@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"net"
 	"net/http"
 	"net/url"
@@ -15,9 +14,12 @@ import (
 	"syscall"
 	"time"
 
+	"go.uber.org/zap"
+
 	"kicau.local/edge/config"
 	"kicau.local/edge/internal/app"
 	delivery "kicau.local/edge/internal/delivery/http"
+	"kicau.local/edge/internal/infra/logger"
 	localDNS "kicau.local/edge/internal/infra/network/dns"
 	"kicau.local/edge/internal/infra/storage/filesystem"
 )
@@ -41,7 +43,7 @@ func Run(c config.Config) error {
 	defer runtimeLock.Close()
 	for _, bin := range []string{c.FFmpeg, c.MediaMTX} {
 		if _, e := exec.LookPath(bin); e != nil {
-			slog.Warn("media executable unavailable; arena service will continue")
+			logger.Warn("media executable unavailable; arena service will continue", zap.String("binary", filepath.Base(bin)), zap.Error(e))
 		}
 	}
 	// Bind before recovery so a second server cannot mutate the same queue accidentally.
@@ -61,7 +63,7 @@ func Run(c config.Config) error {
 		public, _ := url.Parse(c.LocalPublicURL)
 		resolver, err := localDNS.Start(localDNS.Options{Address: c.DNSAddress, Host: public.Hostname(), IP: c.LANServerIP, Upstreams: c.DNSUpstreams, AllowedCIDRs: c.ReadCIDRs})
 		if err != nil {
-			slog.Error("local DNS unavailable; HTTP and judging remain running")
+			logger.Error("local DNS unavailable; HTTP and judging remain running", zap.Error(err))
 		} else {
 			defer resolver.Close()
 		}
@@ -81,7 +83,7 @@ func Run(c config.Config) error {
 			return e
 		}
 	} else {
-		slog.Warn("BACKUP_DIR not configured; provision separate backup storage before the event")
+		logger.Warn("BACKUP_DIR not configured; provision separate backup storage before the event")
 	}
 	mediaServer := container.MediaServer
 	mediaCtx, stopMedia := context.WithCancel(ctx)
@@ -98,7 +100,7 @@ func Run(c config.Config) error {
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
 	defer signal.Stop(signals)
-	slog.Info("edge server listening", "address", c.Listen, "channels", len(c.Channels))
+	logger.Info("edge server listening", zap.String("address", c.Listen), zap.Int("channels", len(c.Channels)))
 	select {
 	case <-signals:
 	case err := <-errorsCh:

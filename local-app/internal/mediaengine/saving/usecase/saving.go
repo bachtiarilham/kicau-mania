@@ -4,13 +4,15 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"log/slog"
 	"path/filepath"
 	"sync"
 	"time"
 
+	"go.uber.org/zap"
+
 	"kicau.local/edge/internal/apperror"
 	"kicau.local/edge/internal/core/identifier"
+	"kicau.local/edge/internal/infra/logger"
 	"kicau.local/edge/internal/mediaengine/media"
 	"kicau.local/edge/internal/mediaengine/saving/model"
 )
@@ -245,7 +247,7 @@ func (u *UseCase) rollbackStart(records []model.Recording) {
 	}
 	u.mu.Unlock()
 	if err := u.executor.StopProcesses(processes); err != nil {
-		slog.Error("cannot stop recording rollback")
+		logger.Error("cannot stop recording rollback", zap.Error(err))
 	}
 }
 func (u *UseCase) finishRecording(r model.Recording, processErr error) {
@@ -261,9 +263,9 @@ func (u *UseCase) finishRecording(r model.Recording, processErr error) {
 		}
 	}
 	if err := u.repo.Save(context.Background(), r); err != nil {
-		slog.Error("cannot persist finalized recording; restart recovery required", "recording", r.ID)
+		logger.Error("cannot persist finalized recording; restart recovery required", zap.String("recording", r.ID), zap.Error(err))
 	}
-	slog.Info("recording completed", "recording", r.ID, "state", r.State)
+	logger.Info("recording completed", zap.String("recording", r.ID), zap.String("state", r.State))
 }
 func (u *UseCase) StopRound(ctx context.Context, id string) error {
 	if !identifier.Valid(id) {
@@ -339,7 +341,7 @@ func (u *UseCase) uploadPending(ctx context.Context) {
 	u.mu.Unlock()
 	if err != nil {
 		if ctx.Err() == nil {
-			slog.Error("upload queue read failed")
+			logger.Error("upload queue read failed", zap.Error(err))
 		}
 		return
 	}
@@ -366,13 +368,13 @@ func (u *UseCase) uploadPending(ctx context.Context) {
 		} else {
 			shift := min(r.Attempts, 8)
 			r.NextAttempt = time.Now().Add(time.Duration(1<<shift) * time.Second)
-			slog.Warn("recording upload failed; queued for retry", "recording", r.ID)
+			logger.Warn("recording upload failed; queued for retry", zap.String("recording", r.ID), zap.Error(err))
 		}
 		u.mu.Lock()
 		err = u.repo.Save(ctx, r)
 		u.mu.Unlock()
 		if err != nil {
-			slog.Error("upload state persistence failed", "recording", r.ID)
+			logger.Error("upload state persistence failed", zap.String("recording", r.ID), zap.Error(err))
 		}
 	}
 }
@@ -391,13 +393,13 @@ func (u *UseCase) checkLimits(ctx context.Context) {
 	processes := []media.Process{}
 	for _, a := range u.running {
 		if err != nil || free < u.cfg.MinFreeBytes || expired[a.round] {
-			slog.Warn("stopping recording: capacity or time limit", "round", a.round)
+			logger.Warn("stopping recording: capacity or time limit", zap.String("round", a.round))
 			processes = append(processes, a.p)
 		}
 	}
 	u.mu.Unlock()
 	if err := u.executor.StopProcesses(processes); err != nil && ctx.Err() == nil {
-		slog.Error("cannot schedule recording stop")
+		logger.Error("cannot schedule recording stop", zap.Error(err))
 	}
 }
 
@@ -406,7 +408,7 @@ func (u *UseCase) failReservations(records []model.Recording) {
 		r.State = "FAILED"
 		r.EndedAt = time.Now()
 		if e := u.repo.Save(u.executor.Context(), r); e != nil {
-			slog.Error("cannot persist reservation rollback", "recording", r.ID)
+			logger.Error("cannot persist reservation rollback", zap.String("recording", r.ID), zap.Error(e))
 		}
 	}
 }
@@ -425,7 +427,7 @@ func (u *UseCase) Close() {
 		}
 		u.mu.Unlock()
 		if err := u.executor.StopProcesses(processes); err != nil {
-			slog.Error("cannot schedule recording shutdown")
+			logger.Error("cannot schedule recording shutdown", zap.Error(err))
 		}
 		// Do not cancel the worker context until all finalization callbacks have returned.
 		_ = u.executor.WaitFor(context.Background(), completions)

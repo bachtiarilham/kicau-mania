@@ -40,6 +40,7 @@ local-app/
 │   ├── infra/           OS, filesystem, storage, dan network
 │   │   ├── network/    DNS lokal arena
 │   │   ├── storage/    Filesystem dan object storage
+│   │   ├── logger/     Log Zap, file JSON, redaksi, dan context request
 │   │   └── runtime/    Child process dan lifecycle goroutine
 │   ├── app/             Merakit dependency konkret
 │   ├── server/          Startup, shutdown, dan supervisi modul
@@ -419,6 +420,7 @@ Folder ini memasang transport global. Handler fitur tetap berada pada `delivery`
 | File | Fungsi |
 | --- | --- |
 | [internal/delivery/http/middleware/auth.go](internal/delivery/http/middleware/auth.go) | Memeriksa token operator untuk API yang dilindungi, origin, serta kebutuhan autentikasi endpoint/WebSocket terkait. |
+| [internal/delivery/http/middleware/logger.go](internal/delivery/http/middleware/logger.go) | Memasang requestId pada context/header dan mencatat status, route template, latency, serta IP menggunakan logger context. Tidak mencatat body, query atau kredensial. |
 | [internal/delivery/http/middleware/origin.go](internal/delivery/http/middleware/origin.go) | Pemeriksaan origin untuk route cookie/API, izin origin konfigurasi atau same-host, serta respons preflight. |
 | [internal/delivery/http/middleware/auth_test.go](internal/delivery/http/middleware/auth_test.go) | Menguji perilaku auth dan pembatasan origin. |
 | [internal/delivery/http/middleware/doc.go](internal/delivery/http/middleware/doc.go) | Ringkasan tanggung jawab middleware auth/origin. |
@@ -526,3 +528,14 @@ Rekaman, database nilai, dan manifest adalah data operasional. Perlakukan pemeli
 | Memasang implementasi service baru | Kontrak UseCase terkait dan wiring `internal/app/container.go` |
 
 Saat menambah atau memindahkan file source, perbarui bagian indeks terkait agar panduan ini tetap sesuai struktur proyek.
+
+## 26. `internal/infra/logger/` — logging bersama
+
+Pola mengikuti logger `park-server-v3`, dengan inisialisasi eksplisit setelah dotenv dimuat. Logger dapat dipakai lintas layer untuk observabilitas; aturan bisnis tetap berada pada UseCase.
+
+| File | Fungsi |
+| --- | --- |
+| [internal/infra/logger/logger.go](internal/infra/logger/logger.go) | Konfigurasi Zap, console development/JSON production, file JSON app.log, caller/stacktrace, identitas service/hostname, helper global, propagation requestId melalui context, dan flush/close sink saat shutdown. |
+| [internal/infra/logger/redact.go](internal/infra/logger/redact.go) | Core filter untuk menyensor field sensitif, data terstruktur bersarang, dan URL pada pesan/field sebelum masuk ke sink. |
+
+Konfigurasi: `APP_ENV`, `SERVICE_NAME`, dan `LOG_DIR`. Default output file adalah `logs/app.log`; folder ini berisi data operasional log dan diabaikan Git. Kegagalan membuka file tidak menghentikan startup. Access log memakai `X-Request-ID`; ini belum merupakan integrasi tracing OpenTelemetry atau pipeline Grafana.

@@ -62,7 +62,7 @@ func dependencyViolation(from, imported string) string {
 			return "dependency points back to application wiring"
 		}
 	}
-	if usecase && to != "internal/apperror" && to != "internal/core/identifier" && to != "internal/mediaengine/media" && !strings.HasSuffix(to, "/model") && !strings.HasSuffix(to, "/contract") {
+	if usecase && to != "internal/apperror" && to != "internal/infra/logger" && to != "internal/core/identifier" && to != "internal/mediaengine/media" && !strings.HasSuffix(to, "/model") && !strings.HasSuffix(to, "/contract") {
 		return "usecase imports implementation instead of contract/model"
 	}
 	if from == "config" && to != "internal/core/identifier" {

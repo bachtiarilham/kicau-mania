@@ -2,9 +2,12 @@ package server
 
 import (
 	"context"
-	"log/slog"
 	"sync"
 	"time"
+
+	"go.uber.org/zap"
+
+	"kicau.local/edge/internal/infra/logger"
 )
 
 type mediaServer interface {
@@ -20,12 +23,12 @@ func superviseMedia(ctx context.Context, server mediaServer, retry time.Duration
 		defer close(done)
 		for ctx.Err() == nil {
 			if err := server.Start(ctx); err != nil {
-				slog.Warn("media unavailable; arena judging remains available")
+				logger.Warn("media unavailable; arena judging remains available", zap.Error(err))
 			} else {
 				select {
 				case <-ctx.Done():
 				case <-server.Done():
-					slog.Warn("media process stopped; restarting independently")
+					logger.Warn("media process stopped; restarting independently")
 				}
 				server.Close()
 			}
@@ -45,7 +48,7 @@ func startIndependentModules(modules ...module) func() {
 	started := []module{}
 	for _, m := range modules {
 		if err := m.Start(); err != nil {
-			slog.Warn("media worker unavailable; arena judging remains available")
+			logger.Warn("media worker unavailable; arena judging remains available", zap.Error(err))
 			m.Close()
 			continue
 		}

@@ -28,6 +28,16 @@ Setelah alur submit jelas, lanjutkan ke lifecycle ronde dan sinkronisasi. Contoh
 
 ## Menjalankan
 
+### Logging
+
+Pola logging mengikuti `park-server-v3`: Zap dengan field `time`, `level`, `msg`, `caller`, `service`, dan `hostname`, serta stacktrace untuk level error. `APP_ENV=development`, `local`, atau kosong memakai console berwarna; nilai lain seperti `production` memakai JSON stdout. File `${LOG_DIR}/app.log` selalu JSON untuk level info ke atas; default `LOG_DIR=./logs` dan `SERVICE_NAME=local-app`. Env dimuat sebelum logger diinisialisasi. Jika file log tidak dapat dibuka, aplikasi tetap memakai stdout.
+
+Middleware membuat atau meneruskan `X-Request-ID` yang valid, memasang `requestId` pada context/response, lalu mencatat method, route template, status, latency, dan IP. Gunakan `logger.FromContext(ctx)` untuk log yang mengikuti request; helper `logger.Info/Warn/Error/Debug` dipakai untuk lifecycle/background. Field sensitif dan URL pada pesan/field disensor. Body, query, cookie, token, dan argumen proses media tidak dicatat oleh access logger. Request ID ini merupakan korelasi log, belum distributed tracing OpenTelemetry.
+
+File log ditulis append dan belum memiliki rotasi otomatis; kelola retensi melalui deployment. Lokasi source logger adalah `internal/infra/logger`, sedangkan file log operasional ada di `logs/` atau lokasi `LOG_DIR` yang dipilih.
+
+### Prasyarat dan startup
+
 Prasyarat: Go 1.25+, FFmpeg dengan encoder `libx264`/`aac`, dan **MediaMTX v1.15.3** di PATH. Schema konfigurasi diikat ke versi MediaMTX tersebut; versi lain harus diverifikasi sebelum dipakai. Windows dan Linux didukung.
 
 ```powershell
@@ -230,6 +240,7 @@ internal/
   infra/                       # OS, filesystem, storage, dan network
     network/dns/               # Resolver lokal tanpa internet
     storage/                   # Filesystem, kapasitas, lock, dan uploader S3
+    logger/                    # Zap console/file, redaksi, dan context request
     runtime/                   # Subprocess Windows/Linux dan jobgroup
   app/                         # Perakitan dependency
   server/                      # Lifecycle HTTP, modul, dan background

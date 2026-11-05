@@ -2,7 +2,6 @@ package http
 
 import (
 	"io"
-	"log/slog"
 	"net/http"
 	"strings"
 
@@ -11,6 +10,7 @@ import (
 	"kicau.local/edge/config"
 	arenaDelivery "kicau.local/edge/internal/core/arena/delivery"
 	"kicau.local/edge/internal/delivery/http/middleware"
+	"kicau.local/edge/internal/infra/logger"
 	audioDelivery "kicau.local/edge/internal/mediaengine/audio/delivery"
 	savingDelivery "kicau.local/edge/internal/mediaengine/saving/delivery"
 	streamingDelivery "kicau.local/edge/internal/mediaengine/streaming/delivery"
@@ -29,8 +29,9 @@ func Router(c config.Config, handlers Handlers) *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	_ = r.SetTrustedProxies([]string{"127.0.0.1", "::1"})
+	r.Use(middleware.LoggerAndTraceMiddleware())
 	r.Use(gin.CustomRecoveryWithWriter(io.Discard, func(c *gin.Context, _ any) {
-		slog.Error("HTTP panic recovered")
+		logger.FromContext(c.Request.Context()).Error("HTTP panic recovered")
 		c.AbortWithStatusJSON(500, gin.H{"error": "internal server error"})
 	}))
 	r.Use(func(c *gin.Context) {

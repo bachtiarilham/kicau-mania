@@ -24,6 +24,7 @@ func WriteError(c *gin.Context, e error) {
 	case errors.Is(e, apperror.ErrUnavailable):
 		status, message = 503, "media service or disk unavailable"
 	}
+	c.Set("application_error", message)
 	var public *apperror.Message
 	if errors.As(e, &public) && status != 500 {
 		message = public.Text

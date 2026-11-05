@@ -2,9 +2,10 @@ package app
 
 import (
 	"context"
-	"log/slog"
 	"path/filepath"
 	"strings"
+
+	"go.uber.org/zap"
 
 	"kicau.local/edge/config"
 	"kicau.local/edge/internal/apperror"
@@ -16,6 +17,7 @@ import (
 	operationUC "kicau.local/edge/internal/edgetocloud/operation/usecase"
 	syncClient "kicau.local/edge/internal/edgetocloud/synchronization/client"
 	syncUC "kicau.local/edge/internal/edgetocloud/synchronization/usecase"
+	"kicau.local/edge/internal/infra/logger"
 	"kicau.local/edge/internal/infra/storage/filesystem"
 	"kicau.local/edge/internal/infra/storage/s3"
 	audioDelivery "kicau.local/edge/internal/mediaengine/audio/delivery"
@@ -74,7 +76,7 @@ func NewContainer(ctx context.Context, c config.Config) (*Container, error) {
 	recordingFiles, recordingError := savingRepo.NewFiles(filepath.Join(c.DataDir, "queue"))
 	var repo savingUC.RecordingRepository = recordingFiles
 	if recordingError != nil {
-		slog.Warn("recording repository unavailable; judging remains available")
+		logger.Warn("recording repository unavailable; judging remains available", zap.Error(recordingError))
 		repo = unavailableRecordings{}
 	}
 	var objectStorage savingUC.Storage

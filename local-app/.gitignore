@@ -7,3 +7,4 @@ bin/
 *.exe
 coverage.out
 !PETA-KODE.md
+/logs/

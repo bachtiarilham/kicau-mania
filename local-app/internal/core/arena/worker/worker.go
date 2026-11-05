@@ -3,9 +3,11 @@ package worker
 
 import (
 	"context"
-	"log/slog"
 	"time"
 
+	"go.uber.org/zap"
+
+	"kicau.local/edge/internal/infra/logger"
 	"kicau.local/edge/internal/infra/runtime/jobgroup"
 )
 
@@ -18,7 +20,7 @@ func (w *Worker) Loop(name string, interval time.Duration, run func(context.Cont
 	return w.jobs.Go(func(ctx context.Context) {
 		for ctx.Err() == nil {
 			if err := run(ctx); err != nil && ctx.Err() == nil {
-				slog.Warn("arena background task pending", "task", name)
+				logger.FromContext(ctx).Warn("arena background task pending", zap.String("task", name), zap.Error(err))
 			}
 			if !jobgroup.Wait(ctx, interval) {
 				return

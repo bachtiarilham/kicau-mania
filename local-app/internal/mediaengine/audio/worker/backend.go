@@ -2,9 +2,11 @@ package worker
 
 import (
 	"context"
-	"log/slog"
+
+	"go.uber.org/zap"
 
 	"kicau.local/edge/internal/apperror"
+	"kicau.local/edge/internal/infra/logger"
 )
 
 // StartMetricDeliveryLoop starts one background consumer for queued metrics.
@@ -27,7 +29,7 @@ func (w *Worker) StartMetricDeliveryLoop(send func(context.Context, []byte) erro
 					return
 				}
 				if e := send(ctx, b); e != nil && ctx.Err() == nil {
-					slog.Warn("metric delivery failed")
+					logger.FromContext(ctx).Warn("metric delivery failed", zap.Error(e))
 				}
 			}
 		}
