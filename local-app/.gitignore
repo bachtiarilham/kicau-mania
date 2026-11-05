@@ -1,0 +1,7 @@
+.env
+.env.webcam
+/runtime/
+data/
+bin/
+*.exe
+coverage.out

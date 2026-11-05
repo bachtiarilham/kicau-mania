@@ -1,0 +1,25 @@
+# Test source only. The application runs its own MediaMTX on port 8554.
+logLevel: warn
+rtsp: true
+rtspAddress: 127.0.0.1:8555
+rtspTransports: [tcp]
+rtmp: false
+hls: false
+srt: false
+webrtc: false
+api: false
+metrics: false
+pprof: false
+playback: false
+authMethod: internal
+authInternalUsers:
+  - user: any
+    ips: [127.0.0.1/32, '::1/128']
+    permissions:
+      - action: publish
+        path: webcam
+      - action: read
+        path: webcam
+paths:
+  webcam:
+    source: publisher
