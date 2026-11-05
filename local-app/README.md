@@ -1,6 +1,30 @@
 # Local arena server
 
-Server Go untuk hingga 24 feed RTSP NVR ZiTech, video WebRTC lokal, audio WebSocket, rekaman ronde ke SSD, upload S3 asinkron, dan restream YouTube/cloud sesuai permintaan.
+Server arena untuk penilaian offline-first dan engine media: hingga 24 feed RTSP, video WebRTC lokal, audio WebSocket, rekaman ke SSD, upload S3 asinkron, dan restream sesuai permintaan. Penilaian disimpan di arena tanpa menunggu cloud atau media.
+
+Panduan operasional baru ada di [OFFLINE-FIRST.md](OFFLINE-FIRST.md): persiapan event, akun juri lokal, deployment LAN/HTTPS, sinkronisasi cloud, backup, dan pengujian gangguan. Backend penerima sinkronisasi berada di [cloud-app](../cloud-app/README.md).
+
+Alur logic dari persiapan event sampai penilaian, media, sinkronisasi, dan recovery dijelaskan di [ALUR-END-TO-END.md](ALUR-END-TO-END.md), termasuk diagram sequence dan state ronde.
+
+## Membaca kode penilaian
+
+Panduan lengkap fungsi setiap folder dan file, termasuk tes, script, konfigurasi, dan lampiran cloud, tersedia di [PETA-KODE.md](PETA-KODE.md).
+
+Mulai dengan satu request submit nilai: [model](internal/core/arena/model/event.go) → [handler `submit()`](internal/core/arena/delivery/handler.go) → [UseCase `Submit()`](internal/core/arena/usecase/scoring.go) → [repository `UpdateScores()`](internal/core/arena/repository/sqlite.go). Model menjelaskan data, handler membaca request, UseCase menerapkan aturan bisnis, dan repository melakukan transaksi penyimpanan.
+
+Semua file berikut berada di `internal/core/arena/usecase`, dalam satu package dengan satu instance `UseCase` dan constructor `New()`:
+
+| File | Baca ketika ingin memahami |
+| --- | --- |
+| [arena.go](internal/core/arena/usecase/arena.go) | Kontrak dependency, state bersama, constructor, dan fungsi internal bersama |
+| [event.go](internal/core/arena/usecase/event.go) | Pengambilan, impor, dan validasi paket event |
+| [auth.go](internal/core/arena/usecase/auth.go) | Login, logout, sesi juri, dan pembatasan percobaan login |
+| [scoring.go](internal/core/arena/usecase/scoring.go) | Submit nilai, revisi, konflik, serta deduplikasi retry |
+| [round.go](internal/core/arena/usecase/round.go) | Mulai, lanjutkan, tutup, batalkan, dan recovery ronde |
+| [query.go](internal/core/arena/usecase/query.go) | Katalog, tampilan juri/operator, rekap, history, dan status operasional |
+| [backup.go](internal/core/arena/usecase/backup.go) | Pembuatan snapshot database dan pencatatan hasil backup |
+
+Setelah alur submit jelas, lanjutkan ke lifecycle ronde dan sinkronisasi. Contoh perilaku penilaian ada di [arena_test.go](internal/core/arena/usecase/arena_test.go), terutama `TestOfflineScoringRevisionsCompletenessAndRoundLock`.
 
 ## Menjalankan
 
@@ -33,7 +57,7 @@ go test ./...
 go vet ./...
 ```
 
-API menjalankan MediaMTX sebagai child process. Jika MediaMTX berhenti, server menghentikan rekaman dan keluar agar service manager dapat me-restart aplikasi. Gunakan Windows Service/systemd untuk startup dan restart otomatis. `/healthz` hanya menandakan proses HTTP hidup, bukan kamera atau koneksi cloud siap.
+API menjalankan MediaMTX sebagai child process dan mencoba menjalankannya kembali ketika berhenti. Kegagalan media atau upload tidak menghentikan HTTP penilaian. Gunakan Windows Service/systemd untuk startup aplikasi otomatis. `/healthz` hanya menandakan proses HTTP hidup; `/api/v1/arena/status` memisahkan status proses media, backlog cloud, dan backup. Status proses media belum menjamin seluruh kamera sehat.
 
 ## Testing dengan webcam dan mic Windows
 
@@ -145,7 +169,7 @@ Worker baru meng-upload file `READY` setelah tidak ada kanal `RECORDING` pada ro
 
 Setelah restart, manifest `RECORDING` dengan file final yang sudah ada dipulihkan menjadi `READY`; lainnya menjadi `INTERRUPTED`. File partial tidak otomatis di-upload atau dihapus. Gangguan feed lokal menandai rekaman gagal; ronde tidak otomatis disambung karena gap tidak boleh disembunyikan. Untuk pemulihan manual, jalankan ffprobe/FFmpeg pada salinan partial, verifikasi isi, lalu arsipkan melalui alur operator. Retensi/penghapusan file dilakukan operator setelah verifikasi cloud; aplikasi tidak otomatis menghapus bukti rekaman.
 
-Server menolak ronde baru jika ruang tersedia di bawah `MIN_FREE_BYTES`, memeriksa ulang setiap 5 detik, dan menghentikan perekam jika batas tercapai. `MAX_ROUND_DURATION` juga memicu stop. Sisakan margin untuk bitrate puncak, flush, dan delay pemeriksaan: 24 kanal Ã— 4 Mbps memerlukan sekitar **43,2 GB/jam** video, belum audio/overhead. Ketika disk benar-benar penuh, penulisan manifest dapat gagal; periksa log dan lakukan restart setelah ruang dipulihkan. Rename + fsync manifest melindungi restart proses; ketahanan terhadap putus daya tetap memerlukan SSD/filesystem dan UPS yang memadai.
+Server menolak ronde baru jika ruang tersedia di bawah `MIN_FREE_BYTES`, memeriksa ulang setiap 5 detik, dan menghentikan perekam jika batas tercapai. `MAX_ROUND_DURATION` juga memicu stop. Sisakan margin untuk bitrate puncak, flush, dan delay pemeriksaan: 24 kanal Ã— 4 Mbps memerlukan sekitar **43,2 GB/jam** video, belum mediaengine/audio/overhead. Ketika disk benar-benar penuh, penulisan manifest dapat gagal; periksa log dan lakukan restart setelah ruang dipulihkan. Rename + fsync manifest melindungi restart proses; ketahanan terhadap putus daya tetap memerlukan SSD/filesystem dan UPS yang memadai.
 
 ## YouTube dan cloud restream
 
@@ -177,39 +201,45 @@ Masing-masing `router.go` menyediakan `RegisterRoutes(group, handler)` dalam pac
 
 | Modul | Pemilik proses bisnis |
 | --- | --- |
-| `internal/video` | Daftar kanal dan URL WebRTC untuk video langsung dari NVR. |
-| `internal/audio` | PCM, metrik energi, WebSocket audio/metrik, dan pengiriman statistik backend. |
-| `internal/streaming` | Restream YouTube/cloud, allowlist target, status, dan retry. |
-| `internal/saving` | Ronde, rekaman, finalisasi, recovery, disk guard, repository manifest, dan upload S3. |
+| `internal/mediaengine/video` | Daftar kanal dan URL WebRTC untuk video langsung dari NVR. |
+| `internal/mediaengine/audio` | PCM, metrik energi, WebSocket mediaengine/audio/metrik, dan pengiriman statistik backend. |
+| `internal/mediaengine/streaming` | Restream YouTube/cloud, allowlist target, status, dan retry. |
+| `internal/mediaengine/saving` | Ronde, rekaman, finalisasi, recovery, disk guard, repository manifest, dan upload S3. |
 
-Koordinasi lintas domain dilakukan di UseCase melalui kontrak/model; implementasi repository, worker, dan handler domain lain tidak diimpor. `channel/repository` menyediakan katalog konfigurasi, sedangkan `saving/repository` menyimpan manifest rekaman. Setiap UseCase menerima interface service yang sempit; adapter FFmpeg audio, streaming, dan recording berada di `internal/media/ffmpeg` dengan runner child process bersama di `internal/runtime/subprocess`.
+Koordinasi lintas domain dilakukan di UseCase melalui kontrak/model; implementasi repository, worker, dan handler domain lain tidak diimpor. `mediaengine/channel/repository` menyediakan katalog konfigurasi, sedangkan `mediaengine/saving/repository` menyimpan manifest rekaman. Setiap UseCase menerima interface service yang sempit; adapter FFmpeg audio, streaming, dan recording berada di `internal/mediaengine/media/ffmpeg` dengan runner child process bersama di `internal/infra/runtime/subprocess`.
 
 
 Struktur komponen pendukung berdasarkan fungsi (folder `pkg` telah dihapus):
 
 ```text
 internal/
-  app/                         # Perakitan dependency; NewMedia dan NewContainer
-  channel/model/               # Identitas channel tanpa kredensial
-  channel/repository/          # Catalog: channel dan HubRTSP lokal
-  media/process.go             # Kontrak Process untuk UseCase dan worker
-  media/mediamtx/               # Server: konfigurasi dan lifecycle MediaMTX
-  media/ffmpeg/                 # AudioDecoder, Recorder, Restreamer
-  audio/pubsub/                # Broadcaster audio dan metrik ke subscriber
-  audio/metricsclient/         # Client pengirim metrik ke backend
-  storage/filesystem/          # Disk, kapasitas disk, dan file lock
-  storage/s3/                  # Uploader dengan konfigurasi Options sendiri
-  runtime/subprocess/          # Implementasi proses Windows/Linux
-  runtime/jobgroup/            # Admission, cancel, dan wait pekerjaan background
-  delivery/http/middleware/   # Autentikasi dan origin
-  delivery/http/response/     # WriteError: error aplikasi ke respons HTTP
+  core/
+    arena/                     # Event, akun juri, nilai, rekap, dan UI lokal
+    identifier/                # Pemeriksaan format identifier
+  mediaengine/
+    channel/                   # Identitas dan katalog sumber kamera
+    video/                     # Daftar channel dan URL live
+    audio/                     # PCM, metrik, pubsub, dan WebSocket
+    streaming/                 # Restream ke target yang diizinkan
+    saving/                    # Rekaman, manifest, dan koordinasi upload
+    media/                     # Kontrak Process dan adapter MediaMTX/FFmpeg
+  edgetocloud/                 # Sinkronisasi pusat dan store-and-forward
+    synchronization/           # Outbox, paket cloud, dan polling command
+    exchange/model/            # Kontrak pertukaran arena/cloud
+    operation/usecase/         # Koordinasi command recording/restream
+  infra/                       # OS, filesystem, storage, dan network
+    network/dns/               # Resolver lokal tanpa internet
+    storage/                   # Filesystem, kapasitas, lock, dan uploader S3
+    runtime/                   # Subprocess Windows/Linux dan jobgroup
+  app/                         # Perakitan dependency
+  server/                      # Lifecycle HTTP, modul, dan background
+  delivery/http/               # Router, middleware, dan response bersama
   apperror/                    # Error aplikasi bersama
-  identifier/                  # Pemeriksaan sintaks identifier
 ```
 
 `app` merakit repository, adapter, worker, UseCase, dan handler. Router hanya menerima `http.Handlers`, tanpa container atau adapter konkret. Container aplikasi memakai nama `ChannelCatalog` dan `MediaServer`. Server serta CLI `-render-config` menggunakan builder di `app`.
 
-UseCase mendeklarasikan interface repository/service yang diperlukannya. Channel dibaca melalui `ChannelRepository`; URL upstream tetap hanya untuk konfigurasi infrastruktur. `media.Process` tidak bergantung pada OS, sedangkan runner konkretnya berada di `runtime/subprocess`. Adapter tidak mengimpor UseCase, handler, atau repository konkret; repository tidak memanggil repository lain. Tes arsitektur memeriksa batas ini dan menolak import lama `pkg`.
+UseCase mendeklarasikan interface repository/service yang diperlukannya. Channel dibaca melalui `ChannelRepository`; URL upstream tetap hanya untuk konfigurasi infrastruktur. `media.Process` tidak bergantung pada OS, sedangkan runner konkretnya berada di `infra/runtime/subprocess`. Adapter tidak mengimpor UseCase, handler, atau repository konkret; repository tidak memanggil repository lain. Tes arsitektur memeriksa batas ini dan menolak import lama `pkg`.
 
 Pembagian pengelolaan proses background:
 
@@ -240,19 +270,19 @@ server.Run()
         → UseCase memanggil service / repository / kalkulasi domain
 ```
 
-Pada audio, streaming, dan saving, DI membuat worker terlebih dahulu, lalu menyuntikkannya melalui interface `Executor` yang dideklarasikan UseCase. Worker tidak mengimpor implementasi UseCase atau repository. Ketiga domain tersebut tetap memakai callback tanpa siklus dependency; video tidak memerlukan executor Go. `internal/runtime/jobgroup` menyediakan mekanisme umum untuk penerimaan tugas, cancellation, dan WaitGroup, sedangkan jadwal spesifik tetap berada di worker domain.
+Pada audio, streaming, dan saving, DI membuat worker terlebih dahulu, lalu menyuntikkannya melalui interface `Executor` yang dideklarasikan UseCase. Worker tidak mengimpor implementasi UseCase atau repository. Ketiga domain tersebut tetap memakai callback tanpa siklus dependency; video tidak memerlukan executor Go. `internal/infra/runtime/jobgroup` menyediakan mekanisme umum untuk penerimaan tugas, cancellation, dan WaitGroup, sedangkan jadwal spesifik tetap berada di worker domain.
 
 Worker tidak menentukan status bisnis: kelayakan upload, backoff `NextAttempt`, batas disk/durasi, recovery, finalisasi file, dan perubahan status tetap dikerjakan UseCase. Callback penyelesaian rekaman harus selesai sebelum worker menandai tugas selesai. Saat shutdown saving, UseCase menolak ronde baru, meminta worker menghentikan perekam secara paralel, menunggu callback finalisasi, lalu menutup worker dan membatalkan upload yang masih aktif. Tidak ada mutex state bisnis yang ditahan selama menunggu callback tersebut.
 
 Worker tetap berjalan dalam executable server yang sama. Ingest NVR dan worker audio dimulai saat startup; video WebRTC diterima ketika browser membuka player; restream dan recording dimulai sesuai perintah operator. Reconnect tetap lima detik, upload tetap berurutan dengan timeout 30 menit, dan backlog metrik tetap best effort tanpa memblokir capture. Tidak ada perubahan endpoint, konfigurasi, atau format penyimpanan akibat pemisahan worker.
 
-Inisialisasi sumber NVR berada di `internal/channel/repository`: katalog kanal dari `.env`, validasi kanal, dan resolusi URL hub lokal. `app.NewMedia` mengambil snapshot sumber dari katalog dan menyuntikkannya ke `mediamtx.Options.Sources`. `internal/media/mediamtx` membangun konfigurasi upstream dari snapshot tersebut, membuka sesi RTSP melalui proses MediaMTX, mengelola lifecycle hub, dan menyediakan URL WHEP. Kredensial RTSP upstream hanya digunakan oleh infrastruktur; UseCase memakai URL lokal dari katalog NVR. `config` hanya memuat/memvalidasi konfigurasi dan tidak lagi menulis konfigurasi MediaMTX. Opsi `-render-config` memanggil renderer hub tanpa menjalankan proses.
+Inisialisasi sumber NVR berada di `internal/mediaengine/channel/repository`: katalog kanal dari `.env`, validasi kanal, dan resolusi URL hub lokal. `app.NewMedia` mengambil snapshot sumber dari katalog dan menyuntikkannya ke `mediamtx.Options.Sources`. `internal/mediaengine/media/mediamtx` membangun konfigurasi upstream dari snapshot tersebut, membuka sesi RTSP melalui proses MediaMTX, mengelola lifecycle hub, dan menyediakan URL WHEP. Kredensial RTSP upstream hanya digunakan oleh infrastruktur; UseCase memakai URL lokal dari katalog NVR. `config` hanya memuat/memvalidasi konfigurasi dan tidak lagi menulis konfigurasi MediaMTX. Opsi `-render-config` memanggil renderer hub tanpa menjalankan proses.
 
 Alamat UDP media WebRTC dapat diatur dengan `WEBRTC_LOCAL_UDP_ADDR` (default `:8189`); sesuaikan firewall jika port diganti. `Close()` menunggu proses MediaMTX berhenti sebelum mengizinkan `Start()` berikutnya. Jika daftar `ReadCIDRs` pada opsi hub kosong, renderer hanya memberikan akses loopback; rule dengan `ips: []` tidak dibuat karena MediaMTX mengartikannya sebagai semua IP. Sumber tetap selalu aktif (`sourceOnDemand: false`) agar audio dan perekaman siap digunakan, dan API MediaMTX tetap nonaktif.
 
-Saat startup: inisialisasi katalog/hub, jalankan MediaMTX, lakukan recovery `saving`, kemudian jalankan worker domain lain dan HTTP. Saat shutdown: hentikan penerimaan request, tutup koneksi WebSocket, finalisasi rekaman, hentikan seluruh worker, lalu tutup hub. Kegagalan startup menutup semua modul yang telah dibuat. Menghentikan restream tidak menghentikan audio, video lokal, atau recording. URL API, format WebSocket, variabel `.env`, format manifest, lokasi file, dan object key S3 tetap kompatibel; tidak ada migrasi data.
+Saat startup: buka database arena dan pulihkan ronde aktif menjadi `INTERRUPTED`, lalu jalankan modul media, worker, dan HTTP. Modul media yang gagal tidak menutup modul penilaian; database arena wajib tersedia agar nilai tidak diterima tanpa penyimpanan. Saat shutdown: hentikan penerimaan request dan perintah cloud, tutup WebSocket, finalisasi rekaman, hentikan worker, lalu tutup media. Menghentikan restream tidak menghentikan penilaian, audio, video lokal, atau recording. Endpoint media lama, format WebSocket, manifest rekaman, dan object key S3 tetap kompatibel.
 
-Template diterapkan pada struktur domain dan pemisahan tanggung jawab. MySQL, Redis/Asynq, JWT SaaS, dan library moneter tidak dipasang karena edge ini menggunakan antrean file lokal dan kredensial operator tunggal. Manifest queue cocok untuk volume satu arena; pembacaan metadata saat ini memindai seluruh manifest. Arsipkan metadata lama atau migrasikan repository ke DB jika volume tumbuh besar.
+Struktur domain memisahkan penilaian dan media. SQLite menyimpan event, akun/sesi juri, history nilai, dan outbox secara transaksional; manifest file tetap digunakan untuk antrean rekaman. MySQL, Redis/Asynq, dan JWT SaaS tidak diperlukan untuk operasional arena. Pembacaan metadata rekaman masih memindai manifest; kelola arsip sesuai volume satu arena.
 
 Pengujian mencakup perhitungan audio, validasi bisnis ronde, konflik, disk guard, finalisasi/recovery dan retry upload persisten, allowlist restream, autentikasi/origin, resolusi sumber NVR, pemetaan kanal langsung MediaMTX, isolasi lifecycle antar domain, rollback startup termasuk upload aktif, kompatibilitas HTTP/WebSocket, dan flush MP4 dengan FFmpeg sintetis bila executable tersedia. Pengujian worker memakai proses palsu dan timer terkontrol untuk reconnect, antrean penuh, penjadwalan berurutan, cancel saat retry, penantian finalisasi, dan penolakan tugas setelah close. Uji lapangan tetap diperlukan: 24 feed asli, putus internet ketika upload, restart ketika merekam, disk mendekati batas, codec browser juri, serta ingest YouTube/S3 yang sebenarnya.
 

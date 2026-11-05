@@ -14,12 +14,7 @@ func Auth(token string, origins []string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		origin := c.GetHeader("Origin")
 		if origin != "" {
-			allowed := false
-			for _, v := range origins {
-				if origin == v {
-					allowed = true
-				}
-			}
+			allowed := originAllowed(c, origin, origins)
 			if !allowed {
 				c.AbortWithStatusJSON(403, gin.H{"error": "origin denied"})
 				return

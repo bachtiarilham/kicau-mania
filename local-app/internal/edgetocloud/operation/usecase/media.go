@@ -1,0 +1,109 @@
+// Package usecase coordinates media commands; judging state is never modified here.
+package usecase
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"sort"
+
+	"kicau.local/edge/internal/apperror"
+	"kicau.local/edge/internal/core/identifier"
+	exchange "kicau.local/edge/internal/edgetocloud/exchange/model"
+	saving "kicau.local/edge/internal/mediaengine/saving/model"
+	streaming "kicau.local/edge/internal/mediaengine/streaming/model"
+)
+
+type Streaming interface {
+	StartRestream(string, string) error
+	StopRestream(string) error
+	Restreams() []streaming.RestreamView
+}
+type Saving interface {
+	StartRound(context.Context, saving.StartRound) ([]saving.Recording, error)
+	StopRound(context.Context, string) error
+	Session(context.Context, string) ([]saving.Recording, error)
+}
+type UseCase struct {
+	streaming Streaming
+	saving    Saving
+}
+
+func New(streaming Streaming, saving Saving) *UseCase {
+	return &UseCase{streaming: streaming, saving: saving}
+}
+func (u *UseCase) Execute(ctx context.Context, command exchange.Command) error {
+	var req struct {
+		Channel  string   `json:"channel_id"`
+		Target   string   `json:"target"`
+		Session  string   `json:"session_id"`
+		Channels []string `json:"channels"`
+	}
+	if err := json.Unmarshal(command.Payload, &req); err != nil {
+		return apperror.ErrInvalid
+	}
+	if command.Kind == "restream.start" || command.Kind == "restream.stop" {
+		if !identifier.Valid(req.Target) {
+			return apperror.ErrInvalid
+		}
+	}
+	if command.Kind == "restream.start" && !identifier.Valid(req.Channel) {
+		return apperror.ErrInvalid
+	}
+	if command.Kind == "recording.start" || command.Kind == "recording.stop" {
+		if !identifier.Valid(req.Session) {
+			return apperror.ErrInvalid
+		}
+	}
+	switch command.Kind {
+	case "restream.start":
+		for _, stream := range u.streaming.Restreams() {
+			if stream.Target == req.Target {
+				if stream.Channel == req.Channel {
+					return nil
+				}
+				return apperror.ErrConflict
+			}
+		}
+		return u.streaming.StartRestream(req.Channel, req.Target)
+	case "restream.stop":
+		err := u.streaming.StopRestream(req.Target)
+		if errors.Is(err, apperror.ErrNotFound) {
+			return nil
+		}
+		return err
+	case "recording.start":
+		recordings, err := u.saving.Session(ctx, req.Session)
+		if err != nil {
+			return err
+		}
+		if len(recordings) > 0 {
+			channels := []string{}
+			for _, r := range recordings {
+				channels = append(channels, r.ChannelID)
+			}
+			wanted := append([]string(nil), req.Channels...)
+			sort.Strings(channels)
+			sort.Strings(wanted)
+			if len(channels) != len(wanted) {
+				return apperror.ErrConflict
+			}
+			for i := range channels {
+				if channels[i] != wanted[i] {
+					return apperror.ErrConflict
+				}
+			}
+			return nil
+		}
+		_, err = u.saving.StartRound(ctx, saving.StartRound{ID: req.Session, Channels: req.Channels})
+		return err
+	case "recording.stop":
+		err := u.saving.StopRound(ctx, req.Session)
+		if errors.Is(err, apperror.ErrNotFound) {
+			return nil
+		}
+		return err
+	default:
+		return apperror.ErrForbidden
+	}
+}

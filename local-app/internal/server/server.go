@@ -7,18 +7,19 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"os/signal"
 	"path/filepath"
-	"sync"
 	"syscall"
 	"time"
 
 	"kicau.local/edge/config"
 	"kicau.local/edge/internal/app"
 	delivery "kicau.local/edge/internal/delivery/http"
-	"kicau.local/edge/internal/storage/filesystem"
+	localDNS "kicau.local/edge/internal/infra/network/dns"
+	"kicau.local/edge/internal/infra/storage/filesystem"
 )
 
 func Run(c config.Config) error {
@@ -40,7 +41,7 @@ func Run(c config.Config) error {
 	defer runtimeLock.Close()
 	for _, bin := range []string{c.FFmpeg, c.MediaMTX} {
 		if _, e := exec.LookPath(bin); e != nil {
-			return fmt.Errorf("required executable unavailable: %s", bin)
+			slog.Warn("media executable unavailable; arena service will continue")
 		}
 	}
 	// Bind before recovery so a second server cannot mutate the same queue accidentally.
@@ -55,20 +56,42 @@ func Run(c config.Config) error {
 	if e != nil {
 		return e
 	}
+	defer container.ArenaStore.Close()
+	if c.DNSAddress != "" {
+		public, _ := url.Parse(c.LocalPublicURL)
+		resolver, err := localDNS.Start(localDNS.Options{Address: c.DNSAddress, Host: public.Hostname(), IP: c.LANServerIP, Upstreams: c.DNSUpstreams, AllowedCIDRs: c.ReadCIDRs})
+		if err != nil {
+			slog.Error("local DNS unavailable; HTTP and judging remain running")
+		} else {
+			defer resolver.Close()
+		}
+	}
+	if e := container.Background.Start(); e != nil {
+		return e
+	}
+	defer container.Background.Close()
+	if e := container.Background.Loop("cloud-sync", 5*time.Second, container.Synchronization.Flush); e != nil {
+		return e
+	}
+	if e := container.Background.Loop("cloud-commands", 5*time.Second, container.Commands.Poll); e != nil {
+		return e
+	}
+	if c.BackupDir != "" {
+		if e := container.Background.Loop("backup", 5*time.Minute, func(ctx context.Context) error { _, err := container.Arena.Backup(ctx); return err }); e != nil {
+			return e
+		}
+	} else {
+		slog.Warn("BACKUP_DIR not configured; provision separate backup storage before the event")
+	}
 	mediaServer := container.MediaServer
-	if e = mediaServer.Start(ctx); e != nil {
-		container.Saving.Close()
-		container.Audio.Close()
-		container.Streaming.Close()
-		return e
-	}
-	defer mediaServer.Close()
-	stop, e := startModules(container.Saving, container.Audio, container.Streaming)
-	if e != nil {
-		return e
-	}
+	mediaCtx, stopMedia := context.WithCancel(ctx)
+	mediaDone := superviseMedia(mediaCtx, mediaServer, 5*time.Second)
+	defer func() { stopMedia(); <-mediaDone }()
+	stop := startIndependentModules(container.Saving, container.Audio, container.Streaming)
 	defer stop()
 	defer container.Handlers.Audio.Close()
+	// Stop new cloud commands before finalizing/stopping the media modules.
+	defer container.Background.Close()
 	server := &http.Server{Handler: delivery.Router(c, container.Handlers), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 30 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 16384}
 	errorsCh := make(chan error, 1)
 	go func() { errorsCh <- server.Serve(listener) }()
@@ -78,8 +101,6 @@ func Run(c config.Config) error {
 	slog.Info("edge server listening", "address", c.Listen, "channels", len(c.Channels))
 	select {
 	case <-signals:
-	case <-mediaServer.Done():
-		e = fmt.Errorf("MediaMTX exited; inspect generated configuration and port availability")
 	case err := <-errorsCh:
 		if !errors.Is(err, http.ErrServerClosed) {
 			e = err
@@ -99,26 +120,4 @@ func Run(c config.Config) error {
 type module interface {
 	Start() error
 	Close()
-}
-
-// Saving is first: recovery precedes other workers, and finalization completes
-// before the remaining modules and finally the shared mediaServer are closed.
-func startModules(modules ...module) (func(), error) {
-	for i, m := range modules {
-		if e := m.Start(); e != nil {
-			// Also close unstarted modules: their constructors own cancellation contexts.
-			for j := len(modules) - 1; j >= 0; j-- {
-				modules[j].Close()
-			}
-			return nil, fmt.Errorf("start module %d: %w", i, e)
-		}
-	}
-	var once sync.Once
-	return func() {
-		once.Do(func() {
-			for _, m := range modules {
-				m.Close()
-			}
-		})
-	}, nil
 }

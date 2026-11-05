@@ -1,7 +1,9 @@
 .env
 .env.webcam
+.env.lan
 /runtime/
 data/
 bin/
 *.exe
 coverage.out
+!PETA-KODE.md

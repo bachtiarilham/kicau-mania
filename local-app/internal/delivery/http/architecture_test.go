@@ -16,7 +16,7 @@ import (
 const modulePath = "kicau.local/edge/"
 
 func isAdapter(pkg string) bool {
-	for _, prefix := range []string{"internal/media/ffmpeg", "internal/media/mediamtx", "internal/audio/pubsub", "internal/audio/metricsclient", "internal/storage/", "internal/runtime/"} {
+	for _, prefix := range []string{"internal/mediaengine/media/ffmpeg", "internal/mediaengine/media/mediamtx", "internal/mediaengine/audio/pubsub", "internal/mediaengine/audio/metricsclient", "internal/infra/storage/", "internal/infra/runtime/", "internal/infra/network/", "internal/edgetocloud/synchronization/client"} {
 		if strings.HasPrefix(pkg, prefix) {
 			return true
 		}
@@ -26,12 +26,12 @@ func isAdapter(pkg string) bool {
 
 func domainOf(pkg string) string {
 	parts := strings.Split(pkg, "/")
-	if len(parts) < 2 || parts[0] != "internal" {
+	if len(parts) < 3 || parts[0] != "internal" {
 		return ""
 	}
-	switch parts[1] {
-	case "channel", "audio", "video", "saving", "streaming":
-		return parts[1]
+	switch parts[1] + "/" + parts[2] {
+	case "core/arena", "mediaengine/channel", "mediaengine/audio", "mediaengine/video", "mediaengine/saving", "mediaengine/streaming", "edgetocloud/synchronization", "edgetocloud/operation":
+		return parts[1] + "/" + parts[2]
 	}
 	return ""
 }
@@ -49,15 +49,23 @@ func dependencyViolation(from, imported string) string {
 		return ""
 	}
 	to := strings.TrimPrefix(imported, modulePath)
+	if to == "internal/edge" || strings.HasPrefix(to, "internal/edge/") {
+		return "legacy edge grouping import"
+	}
+	for _, old := range []string{"arena", "identifier", "channel", "video", "audio", "streaming", "saving", "media", "synchronization", "exchange", "operation", "network", "storage", "runtime"} {
+		if to == "internal/"+old || strings.HasPrefix(to, "internal/"+old+"/") {
+			return "legacy ungrouped internal import"
+		}
+	}
 	if to == "internal/app" || strings.HasPrefix(to, "internal/app/") || to == "internal/server" || strings.HasPrefix(to, "internal/server/") {
 		if from != "internal/app" && from != "internal/server" && !strings.HasPrefix(from, "cmd/") {
 			return "dependency points back to application wiring"
 		}
 	}
-	if usecase && to != "internal/apperror" && to != "internal/identifier" && to != "internal/media" && !strings.HasSuffix(to, "/model") && !strings.HasSuffix(to, "/contract") {
+	if usecase && to != "internal/apperror" && to != "internal/core/identifier" && to != "internal/mediaengine/media" && !strings.HasSuffix(to, "/model") && !strings.HasSuffix(to, "/contract") {
 		return "usecase imports implementation instead of contract/model"
 	}
-	if from == "config" && to != "internal/identifier" {
+	if from == "config" && to != "internal/core/identifier" {
 		return "configuration depends on application implementation"
 	}
 	if isAdapter(from) && (strings.Contains(to+"/", "/repository/") || strings.Contains(to+"/", "/usecase/") || strings.Contains(to+"/", "/delivery/") || strings.Contains(to+"/", "/worker/") || to == "config") {
@@ -66,7 +74,7 @@ func dependencyViolation(from, imported string) string {
 	if strings.Contains(from+"/", "/repository/") && (strings.Contains(to+"/", "/repository/") || strings.Contains(to+"/", "/usecase/") || strings.Contains(to+"/", "/delivery/") || strings.Contains(to+"/", "/worker/")) {
 		return "repository depends on another repository or upper layer"
 	}
-	if strings.Contains(from+"/", "/worker/") && (strings.Contains(to+"/", "/repository/") || strings.Contains(to+"/", "/usecase/") || strings.Contains(to+"/", "/delivery/") || isAdapter(to)) && to != "internal/runtime/jobgroup" {
+	if strings.Contains(from+"/", "/worker/") && (strings.Contains(to+"/", "/repository/") || strings.Contains(to+"/", "/usecase/") || strings.Contains(to+"/", "/delivery/") || isAdapter(to)) && to != "internal/infra/runtime/jobgroup" {
 		return "worker depends on concrete business/media implementation"
 	}
 	if strings.Contains(from+"/", "/delivery/") && (strings.Contains(to+"/", "/repository/") || strings.Contains(to+"/", "/worker/") || isAdapter(to)) {
@@ -77,7 +85,7 @@ func dependencyViolation(from, imported string) string {
 			return "cross-domain access outside usecase contracts/models"
 		}
 	}
-	if from == "internal/media" || from == "internal/apperror" || from == "internal/identifier" || strings.HasSuffix(from, "/model") {
+	if from == "internal/mediaengine/media" || from == "internal/apperror" || from == "internal/core/identifier" || strings.HasSuffix(from, "/model") {
 		return "shared contract/model depends on implementation"
 	}
 	return ""
@@ -141,27 +149,27 @@ func TestDependencyRules(t *testing.T) {
 		from, to string
 		allowed  bool
 	}{
-		{"internal/audio/usecase", "internal/channel/model", true},
-		{"internal/saving/usecase", "internal/media", true},
-		{"internal/app", "internal/channel/repository", true},
-		{"internal/app", "internal/media/ffmpeg", true},
-		{"internal/media/ffmpeg", "internal/runtime/subprocess", true},
-		{"internal/audio/worker", "internal/runtime/jobgroup", true},
-		{"internal/saving/repository", "internal/storage/filesystem", true},
-		{"config", "internal/identifier", true},
-		{"internal/audio/usecase", "internal/audio/pubsub", false},
-		{"internal/audio/usecase", "internal/media/ffmpeg", false},
-		{"internal/saving/usecase", "internal/runtime/subprocess", false},
-		{"internal/video/usecase", "internal/channel/repository", false},
-		{"internal/channel/repository", "internal/saving/repository", false},
-		{"internal/media/mediamtx", "internal/channel/repository", false},
-		{"internal/audio/metricsclient", "internal/audio/usecase", false},
-		{"internal/audio/metricsclient", "config", false},
-		{"internal/audio/delivery", "internal/app", false},
-		{"internal/delivery/http", "internal/storage/s3", false},
-		{"internal/audio/worker", "internal/video/model", false},
-		{"internal/media", "internal/runtime/subprocess", false},
-		{"internal/audio/usecase", "pkg/nvr", false},
+		{"internal/mediaengine/audio/usecase", "internal/mediaengine/channel/model", true},
+		{"internal/mediaengine/saving/usecase", "internal/mediaengine/media", true},
+		{"internal/app", "internal/mediaengine/channel/repository", true},
+		{"internal/app", "internal/mediaengine/media/ffmpeg", true},
+		{"internal/mediaengine/media/ffmpeg", "internal/infra/runtime/subprocess", true},
+		{"internal/mediaengine/audio/worker", "internal/infra/runtime/jobgroup", true},
+		{"internal/mediaengine/saving/repository", "internal/infra/storage/filesystem", true},
+		{"config", "internal/core/identifier", true},
+		{"internal/mediaengine/audio/usecase", "internal/mediaengine/audio/pubsub", false},
+		{"internal/mediaengine/audio/usecase", "internal/mediaengine/media/ffmpeg", false},
+		{"internal/mediaengine/saving/usecase", "internal/infra/runtime/subprocess", false},
+		{"internal/mediaengine/video/usecase", "internal/mediaengine/channel/repository", false},
+		{"internal/mediaengine/channel/repository", "internal/mediaengine/saving/repository", false},
+		{"internal/mediaengine/media/mediamtx", "internal/mediaengine/channel/repository", false},
+		{"internal/mediaengine/audio/metricsclient", "internal/mediaengine/audio/usecase", false},
+		{"internal/mediaengine/audio/metricsclient", "config", false},
+		{"internal/mediaengine/audio/delivery", "internal/app", false},
+		{"internal/delivery/http", "internal/infra/storage/s3", false},
+		{"internal/mediaengine/audio/worker", "internal/mediaengine/video/model", false},
+		{"internal/mediaengine/media", "internal/infra/runtime/subprocess", false},
+		{"internal/mediaengine/audio/usecase", "pkg/nvr", false},
 	} {
 		t.Run(tc.from+"->"+tc.to, func(t *testing.T) {
 			reason := dependencyViolation(tc.from, modulePath+tc.to)
@@ -170,7 +178,7 @@ func TestDependencyRules(t *testing.T) {
 			}
 		})
 	}
-	if dependencyViolation("internal/audio/usecase", "net/http") == "" {
+	if dependencyViolation("internal/mediaengine/audio/usecase", "net/http") == "" {
 		t.Fatal("usecase can import HTTP")
 	}
 }

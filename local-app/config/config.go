@@ -13,16 +13,28 @@ import (
 
 	"github.com/joho/godotenv"
 
-	"kicau.local/edge/internal/identifier"
+	"kicau.local/edge/internal/core/identifier"
 )
 
 type Config struct {
 	// Aplikasi
-	Listen     string
-	Token      string
-	DataDir    string
-	RuntimeDir string
-	Origins    []string
+	Listen           string
+	Token            string
+	DataDir          string
+	RuntimeDir       string
+	Origins          []string
+	ArenaID          string
+	EngineID         string
+	BackupDir        string
+	CloudSyncURL     string
+	CloudCommandsURL string
+	CloudPackagesURL string
+	CloudToken       string
+	FrontendOrigin   string
+	LocalPublicURL   string
+	LANServerIP      string
+	DNSAddress       string
+	DNSUpstreams     []string
 
 	// Media / NVR
 	FFmpeg         string
@@ -103,14 +115,33 @@ func Load(path string) (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
+	backupDir := getEnv("BACKUP_DIR", "")
+	if backupDir != "" {
+		backupDir, err = filepath.Abs(backupDir)
+		if err != nil {
+			return Config{}, err
+		}
+	}
 
 	cfg := Config{
 		// Aplikasi
-		Listen:     getEnv("HTTP_ADDR", "127.0.0.1:8090"),
-		Token:      getEnv("API_TOKEN", ""),
-		DataDir:    dataDir,
-		RuntimeDir: runtimeDir,
-		Origins:    strings.Split(getEnv("ALLOWED_ORIGINS", "http://localhost:3000"), ","),
+		Listen:           getEnv("HTTP_ADDR", "127.0.0.1:8090"),
+		Token:            getEnv("API_TOKEN", ""),
+		DataDir:          dataDir,
+		RuntimeDir:       runtimeDir,
+		Origins:          strings.Split(getEnv("ALLOWED_ORIGINS", "http://localhost:3000"), ","),
+		ArenaID:          getEnv("ARENA_ID", "arena01"),
+		EngineID:         getEnv("ENGINE_ID", "engine01"),
+		BackupDir:        backupDir,
+		CloudSyncURL:     getEnv("CLOUD_SYNC_URL", ""),
+		CloudCommandsURL: getEnv("CLOUD_COMMANDS_URL", ""),
+		CloudPackagesURL: getEnv("CLOUD_PACKAGES_URL", ""),
+		CloudToken:       getEnv("CLOUD_ENGINE_TOKEN", ""),
+		FrontendOrigin:   strings.TrimRight(getEnv("FRONTEND_ORIGIN", ""), "/"),
+		LocalPublicURL:   strings.TrimRight(getEnv("LOCAL_PUBLIC_URL", ""), "/"),
+		LANServerIP:      getEnv("LAN_SERVER_IP", ""),
+		DNSAddress:       getEnv("DNS_LISTEN_ADDR", ""),
+		DNSUpstreams:     strings.Split(getEnv("DNS_UPSTREAMS", "1.1.1.1:53,8.8.8.8:53"), ","),
 
 		// Media / NVR
 		FFmpeg:         getEnv("FFMPEG_BIN", "ffmpeg"),
@@ -145,6 +176,13 @@ func Load(path string) (Config, error) {
 		S3AccessKey: getEnv("S3_ACCESS_KEY", ""),
 		S3SecretKey: getEnv("S3_SECRET_KEY", ""),
 	}
+	if cfg.LocalPublicURL != "" {
+		cfg.WebRTCBase = cfg.LocalPublicURL
+		cfg.Origins = append([]string{cfg.LocalPublicURL}, cfg.Origins...)
+	}
+	if cfg.FrontendOrigin != "" {
+		cfg.Origins = append([]string{cfg.FrontendOrigin}, cfg.Origins...)
+	}
 	if err := validate(cfg); err != nil {
 		return cfg, err
 	}
@@ -152,6 +190,54 @@ func Load(path string) (Config, error) {
 }
 
 func validate(c Config) error {
+	if !ValidID(c.ArenaID) || !ValidID(c.EngineID) {
+		return fmt.Errorf("invalid ARENA_ID or ENGINE_ID")
+	}
+	for _, raw := range []string{c.LocalPublicURL, c.FrontendOrigin} {
+		if raw == "" {
+			continue
+		}
+		u, err := url.Parse(raw)
+		if err != nil || u.Host == "" || u.User != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Path != "" || u.RawQuery != "" || u.Fragment != "" {
+			return fmt.Errorf("public URLs must be HTTP(S) origins without a path")
+		}
+	}
+	for _, endpoint := range []string{c.CloudSyncURL, c.CloudCommandsURL, c.CloudPackagesURL} {
+		if endpoint == "" {
+			continue
+		}
+		if !validURL(endpoint, "https", "http") || len(c.CloudToken) < 32 {
+			return fmt.Errorf("cloud endpoints require a URL and CLOUD_ENGINE_TOKEN of at least 32 characters")
+		}
+		u, _ := url.Parse(endpoint)
+		if u.User != nil {
+			return fmt.Errorf("cloud endpoint must not contain URL credentials")
+		}
+		if u.Scheme != "https" && u.Hostname() != "localhost" && !net.ParseIP(u.Hostname()).IsLoopback() {
+			return fmt.Errorf("cloud credentials require HTTPS outside loopback")
+		}
+	}
+	if c.DNSAddress != "" {
+		if c.LocalPublicURL == "" || net.ParseIP(c.LANServerIP).To4() == nil {
+			return fmt.Errorf("local DNS requires LOCAL_PUBLIC_URL and LAN_SERVER_IP")
+		}
+		if _, _, err := net.SplitHostPort(c.DNSAddress); err != nil {
+			return fmt.Errorf("invalid DNS_LISTEN_ADDR")
+		}
+		for _, upstream := range c.DNSUpstreams {
+			host, port, err := net.SplitHostPort(strings.TrimSpace(upstream))
+			n, _ := strconv.Atoi(port)
+			if err != nil || net.ParseIP(host) == nil || n < 1 || n > 65535 {
+				return fmt.Errorf("DNS_UPSTREAMS requires IP:port values")
+			}
+		}
+	}
+	if c.BackupDir != "" {
+		rel, err := filepath.Rel(c.DataDir, c.BackupDir)
+		if err == nil && (rel == "." || (!strings.HasPrefix(rel, ".."+string(filepath.Separator)) && rel != ".." && !filepath.IsAbs(rel))) {
+			return fmt.Errorf("BACKUP_DIR must be outside DATA_DIR, on separate backup storage")
+		}
+	}
 	if !(c.Threshold >= -120 && c.Threshold <= 0) {
 		return fmt.Errorf("invalid AUDIO_ACTIVE_DBFS")
 	}

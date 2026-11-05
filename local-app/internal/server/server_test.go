@@ -22,32 +22,27 @@ func (m *trackedModule) Start() error {
 	return nil
 }
 func (m *trackedModule) Close() { *m.events = append(*m.events, "close:"+m.name); m.open = false }
-func TestStartupFailureClosesAllConstructedModules(t *testing.T) {
+func TestMediaStartupFailureDoesNotCloseHealthyModules(t *testing.T) {
 	events := []string{}
 	saving := &trackedModule{"saving", &events, false, false}
 	video := &trackedModule{"video", &events, true, false}
 	audio := &trackedModule{"audio", &events, false, false}
-	stop, e := startModules(saving, video, audio)
-	if e == nil || stop != nil {
-		t.Fatal("startup failure was ignored")
-	}
-	want := []string{"start:saving", "start:video", "close:audio", "close:video", "close:saving"}
+	stop := startIndependentModules(saving, video, audio)
+	want := []string{"start:saving", "start:video", "close:video", "start:audio"}
 	if !reflect.DeepEqual(events, want) {
 		t.Fatal(events)
 	}
-	if saving.open || video.open || audio.open {
-		t.Fatal("startup leaked a module")
+	if !saving.open || video.open || !audio.open {
+		t.Fatal("failure disabled a healthy module")
 	}
+	stop()
 }
 func TestShutdownFinalizesSavingFirstAndIsIdempotent(t *testing.T) {
 	events := []string{}
 	saving := &trackedModule{"saving", &events, false, false}
 	video := &trackedModule{"video", &events, false, false}
 	audio := &trackedModule{"audio", &events, false, false}
-	stop, e := startModules(saving, video, audio)
-	if e != nil {
-		t.Fatal(e)
-	}
+	stop := startIndependentModules(saving, video, audio)
 	stop()
 	stop()
 	want := []string{"start:saving", "start:video", "start:audio", "close:saving", "close:video", "close:audio"}

@@ -36,6 +36,7 @@ func TestConfigValidation(t *testing.T) {
 func prepareConfigEnv(t *testing.T) {
 	t.Helper()
 	keys := []string{
+		"ARENA_ID", "ENGINE_ID", "BACKUP_DIR", "CLOUD_SYNC_URL", "CLOUD_COMMANDS_URL", "CLOUD_PACKAGES_URL", "CLOUD_ENGINE_TOKEN", "FRONTEND_ORIGIN", "LOCAL_PUBLIC_URL", "LAN_SERVER_IP", "DNS_LISTEN_ADDR", "DNS_UPSTREAMS",
 		"HTTP_ADDR", "API_TOKEN", "DATA_DIR", "RUNTIME_DIR", "FFMPEG_BIN", "MEDIAMTX_BIN",
 		"RTSP_ADDR", "RTSP_BASE_URL", "WEBRTC_ADDR", "WEBRTC_PUBLIC_URL", "WEBRTC_LOCAL_UDP_ADDR",
 		"WEBRTC_HOSTS", "ALLOWED_ORIGINS", "MEDIA_READ_CIDRS", "CHANNELS_JSON",
@@ -190,5 +191,35 @@ func TestLoadDoesNotSearchParentDirectories(t *testing.T) {
 	c, err := Load(".env")
 	if err != nil || c.Threshold != -35 {
 		t.Fatal("Load searched a parent .env")
+	}
+}
+
+func TestOfflineDeploymentConfiguration(t *testing.T) {
+	prepareConfigEnv(t)
+	t.Setenv("DATA_DIR", t.TempDir())
+	t.Setenv("BACKUP_DIR", t.TempDir())
+	t.Setenv("LOCAL_PUBLIC_URL", "https://lan-dev.example.test")
+	t.Setenv("FRONTEND_ORIGIN", "https://dev.example.test")
+	t.Setenv("LAN_SERVER_IP", "192.168.2.151")
+	t.Setenv("DNS_LISTEN_ADDR", "192.168.2.151:53")
+	t.Setenv("CLOUD_SYNC_URL", "https://api.example.test/api/v1/engines/engine01/changes")
+	t.Setenv("CLOUD_ENGINE_TOKEN", strings.Repeat("m", 32))
+	cfg, err := Load(filepath.Join(t.TempDir(), "missing.env"))
+	if err != nil || cfg.WebRTCBase != "https://lan-dev.example.test" || cfg.ArenaID != "arena01" || cfg.EngineID != "engine01" {
+		t.Fatal("deployment configuration not applied", err)
+	}
+	for key, value := range map[string]string{
+		"CLOUD_SYNC_URL":     "http://api.example.test/changes",
+		"CLOUD_ENGINE_TOKEN": "short",
+		"DNS_UPSTREAMS":      "external-name.example:53",
+		"BACKUP_DIR":         filepath.Join(cfg.DataDir, "backup"),
+		"LOCAL_PUBLIC_URL":   "https://arena.example/path",
+	} {
+		t.Run(key, func(t *testing.T) {
+			t.Setenv(key, value)
+			if _, err := Load(filepath.Join(t.TempDir(), "missing.env")); err == nil {
+				t.Fatal("invalid deployment configuration accepted")
+			}
+		})
 	}
 }

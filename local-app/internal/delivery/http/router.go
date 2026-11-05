@@ -4,18 +4,21 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
 	"kicau.local/edge/config"
-	audioDelivery "kicau.local/edge/internal/audio/delivery"
+	arenaDelivery "kicau.local/edge/internal/core/arena/delivery"
 	"kicau.local/edge/internal/delivery/http/middleware"
-	savingDelivery "kicau.local/edge/internal/saving/delivery"
-	streamingDelivery "kicau.local/edge/internal/streaming/delivery"
-	videoDelivery "kicau.local/edge/internal/video/delivery"
+	audioDelivery "kicau.local/edge/internal/mediaengine/audio/delivery"
+	savingDelivery "kicau.local/edge/internal/mediaengine/saving/delivery"
+	streamingDelivery "kicau.local/edge/internal/mediaengine/streaming/delivery"
+	videoDelivery "kicau.local/edge/internal/mediaengine/video/delivery"
 )
 
 type Handlers struct {
+	Arena     *arenaDelivery.Handler
 	Video     *videoDelivery.Handler
 	Audio     *audioDelivery.Handler
 	Streaming *streamingDelivery.Handler
@@ -25,16 +28,24 @@ type Handlers struct {
 func Router(c config.Config, handlers Handlers) *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
+	_ = r.SetTrustedProxies([]string{"127.0.0.1", "::1"})
 	r.Use(gin.CustomRecoveryWithWriter(io.Discard, func(c *gin.Context, _ any) {
 		slog.Error("HTTP panic recovered")
 		c.AbortWithStatusJSON(500, gin.H{"error": "internal server error"})
 	}))
 	r.Use(func(c *gin.Context) {
-		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 65536)
+		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 2*1024*1024)
 		c.Header("X-Content-Type-Options", "nosniff")
+		if strings.HasPrefix(c.Request.URL.Path, "/api/") {
+			c.Header("Cache-Control", "no-store")
+		}
 		c.Next()
 	})
 	r.GET("/healthz", health)
+	r.GET("/", func(c *gin.Context) { c.Redirect(307, "/arena/") })
+	if handlers.Arena != nil {
+		arenaDelivery.RegisterRoutes(r, handlers.Arena, middleware.Auth(c.Token, c.Origins), middleware.Origin(c.Origins))
+	}
 	g := r.Group("/api/v1", middleware.Auth(c.Token, c.Origins))
 	g.OPTIONS("/*path", preflight)
 	videoDelivery.RegisterRoutes(g, handlers.Video)

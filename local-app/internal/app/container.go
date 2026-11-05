@@ -2,39 +2,55 @@ package app
 
 import (
 	"context"
+	"log/slog"
 	"path/filepath"
+	"strings"
 
 	"kicau.local/edge/config"
-	audioDelivery "kicau.local/edge/internal/audio/delivery"
-	"kicau.local/edge/internal/audio/metricsclient"
-	"kicau.local/edge/internal/audio/pubsub"
-	audioUC "kicau.local/edge/internal/audio/usecase"
-	audioWorker "kicau.local/edge/internal/audio/worker"
-	channelRepo "kicau.local/edge/internal/channel/repository"
+	"kicau.local/edge/internal/apperror"
+	arenaDelivery "kicau.local/edge/internal/core/arena/delivery"
+	arenaRepo "kicau.local/edge/internal/core/arena/repository"
+	arenaUC "kicau.local/edge/internal/core/arena/usecase"
+	arenaWorker "kicau.local/edge/internal/core/arena/worker"
 	delivery "kicau.local/edge/internal/delivery/http"
-	"kicau.local/edge/internal/media/ffmpeg"
-	"kicau.local/edge/internal/media/mediamtx"
-	savingDelivery "kicau.local/edge/internal/saving/delivery"
-	savingRepo "kicau.local/edge/internal/saving/repository"
-	savingUC "kicau.local/edge/internal/saving/usecase"
-	savingWorker "kicau.local/edge/internal/saving/worker"
-	"kicau.local/edge/internal/storage/filesystem"
-	"kicau.local/edge/internal/storage/s3"
-	streamingDelivery "kicau.local/edge/internal/streaming/delivery"
-	streamingUC "kicau.local/edge/internal/streaming/usecase"
-	streamingWorker "kicau.local/edge/internal/streaming/worker"
-	videoDelivery "kicau.local/edge/internal/video/delivery"
-	videoUC "kicau.local/edge/internal/video/usecase"
+	operationUC "kicau.local/edge/internal/edgetocloud/operation/usecase"
+	syncClient "kicau.local/edge/internal/edgetocloud/synchronization/client"
+	syncUC "kicau.local/edge/internal/edgetocloud/synchronization/usecase"
+	"kicau.local/edge/internal/infra/storage/filesystem"
+	"kicau.local/edge/internal/infra/storage/s3"
+	audioDelivery "kicau.local/edge/internal/mediaengine/audio/delivery"
+	"kicau.local/edge/internal/mediaengine/audio/metricsclient"
+	"kicau.local/edge/internal/mediaengine/audio/pubsub"
+	audioUC "kicau.local/edge/internal/mediaengine/audio/usecase"
+	audioWorker "kicau.local/edge/internal/mediaengine/audio/worker"
+	channelRepo "kicau.local/edge/internal/mediaengine/channel/repository"
+	"kicau.local/edge/internal/mediaengine/media/ffmpeg"
+	"kicau.local/edge/internal/mediaengine/media/mediamtx"
+	savingDelivery "kicau.local/edge/internal/mediaengine/saving/delivery"
+	savingModel "kicau.local/edge/internal/mediaengine/saving/model"
+	savingRepo "kicau.local/edge/internal/mediaengine/saving/repository"
+	savingUC "kicau.local/edge/internal/mediaengine/saving/usecase"
+	savingWorker "kicau.local/edge/internal/mediaengine/saving/worker"
+	streamingDelivery "kicau.local/edge/internal/mediaengine/streaming/delivery"
+	streamingUC "kicau.local/edge/internal/mediaengine/streaming/usecase"
+	streamingWorker "kicau.local/edge/internal/mediaengine/streaming/worker"
+	videoDelivery "kicau.local/edge/internal/mediaengine/video/delivery"
+	videoUC "kicau.local/edge/internal/mediaengine/video/usecase"
 )
 
 type Container struct {
-	ChannelCatalog *channelRepo.Catalog
-	MediaServer    *mediamtx.Server
-	Video          *videoUC.UseCase
-	Audio          *audioUC.UseCase
-	Streaming      *streamingUC.UseCase
-	Saving         *savingUC.UseCase
-	Handlers       delivery.Handlers
+	ArenaStore      *arenaRepo.SQLite
+	Arena           *arenaUC.UseCase
+	Background      *arenaWorker.Worker
+	Synchronization *syncUC.UseCase
+	Commands        *syncUC.Commands
+	ChannelCatalog  *channelRepo.Catalog
+	MediaServer     *mediamtx.Server
+	Video           *videoUC.UseCase
+	Audio           *audioUC.UseCase
+	Streaming       *streamingUC.UseCase
+	Saving          *savingUC.UseCase
+	Handlers        delivery.Handlers
 }
 
 // NewMedia is also used by -render-config: rendering does not start processes.
@@ -55,16 +71,15 @@ func NewContainer(ctx context.Context, c config.Config) (*Container, error) {
 	if e != nil {
 		return nil, e
 	}
-	repo, e := savingRepo.NewFiles(filepath.Join(c.DataDir, "queue"))
-	if e != nil {
-		return nil, e
+	recordingFiles, recordingError := savingRepo.NewFiles(filepath.Join(c.DataDir, "queue"))
+	var repo savingUC.RecordingRepository = recordingFiles
+	if recordingError != nil {
+		slog.Warn("recording repository unavailable; judging remains available")
+		repo = unavailableRecordings{}
 	}
 	var objectStorage savingUC.Storage
 	if c.S3Bucket != "" {
-		objectStorage, e = s3.New(ctx, s3.Options{Endpoint: c.S3Endpoint, Region: c.S3Region, Bucket: c.S3Bucket, AccessKey: c.S3AccessKey, SecretKey: c.S3SecretKey})
-		if e != nil {
-			return nil, e
-		}
+		objectStorage = s3.NewLazy(s3.Options{Endpoint: c.S3Endpoint, Region: c.S3Region, Bucket: c.S3Bucket, AccessKey: c.S3AccessKey, SecretKey: c.S3SecretKey})
 	}
 	var remote audioUC.MetricSender
 	if c.BackendURL != "" {
@@ -77,7 +92,43 @@ func NewContainer(ctx context.Context, c config.Config) (*Container, error) {
 	audio := audioUC.New(audioUC.Options{SampleRate: c.SampleRate, Threshold: c.Threshold}, sources, ffmpeg.AudioDecoder{Binary: c.FFmpeg}, pubsub.New(), remote, audioJobs)
 	streaming := streamingUC.New(sources, ffmpeg.Restreamer{Binary: c.FFmpeg}, c.Destinations, streamingJobs)
 	saving := savingUC.New(savingUC.Options{DataDir: c.DataDir, MaxRound: c.MaxRound, MinFreeBytes: c.MinFreeBytes}, sources, repo, ffmpeg.Recorder{Binary: c.FFmpeg}, objectStorage, filesystem.Disk{}, savingJobs)
-	return &Container{ChannelCatalog: sources, MediaServer: mediaServer, Video: video, Audio: audio, Streaming: streaming, Saving: saving, Handlers: delivery.Handlers{Video: videoDelivery.New(video), Audio: audioDelivery.New(audio, c.Origins), Streaming: streamingDelivery.New(streaming), Saving: savingDelivery.New(saving)}}, nil
+	store, err := arenaRepo.Open(filepath.Join(c.DataDir, "arena.sqlite"))
+	if err != nil {
+		audioJobs.Close()
+		streamingJobs.Close()
+		savingJobs.Close()
+		return nil, err
+	}
+	var packages arenaUC.PackageSource
+	if c.CloudPackagesURL != "" {
+		packages = syncClient.New(c.CloudPackagesURL, c.CloudToken)
+	}
+	arena := arenaUC.New(store, mediaServer, arenaUC.Options{ArenaID: c.ArenaID, EngineID: c.EngineID, BackupDir: c.BackupDir, PackageSource: packages})
+	if err := arena.Recover(ctx); err != nil {
+		store.Close()
+		audioJobs.Close()
+		streamingJobs.Close()
+		savingJobs.Close()
+		return nil, err
+	}
+	var cloud syncUC.Cloud
+	if c.CloudSyncURL != "" {
+		cloud = syncClient.New(c.CloudSyncURL, c.CloudToken)
+	}
+	var commands syncUC.CommandCloud
+	if c.CloudCommandsURL != "" {
+		commands = syncClient.New(c.CloudCommandsURL, c.CloudToken)
+	}
+	return &Container{ArenaStore: store, Arena: arena, Background: arenaWorker.New(), Synchronization: syncUC.New(store, cloud), Commands: syncUC.NewCommands(store, commands, operationUC.New(streaming, saving), c.ArenaID, c.EngineID), ChannelCatalog: sources, MediaServer: mediaServer, Video: video, Audio: audio, Streaming: streaming, Saving: saving, Handlers: delivery.Handlers{Arena: arenaDelivery.New(arena, strings.HasPrefix(c.LocalPublicURL, "https://")), Video: videoDelivery.New(video), Audio: audioDelivery.New(audio, c.Origins), Streaming: streamingDelivery.New(streaming), Saving: savingDelivery.New(saving)}}, nil
+}
+
+type unavailableRecordings struct{}
+
+func (unavailableRecordings) Save(context.Context, savingModel.Recording) error {
+	return apperror.ErrUnavailable
+}
+func (unavailableRecordings) List(context.Context) ([]savingModel.Recording, error) {
+	return nil, apperror.ErrUnavailable
 }
 
 func mediaSources(catalog *channelRepo.Catalog) []mediamtx.Source {
