@@ -1,5 +1,7 @@
 # Cloud exchange
 
+Migrasi PostgreSQL dan contoh query untuk fase CRUD tersedia di [panduan SQL](db/README.md).
+
 Penerima sinkronisasi untuk arena offline-first. Layanan ini menyimpan paket event yang disiapkan, perubahan arena, dan antrean perintah media. Website pendaftaran, CRUD peserta, penyusunan paket dari data bisnis, serta publikasi hasil belum diimplementasikan di sini.
 
 ## Jalankan

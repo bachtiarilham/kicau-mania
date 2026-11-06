@@ -1,0 +1,17 @@
+DROP VIEW cloud_read.v_round_recordings;
+DROP VIEW cloud_read.v_round_scores;
+DROP VIEW cloud_read.v_score_criteria;
+DROP VIEW cloud_read.v_user_subscriptions;
+DROP VIEW cloud_read.v_plans;
+DROP VIEW cloud_read.v_user_sessions;
+DROP VIEW cloud_read.v_user_auth_providers;
+DROP VIEW cloud_read.v_roles;
+DROP VIEW cloud_read.v_users;
+DROP VIEW cloud_read.v_devices;
+DROP VIEW cloud_read.v_lapaks;
+DROP VIEW cloud_read.v_bird_owners;
+DROP VIEW cloud_read.v_birds;
+DROP VIEW cloud_read.v_round_participants;
+DROP VIEW cloud_read.v_rounds;
+DROP VIEW cloud_read.v_events;
+DROP SCHEMA cloud_read;
