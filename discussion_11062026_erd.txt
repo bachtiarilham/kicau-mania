@@ -1,0 +1,25 @@
+1. 1 user lebih dari 1 role
+2. user_id log in boleh 3 device maksimal
+3. video url dikirim ke si register (bukan owner) 
+4. 1 bird 1 owner (lock)
+5. lapak, rename jadi gantangan
+6. asset_bird_owner di delete
+6. data arena 
+7. tabel registrasi apakah dipisah atau digabung ke user? 
+   secara bisnis : 
+	1. bisa offline lalu di input manual
+	2. registrasi online (dengan syarat udah bayar)
+8. ada pengkategorian lomba (misal biasa dan VIP)
+
+setiap sesi 10 menit
+break 15 menit penjurian
+10 menit sesi berikutnya 
+jam 12 berhenti
+jam 1 lanjut lagi
+maksimal jam 5 
+
+start/stop by button. 
+
+juri hanya bisa menilai pada sesi penjurian. 
+
+data media by sistem, gak bisa diubah oleh user. 
