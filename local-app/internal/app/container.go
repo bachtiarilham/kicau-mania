@@ -12,19 +12,19 @@ import (
 	cloudUC "kicau.local/edge/internal/cloud/usecase"
 	cloudWorker "kicau.local/edge/internal/cloud/worker"
 	delivery "kicau.local/edge/internal/delivery"
+	channelDelivery "kicau.local/edge/internal/delivery/rest/channel"
 	engineDelivery "kicau.local/edge/internal/delivery/rest/engine"
 	savingDelivery "kicau.local/edge/internal/delivery/rest/saving"
 	streamingDelivery "kicau.local/edge/internal/delivery/rest/streaming"
-	videoDelivery "kicau.local/edge/internal/delivery/rest/video"
 	websocketDelivery "kicau.local/edge/internal/delivery/websocket"
 	whepDelivery "kicau.local/edge/internal/delivery/whep"
 	"kicau.local/edge/internal/infra/storage/filesystem"
 	"kicau.local/edge/internal/infra/storage/s3"
-	"kicau.local/edge/internal/mediaengine/audio/metricsclient"
-	"kicau.local/edge/internal/mediaengine/audio/pubsub"
+	audioService "kicau.local/edge/internal/mediaengine/audio/service"
 	audioUC "kicau.local/edge/internal/mediaengine/audio/usecase"
 	audioWorker "kicau.local/edge/internal/mediaengine/audio/worker"
 	channelRepo "kicau.local/edge/internal/mediaengine/channel/repository"
+	channelUC "kicau.local/edge/internal/mediaengine/channel/usecase"
 	"kicau.local/edge/internal/mediaengine/media/ffmpeg"
 	"kicau.local/edge/internal/mediaengine/media/mediamtx"
 	savingRepo "kicau.local/edge/internal/mediaengine/saving/repository"
@@ -32,7 +32,6 @@ import (
 	savingWorker "kicau.local/edge/internal/mediaengine/saving/worker"
 	streamingUC "kicau.local/edge/internal/mediaengine/streaming/usecase"
 	streamingWorker "kicau.local/edge/internal/mediaengine/streaming/worker"
-	videoUC "kicau.local/edge/internal/mediaengine/video/usecase"
 )
 
 type Container struct {
@@ -41,7 +40,7 @@ type Container struct {
 	Commands       *cloudUC.Commands
 	ChannelCatalog *channelRepo.Catalog
 	MediaServer    *mediamtx.Server
-	Video          *videoUC.UseCase
+	Channels       *channelUC.UseCase
 	Audio          *audioUC.UseCase
 	Streaming      *streamingUC.UseCase
 	Saving         *savingUC.UseCase
@@ -80,13 +79,13 @@ func NewContainer(ctx context.Context, c config.Config) (*Container, error) {
 	}
 	var remote audioUC.MetricSender
 	if c.BackendURL != "" {
-		remote = metricsclient.New(c.BackendURL, c.BackendToken)
+		remote = audioService.NewMetricsClient(c.BackendURL, c.BackendToken)
 	}
-	video := videoUC.New(sources, mediaServer)
+	channels := channelUC.New(sources, mediaServer)
 	audioJobs := audioWorker.New()
 	streamingJobs := streamingWorker.New()
 	savingJobs := savingWorker.New()
-	audio := audioUC.New(audioUC.Options{SampleRate: c.SampleRate, Threshold: c.Threshold}, sources, ffmpeg.AudioDecoder{Binary: c.FFmpeg}, pubsub.New(), remote, audioJobs)
+	audio := audioUC.New(audioUC.Options{SampleRate: c.SampleRate, Threshold: c.Threshold}, sources, ffmpeg.AudioDecoder{Binary: c.FFmpeg}, audioService.NewBroadcaster(), remote, audioJobs)
 	streaming := streamingUC.New(sources, ffmpeg.Restreamer{Binary: c.FFmpeg}, c.Destinations, streamingJobs)
 	saving := savingUC.New(savingUC.Options{DataDir: c.DataDir, MaxRound: c.MaxRound, MinFreeBytes: c.MinFreeBytes}, sources, repo, ffmpeg.Recorder{Binary: c.FFmpeg}, objectStorage, filesystem.Disk{}, savingJobs)
 	engine := cloudUC.NewEngine(cloudUC.EngineOptions{
@@ -106,8 +105,8 @@ func NewContainer(ctx context.Context, c config.Config) (*Container, error) {
 	return &Container{
 		Background: cloudWorker.New(), Engine: engine,
 		Commands:       cloudUC.NewCommands(journal, commands, cloudUC.NewCommandExecutor(streaming, saving), c.ArenaID, c.EngineID),
-		ChannelCatalog: sources, MediaServer: mediaServer, Video: video, Audio: audio, Streaming: streaming, Saving: saving,
-		Handlers: delivery.Handlers{Engine: engineDelivery.New(engine), WHEP: playback, Video: videoDelivery.New(video), WebSocket: websocketDelivery.New(audio, c.Origins), Streaming: streamingDelivery.New(streaming), Saving: savingDelivery.New(saving)},
+		ChannelCatalog: sources, MediaServer: mediaServer, Channels: channels, Audio: audio, Streaming: streaming, Saving: saving,
+		Handlers: delivery.Handlers{Engine: engineDelivery.New(engine), WHEP: playback, Channels: channelDelivery.New(channels), WebSocket: websocketDelivery.New(audio, c.Origins), Streaming: streamingDelivery.New(streaming), Saving: savingDelivery.New(saving)},
 	}, nil
 }
 

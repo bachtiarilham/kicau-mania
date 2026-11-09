@@ -16,15 +16,16 @@ import (
 	"github.com/gorilla/websocket"
 
 	"kicau.local/edge/config"
+	channelDelivery "kicau.local/edge/internal/delivery/rest/channel"
 	savingDelivery "kicau.local/edge/internal/delivery/rest/saving"
 	streamingDelivery "kicau.local/edge/internal/delivery/rest/streaming"
-	videoDelivery "kicau.local/edge/internal/delivery/rest/video"
 	websocketDelivery "kicau.local/edge/internal/delivery/websocket"
 	"kicau.local/edge/internal/infra/storage/filesystem"
-	"kicau.local/edge/internal/mediaengine/audio/pubsub"
+	audioService "kicau.local/edge/internal/mediaengine/audio/service"
 	audioUC "kicau.local/edge/internal/mediaengine/audio/usecase"
 	audioWorker "kicau.local/edge/internal/mediaengine/audio/worker"
 	channelRepo "kicau.local/edge/internal/mediaengine/channel/repository"
+	channelUC "kicau.local/edge/internal/mediaengine/channel/usecase"
 	"kicau.local/edge/internal/mediaengine/media"
 	"kicau.local/edge/internal/mediaengine/media/mediamtx"
 	savingModel "kicau.local/edge/internal/mediaengine/saving/model"
@@ -33,7 +34,6 @@ import (
 	savingWorker "kicau.local/edge/internal/mediaengine/saving/worker"
 	streamingUC "kicau.local/edge/internal/mediaengine/streaming/usecase"
 	streamingWorker "kicau.local/edge/internal/mediaengine/streaming/worker"
-	videoUC "kicau.local/edge/internal/mediaengine/video/usecase"
 )
 
 type observed struct {
@@ -94,7 +94,7 @@ func (f *fakeMedia) Audio(ctx context.Context, source string, write func([]byte)
 type testDisk struct{ filesystem.Disk }
 
 type testContainer struct {
-	Video     *videoUC.UseCase
+	Channels  *channelUC.UseCase
 	Audio     *audioUC.UseCase
 	Streaming *streamingUC.UseCase
 	Saving    *savingUC.UseCase
@@ -117,11 +117,11 @@ func fixture(t *testing.T) (*testContainer, config.Config, *fakeMedia) {
 		t.Fatal(e)
 	}
 	media := &fakeMedia{events: make(chan observed, 10)}
-	v := videoUC.New(catalog, mediaServer)
-	a := audioUC.New(audioUC.Options{SampleRate: 16000, Threshold: -35}, catalog, media, pubsub.New(), nil, audioWorker.New())
+	v := channelUC.New(catalog, mediaServer)
+	a := audioUC.New(audioUC.Options{SampleRate: 16000, Threshold: -35}, catalog, media, audioService.NewBroadcaster(), nil, audioWorker.New())
 	s := streamingUC.New(catalog, media, map[string]string{"youtube": "rtmps://example.test/live/key"}, streamingWorker.New())
 	save := savingUC.New(savingUC.Options{DataDir: dir, MaxRound: time.Hour, MinFreeBytes: 100}, catalog, repo, media, nil, testDisk{}, savingWorker.New())
-	c := &testContainer{Video: v, Audio: a, Streaming: s, Saving: save, Handlers: Handlers{Video: videoDelivery.New(v), WebSocket: websocketDelivery.New(a, cfg.Origins), Streaming: streamingDelivery.New(s), Saving: savingDelivery.New(save)}}
+	c := &testContainer{Channels: v, Audio: a, Streaming: s, Saving: save, Handlers: Handlers{Channels: channelDelivery.New(v), WebSocket: websocketDelivery.New(a, cfg.Origins), Streaming: streamingDelivery.New(s), Saving: savingDelivery.New(save)}}
 	t.Cleanup(func() {
 		c.Handlers.WebSocket.Close()
 		save.Close()
@@ -176,7 +176,7 @@ func TestStopStreamingDoesNotStopOtherDomains(t *testing.T) {
 		default:
 		}
 	}
-	channels := c.Video.Channels()
+	channels := c.Channels.Channels()
 	if len(channels) != 1 || channels[0].WHEP != "http://192.0.2.2:8889/api/v1/playback/lapak01/whep" {
 		t.Fatal("restream changed local video metadata")
 	}

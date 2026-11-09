@@ -55,7 +55,7 @@ Lihat [kontrak cloud](ENGINE-CLOUD-CONTRACT.md) untuk payload dan batas implemen
 
 ## Delivery berdasarkan protokol
 
-Gateway WHEP berada di internal/delivery/whep. Handler dan pengelola koneksi WebSocket berada di internal/delivery/websocket; handler meminta subscription melalui interface SubscribeAudio/SubscribeMetrics, lalu transport mengirim frame. Container membuat kedua handler, router HTTP memasang middleware origin/auth yang sesuai, dan shutdown menutup koneksi melalui WebSocket.Close(). Katalog channel REST tetap di delivery/rest/video.
+Gateway WHEP berada di internal/delivery/whep. Handler dan pengelola koneksi WebSocket berada di internal/delivery/websocket; handler meminta subscription melalui interface SubscribeAudio/SubscribeMetrics, lalu transport mengirim frame. Container membuat kedua handler, router HTTP memasang middleware origin/auth yang sesuai, dan shutdown menutup koneksi melalui WebSocket.Close(). Katalog channel REST tetap di delivery/rest/channel.
 
 ## Jalur baca domain cloud
 
@@ -65,3 +65,10 @@ Gateway WHEP berada di internal/delivery/whep. Handler dan pengelola koneksi Web
 - Metadata: `usecase/recording_metadata.go` → journal → client → acknowledgment. Format hash dan urutan persistensi tidak berubah.
 
 Nama file relatif di atas berada di bawah `internal/cloud`, kecuali handler WHEP dan domain media.
+## Membaca alur media
+
+Katalog channel: `delivery/rest/channel` → `mediaengine/channel/usecase` → katalog repository dan interface playback. Identitas tetap berupa Channel tanpa kredensial; hasil playback berupa PlaybackChannel. ChannelResponse adalah DTO HTTP di handler.
+
+Audio: UseCase tetap meminta interface Broadcaster/MetricSender; container memasang implementasi dari `mediaengine/audio/service`. Worker capture, retry, dan antrean metrik tetap berjalan seperti sebelumnya.
+
+Recording berada dalam satu package `mediaengine/saving/usecase`: `saving.go` untuk state/startup/shutdown, `session.go` untuk lifecycle sesi, `query.go` untuk daftar/pencarian, `recovery.go` untuk startup recovery, `upload.go` untuk upload/retry, dan `limits.go` untuk kapasitas/durasi. Seluruh file memakai instance serta mutex yang sama.

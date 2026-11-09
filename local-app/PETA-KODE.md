@@ -26,9 +26,8 @@ Lihat [alur end-to-end](ALUR-END-TO-END.md) dan [kontrak cloud](ENGINE-CLOUD-CON
 | internal/delivery/websocket | Handler audio/metrik dan lifecycle koneksi WebSocket. |
 | internal/apperror | Error aplikasi bersama. |
 | internal/core/identifier | Validasi format identifier. |
-| internal/mediaengine/channel | Identitas channel dan katalog sumber tanpa membocorkan kredensial. |
-| internal/mediaengine/video | Katalog channel dan informasi playback untuk REST. |
-| internal/mediaengine/audio | Decode PCM, analisis/distribusi audio dan metrik. |
+| internal/mediaengine/channel | Identitas, katalog sumber, dan informasi playback tanpa membocorkan kredensial. |
+| internal/mediaengine/audio | Decode PCM, analisis audio, worker, dan service broadcasting/pengiriman metrik. |
 | internal/mediaengine/streaming | Lifecycle restream. |
 | internal/mediaengine/saving | Rekaman, manifest, antrean upload, recovery media. |
 | internal/mediaengine/media | Kontrak proses serta adapter FFmpeg/MediaMTX. |
@@ -38,7 +37,7 @@ Lihat [alur end-to-end](ALUR-END-TO-END.md) dan [kontrak cloud](ENGINE-CLOUD-CON
 
 Handler membaca request dan memanggil UseCase. UseCase mengoordinasi aturan/layanan melalui interface. Repository mengelola penyimpanan dan tidak memanggil repository lain. Adapter infrastruktur tidak bergantung pada handler atau UseCase.
 
-Handler REST menerima interface kecil yang didefinisikan di file handler pemakainya: `RecordingUseCase` untuk saving, `RestreamUseCase` untuk streaming, `ChannelUseCase` untuk video, dan `EngineUseCase` untuk status engine. Container tetap membangun implementasi konkret dan menyuntikkannya melalui constructor. Interface engine memakai tipe hasil `usecase.EngineStatus` yang sudah ada; model tidak dipindahkan. WHEP, WebSocket, dan health cloud-app juga sudah menerima interface. DTO, helper response, dan container tetap konkret.
+Handler REST menerima interface kecil yang didefinisikan di file handler pemakainya: `RecordingUseCase` untuk saving, `RestreamUseCase` untuk streaming, `ChannelUseCase` untuk katalog channel, dan `EngineUseCase` untuk status engine. Container tetap membangun implementasi konkret dan menyuntikkannya melalui constructor. Interface engine memakai tipe hasil `usecase.EngineStatus` yang sudah ada; model tidak dipindahkan. WHEP, WebSocket, dan health cloud-app juga sudah menerima interface. DTO, helper response, dan container tetap konkret.
 
 ## Indeks file
 
@@ -192,13 +191,6 @@ Handler REST menerima interface kecil yang didefinisikan di file handler pemakai
 | [websocket.go](internal/delivery/websocket/websocket.go) | Upgrade WebSocket, pemeriksaan origin, pengiriman frame, ping/pong, deadline, dan penutupan koneksi/subscription. |
 
 
-### internal/mediaengine/audio/metricsclient
-
-| File | Fungsi |
-| --- | --- |
-| [client.go](internal/mediaengine/audio/metricsclient/client.go) | Mengirim satu objek metrik JSON ke `BACKEND_METRICS_URL` memakai Bearer token dan timeout. Respons 2xx dianggap diterima; redirect tidak diikuti. |
-
-
 ### internal/mediaengine/audio/model
 
 | File | Fungsi |
@@ -206,13 +198,6 @@ Handler REST menerima interface kecil yang didefinisikan di file handler pemakai
 | [analyzer_test.go](internal/mediaengine/audio/model/analyzer_test.go) | Menguji hasil perhitungan energi audio. |
 | [analyzer.go](internal/mediaengine/audio/model/analyzer.go) | `Analyze()` menghitung peak, RMS, nilai dBFS, dan durasi aktif dari PCM 16-bit little-endian. |
 | [metric.go](internal/mediaengine/audio/model/metric.go) | Struktur metrik audio per channel, termasuk waktu, peak/RMS, durasi aktif, dan jendela pengukuran. |
-
-
-### internal/mediaengine/audio/pubsub
-
-| File | Fungsi |
-| --- | --- |
-| [broadcaster.go](internal/mediaengine/audio/pubsub/broadcaster.go) | `Broadcaster` mendistribusikan payload berdasarkan topic ke subscriber dalam memori. Subscriber lambat dapat kehilangan frame ketika buffer penuh sehingga capture tidak tertahan. |
 
 
 ### internal/mediaengine/audio/usecase
@@ -302,7 +287,12 @@ Handler REST menerima interface kecil yang didefinisikan di file handler pemakai
 | File | Fungsi |
 | --- | --- |
 | [saving_test.go](internal/mediaengine/saving/usecase/saving_test.go) | Menguji lifecycle rekaman, validasi, recovery partial, disk guard, kegagalan spawn, retry upload setelah restart, dan cleanup kegagalan startup. |
-| [saving.go](internal/mediaengine/saving/usecase/saving.go) | Validasi/reservasi sesi, start/stop recorder, finalisasi, recovery manifest, daftar rekaman, batas disk/durasi, pemilihan file upload, serta state/retry upload. Fungsi `uploadPending()` adalah keputusan bisnis satu putaran upload. |
+| [saving.go](internal/mediaengine/saving/usecase/saving.go) | Dependency, options, state bersama, constructor, startup, abort startup, dan shutdown. |
+| [session.go](internal/mediaengine/saving/usecase/session.go) | Mulai/stop sesi, reservasi, rollback, finalisasi, dan kegagalan reservasi. |
+| [query.go](internal/mediaengine/saving/usecase/query.go) | Pagination rekaman dan pencarian berdasarkan sesi. |
+| [recovery.go](internal/mediaengine/saving/usecase/recovery.go) | Memulihkan status manifest saat startup. |
+| [upload.go](internal/mediaengine/saving/usecase/upload.go) | Memilih upload siap jalan, melakukan retry, dan menyimpan hasil. |
+| [limits.go](internal/mediaengine/saving/usecase/limits.go) | Memeriksa kapasitas disk dan batas durasi rekaman. |
 
 
 ### internal/mediaengine/saving/worker
@@ -348,27 +338,13 @@ Handler REST menerima interface kecil yang didefinisikan di file handler pemakai
 | [worker.go](internal/mediaengine/streaming/worker/worker.go) | Menyimpan pekerjaan per target, jobgroup, serta lifecycle worker. |
 
 
-### internal/delivery/rest/video
+### internal/delivery/rest/channel
 
 | File | Fungsi |
 | --- | --- |
-| [handler.go](internal/delivery/rest/video/handler.go) | Memanggil UseCase daftar channel dan mengirim response HTTP. |
+| [handler.go](internal/delivery/rest/channel/handler.go) | Memanggil UseCase daftar channel dan mengirim response HTTP. |
 
-| [router.go](internal/delivery/rest/video/router.go) | Mendaftarkan `GET /api/v1/channels` pada route group yang diberikan. |
-
-
-### internal/mediaengine/video/model
-
-| File | Fungsi |
-| --- | --- |
-| [model.go](internal/mediaengine/video/model/model.go) | Bentuk data channel video yang disediakan ke konsumen: ID dan URL WHEP. |
-
-
-### internal/mediaengine/video/usecase
-
-| File | Fungsi |
-| --- | --- |
-| [video.go](internal/mediaengine/video/usecase/video.go) | Menggabungkan identitas dari interface katalog dengan URL dari interface playback menjadi daftar channel video. |
+| [router.go](internal/delivery/rest/channel/router.go) | Mendaftarkan `GET /api/v1/channels` pada route group yang diberikan. |
 
 
 ### internal/server
@@ -441,3 +417,16 @@ DATA_DIR berisi media/manifest, commands/, dan media-updates/. RUNTIME_DIR beris
 | File | Fungsi |
 | --- | --- |
 | [scheduler.go](internal/cloud/worker/scheduler.go) | Lifecycle dan penjadwalan pekerjaan polling, heartbeat, serta metadata melalui jobgroup. |
+
+### internal/mediaengine/channel/usecase
+
+| File | Fungsi |
+| --- | --- |
+| [channel.go](internal/mediaengine/channel/usecase/channel.go) | Menggabungkan identitas katalog dan URL playback menjadi PlaybackChannel untuk handler REST. |
+
+### internal/mediaengine/audio/service
+
+| File | Fungsi |
+| --- | --- |
+| [broadcaster.go](internal/mediaengine/audio/service/broadcaster.go) | Broadcaster mendistribusikan audio/metrik berdasarkan topic; subscriber lambat tidak menahan capture. Constructor NewBroadcaster. |
+| [metrics_client.go](internal/mediaengine/audio/service/metrics_client.go) | MetricsClient mengirim metrik JSON melalui HTTP; timeout, header, kebijakan 2xx, dan larangan redirect dipertahankan. Constructor NewMetricsClient. |

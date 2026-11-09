@@ -4,3 +4,9 @@ package model
 type Channel struct {
 	ID string
 }
+
+// PlaybackChannel adds public playback information without exposing source credentials.
+type PlaybackChannel struct {
+	ID   string
+	WHEP string
+}

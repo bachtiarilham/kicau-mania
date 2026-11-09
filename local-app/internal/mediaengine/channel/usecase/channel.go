@@ -1,12 +1,12 @@
+// Package usecase builds the public channel catalog from identities and playback addresses.
 package usecase
 
 import (
-	channelModel "kicau.local/edge/internal/mediaengine/channel/model"
-	"kicau.local/edge/internal/mediaengine/video/model"
+	"kicau.local/edge/internal/mediaengine/channel/model"
 )
 
 type ChannelRepository interface {
-	Channels() []channelModel.Channel
+	Channels() []model.Channel
 }
 
 type Playback interface {
@@ -28,10 +28,10 @@ func New(
 	}
 }
 
-func (u *UseCase) Channels() []model.Channel {
-	out := []model.Channel{}
+func (u *UseCase) Channels() []model.PlaybackChannel {
+	out := []model.PlaybackChannel{}
 	for _, ch := range u.sources.Channels() {
-		out = append(out, model.Channel{
+		out = append(out, model.PlaybackChannel{
 			ID:   ch.ID,
 			WHEP: u.playback.WHEP(ch.ID),
 		})

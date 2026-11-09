@@ -1,5 +1,5 @@
-// Package pubsub broadcasts audio frames and metrics to local subscribers.
-package pubsub
+// Package service provides audio broadcasting and outbound metric delivery.
+package service
 
 import "sync"
 
@@ -8,7 +8,7 @@ type Broadcaster struct {
 	subs map[string]map[chan []byte]struct{}
 }
 
-func New() *Broadcaster { return &Broadcaster{subs: map[string]map[chan []byte]struct{}{}} }
+func NewBroadcaster() *Broadcaster { return &Broadcaster{subs: map[string]map[chan []byte]struct{}{}} }
 func (b *Broadcaster) Subscribe(topic string) (<-chan []byte, func()) {
 	b.mu.Lock()
 	defer b.mu.Unlock()

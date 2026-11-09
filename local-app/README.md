@@ -88,3 +88,12 @@ Pemeriksaan dasar: `go build ./...`. Suite tes tidak dijalankan otomatis sesuai 
 Semua komunikasi engine ke cloud berada di `internal/cloud`. Mulai dari `worker/scheduler.go` untuk jadwal pekerjaan, lalu pilih alur UseCase: `command_polling.go`, `command_execution.go`, `heartbeat.go`, `playback.go`, atau `recording_metadata.go`. `connection.go` merakit dependency dan state Engine; `status.go` menghitung readiness.
 
 `client/http.go` memiliki satu implementasi HTTP/header/envelope, `client/command_api.go` menentukan endpoint command, dan `repository/journal.go` menyimpan command/hasil/ack serta antrean metadata. `model` berisi bentuk pesan. Delivery REST/WHEP/WebSocket tetap berada di `internal/delivery` dan tidak dipindahkan ke domain cloud.
+## Struktur mediaengine
+
+- `channel`: identitas, repository katalog, dan UseCase daftar playback; handler JSON di `delivery/rest/channel`. Domain video lama sudah digabung ke channel.
+- `audio`: analisis dan worker audio; `service` berisi Broadcaster dan MetricsClient, disuntikkan melalui interface UseCase.
+- `saving/usecase`: satu UseCase dengan file menurut alur: saving, session, query, recovery, upload, dan limits.
+- `streaming`: lifecycle restream yang sudah ada.
+- `media`: kontrak proses dan adapter FFmpeg/MediaMTX.
+
+Perapian ini tidak mengubah codec, pengaktifan analisis audio, recorder, retry, atau kontrak endpoint. Mekanisme disk guard, rollback, finalisasi, dan recovery tetap dipertahankan.

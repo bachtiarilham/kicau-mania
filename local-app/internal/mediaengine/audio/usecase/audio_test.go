@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"kicau.local/edge/internal/apperror"
-	"kicau.local/edge/internal/mediaengine/audio/pubsub"
+	audioService "kicau.local/edge/internal/mediaengine/audio/service"
 	channelRepo "kicau.local/edge/internal/mediaengine/channel/repository"
 )
 
@@ -14,7 +14,7 @@ func TestSubscriptionsSeparateChannelAudioAndGlobalMetrics(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	broadcast := pubsub.New()
+	broadcast := audioService.NewBroadcaster()
 	uc := New(Options{}, catalog, nil, broadcast, nil, nil)
 	if messages, cancel, err := uc.SubscribeAudio("missing"); !errors.Is(err, apperror.ErrNotFound) || messages != nil || cancel != nil {
 		t.Fatal("unknown channel accepted")

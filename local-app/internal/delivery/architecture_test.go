@@ -16,7 +16,7 @@ import (
 const modulePath = "kicau.local/edge/"
 
 func isAdapter(pkg string) bool {
-	for _, prefix := range []string{"internal/mediaengine/media/ffmpeg", "internal/mediaengine/media/mediamtx", "internal/mediaengine/audio/pubsub", "internal/mediaengine/audio/metricsclient", "internal/infra/storage/", "internal/infra/runtime/", "internal/infra/network/", "internal/cloud/client"} {
+	for _, prefix := range []string{"internal/mediaengine/media/ffmpeg", "internal/mediaengine/media/mediamtx", "internal/mediaengine/audio/service", "internal/infra/storage/", "internal/infra/runtime/", "internal/infra/network/", "internal/cloud/client"} {
 		if strings.HasPrefix(pkg, prefix) {
 			return true
 		}
@@ -33,7 +33,7 @@ func domainOf(pkg string) string {
 		return "cloud"
 	}
 	switch parts[1] + "/" + parts[2] {
-	case "mediaengine/channel", "mediaengine/audio", "mediaengine/video", "mediaengine/saving", "mediaengine/streaming":
+	case "mediaengine/channel", "mediaengine/audio", "mediaengine/saving", "mediaengine/streaming":
 		return parts[1] + "/" + parts[2]
 	}
 	return ""
@@ -55,6 +55,11 @@ func dependencyViolation(from, imported string) string {
 		return ""
 	}
 	to := strings.TrimPrefix(imported, modulePath)
+	for _, old := range []string{"internal/mediaengine/video", "internal/delivery/rest/video", "internal/mediaengine/audio/pubsub", "internal/mediaengine/audio/metricsclient"} {
+		if to == old || strings.HasPrefix(to, old+"/") {
+			return "removed video/audio package grouping"
+		}
+	}
 	if to == "internal/edgetocloud" || strings.HasPrefix(to, "internal/edgetocloud/") {
 		return "legacy edgetocloud import; use internal/cloud"
 	}
@@ -117,7 +122,7 @@ func dependencyViolation(from, imported string) string {
 func TestDomainDependencyBoundaries(t *testing.T) {
 	_, file, _, _ := runtime.Caller(0)
 	root := filepath.Clean(filepath.Join(filepath.Dir(file), "..", ".."))
-	for _, old := range []string{"internal/edgetocloud", "internal/delivery/http", "internal/mediaengine/audio/delivery", "internal/mediaengine/video/delivery", "internal/mediaengine/saving/delivery", "internal/mediaengine/streaming/delivery"} {
+	for _, old := range []string{"internal/edgetocloud", "internal/delivery/http", "internal/mediaengine/audio/delivery", "internal/mediaengine/video", "internal/delivery/rest/video", "internal/mediaengine/audio/pubsub", "internal/mediaengine/audio/metricsclient", "internal/mediaengine/saving/delivery", "internal/mediaengine/streaming/delivery"} {
 		if _, err := os.Stat(filepath.Join(root, filepath.FromSlash(old))); !os.IsNotExist(err) {
 			t.Fatalf("legacy protocol delivery location still exists: %s", old)
 		}
@@ -185,14 +190,18 @@ func TestDependencyRules(t *testing.T) {
 		{"internal/mediaengine/audio/worker", "internal/infra/runtime/jobgroup", true},
 		{"internal/mediaengine/saving/repository", "internal/infra/storage/filesystem", true},
 		{"config", "internal/core/identifier", true},
-		{"internal/mediaengine/audio/usecase", "internal/mediaengine/audio/pubsub", false},
+		{"internal/mediaengine/audio/usecase", "internal/mediaengine/audio/service", false},
 		{"internal/mediaengine/audio/usecase", "internal/mediaengine/media/ffmpeg", false},
 		{"internal/mediaengine/saving/usecase", "internal/infra/runtime/subprocess", false},
-		{"internal/mediaengine/video/usecase", "internal/mediaengine/channel/repository", false},
+		{"internal/mediaengine/channel/usecase", "internal/mediaengine/channel/repository", false},
 		{"internal/mediaengine/channel/repository", "internal/mediaengine/saving/repository", false},
 		{"internal/mediaengine/media/mediamtx", "internal/mediaengine/channel/repository", false},
-		{"internal/mediaengine/audio/metricsclient", "internal/mediaengine/audio/usecase", false},
-		{"internal/mediaengine/audio/metricsclient", "config", false},
+		{"internal/mediaengine/audio/service", "internal/mediaengine/audio/usecase", false},
+		{"internal/mediaengine/audio/service", "config", false},
+		{"internal/app", "internal/mediaengine/audio/service", true},
+		{"internal/app", "internal/mediaengine/video/usecase", false},
+		{"internal/app", "internal/mediaengine/audio/pubsub", false},
+		{"internal/app", "internal/mediaengine/audio/metricsclient", false},
 		{"internal/delivery/websocket", "internal/app", false},
 		{"internal/app", "internal/mediaengine/audio/delivery", false},
 		{"internal/app", "internal/delivery/http", false},

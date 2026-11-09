@@ -11,11 +11,11 @@ import (
 	"kicau.local/edge/internal/apperror"
 	"kicau.local/edge/internal/delivery/middleware"
 	"kicau.local/edge/internal/delivery/rest"
+	channelDelivery "kicau.local/edge/internal/delivery/rest/channel"
 	engineDelivery "kicau.local/edge/internal/delivery/rest/engine"
 	"kicau.local/edge/internal/delivery/rest/response"
 	savingDelivery "kicau.local/edge/internal/delivery/rest/saving"
 	streamingDelivery "kicau.local/edge/internal/delivery/rest/streaming"
-	videoDelivery "kicau.local/edge/internal/delivery/rest/video"
 	"kicau.local/edge/internal/delivery/websocket"
 	"kicau.local/edge/internal/delivery/whep"
 	"kicau.local/edge/internal/infra/logger"
@@ -24,7 +24,7 @@ import (
 type Handlers struct {
 	Engine    *engineDelivery.Handler
 	WHEP      *whep.Handler
-	Video     *videoDelivery.Handler
+	Channels  *channelDelivery.Handler
 	WebSocket *websocket.Handler
 	Streaming *streamingDelivery.Handler
 	Saving    *savingDelivery.Handler
@@ -65,7 +65,7 @@ func Router(c config.Config, handlers Handlers) *gin.Engine {
 	if handlers.Engine != nil {
 		g.GET("/engine/status", handlers.Engine.Status)
 	}
-	videoDelivery.RegisterRoutes(g, handlers.Video)
+	channelDelivery.RegisterRoutes(g, handlers.Channels)
 	websocket.RegisterRoutes(g, handlers.WebSocket)
 	streamingDelivery.RegisterRoutes(g, handlers.Streaming)
 	savingDelivery.RegisterRoutes(g, handlers.Saving)
