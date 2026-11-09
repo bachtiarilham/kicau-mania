@@ -1,3 +1,5 @@
+// Package repository provides the configured channel catalog and local RTSP resolution.
+//
 // The catalog initializes configured channels. MediaMTX owns the actual
 // upstream RTSP sessions; consumers receive only local hub addresses.
 package repository

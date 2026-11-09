@@ -37,7 +37,7 @@ func TestNewMediaMapsChannelSnapshotWithoutStartingProcesses(t *testing.T) {
 	if got, err := catalog.HubRTSP("one"); err != nil || got != "rtsp://127.0.0.1:8554/one" {
 		t.Fatalf("local channel URL: %q %v", got, err)
 	}
-	if server.WHEP("one") != "http://arena.test:8889/one/whep" {
+	if server.WHEP("one") != "http://arena.test:8889/api/v1/playback/one/whep" {
 		t.Fatal("WebRTC URL changed")
 	}
 	if err := server.Render(); err != nil {

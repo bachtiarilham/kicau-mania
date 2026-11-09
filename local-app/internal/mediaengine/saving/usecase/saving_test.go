@@ -67,23 +67,23 @@ func TestRoundLifecycleAndBusinessValidation(t *testing.T) {
 	}
 	defer u.Close()
 	ctx := context.Background()
-	for _, req := range []model.StartRound{{ID: "../escape", Channels: []string{"lapak01"}}, {ID: "round1", Channels: []string{"lapak01", "lapak01"}}} {
-		if _, e := u.StartRound(ctx, req); !errors.Is(e, apperror.ErrInvalid) {
+	for _, req := range []model.StartSession{{ID: "../escape", Channels: []string{"lapak01"}}, {ID: "round1", Channels: []string{"lapak01", "lapak01"}}} {
+		if _, e := u.StartSession(ctx, req); !errors.Is(e, apperror.ErrInvalid) {
 			t.Fatalf("expected invalid, got %v", e)
 		}
 	}
-	if _, e := u.StartRound(ctx, model.StartRound{ID: "round1", Channels: []string{"missing"}}); !errors.Is(e, apperror.ErrNotFound) {
+	if _, e := u.StartSession(ctx, model.StartSession{ID: "round1", Channels: []string{"missing"}}); !errors.Is(e, apperror.ErrNotFound) {
 		t.Fatal(e)
 	}
-	req := model.StartRound{ID: "round1", Channels: []string{"lapak01", "lapak02"}}
-	out, e := u.StartRound(ctx, req)
+	req := model.StartSession{ID: "round1", Channels: []string{"lapak01", "lapak02"}}
+	out, e := u.StartSession(ctx, req)
 	if e != nil || len(out) != 2 {
 		t.Fatalf("start: %v %v", out, e)
 	}
-	if _, e = u.StartRound(ctx, model.StartRound{ID: "round2", Channels: []string{"lapak01"}}); !errors.Is(e, apperror.ErrConflict) {
+	if _, e = u.StartSession(ctx, model.StartSession{ID: "round2", Channels: []string{"lapak01"}}); !errors.Is(e, apperror.ErrConflict) {
 		t.Fatal(e)
 	}
-	if e = u.StopRound(ctx, "round1"); e != nil {
+	if e = u.StopSession(ctx, "round1"); e != nil {
 		t.Fatal(e)
 	}
 	saved, e := r.List(ctx)
@@ -98,7 +98,7 @@ func TestRoundLifecycleAndBusinessValidation(t *testing.T) {
 			t.Fatal(e)
 		}
 	}
-	if _, e = u.StartRound(ctx, req); !errors.Is(e, apperror.ErrConflict) {
+	if _, e = u.StartSession(ctx, req); !errors.Is(e, apperror.ErrConflict) {
 		t.Fatal(e)
 	}
 	page, next, e := u.Recordings(ctx, "", 1)
@@ -148,7 +148,7 @@ func TestDiskGuardAndSpawnFailure(t *testing.T) {
 	defer u.Close()
 	ctx := context.Background()
 	u.disk.(*testDisk).space.Store(0)
-	if _, e := u.StartRound(ctx, model.StartRound{ID: "a", Channels: []string{"lapak01"}}); !errors.Is(e, apperror.ErrUnavailable) {
+	if _, e := u.StartSession(ctx, model.StartSession{ID: "a", Channels: []string{"lapak01"}}); !errors.Is(e, apperror.ErrUnavailable) {
 		t.Fatal(e)
 	}
 	rows, _ := r.List(ctx)
@@ -156,7 +156,7 @@ func TestDiskGuardAndSpawnFailure(t *testing.T) {
 		t.Fatal("disk guard created records")
 	}
 	u.disk.(*testDisk).space.Store(1000)
-	if _, e := u.StartRound(ctx, model.StartRound{ID: "a", Channels: []string{"lapak01", "lapak02"}}); !errors.Is(e, apperror.ErrUnavailable) {
+	if _, e := u.StartSession(ctx, model.StartSession{ID: "a", Channels: []string{"lapak01", "lapak02"}}); !errors.Is(e, apperror.ErrUnavailable) {
 		t.Fatal(e)
 	}
 	rows, _ = r.List(ctx)
@@ -277,7 +277,7 @@ func TestStartupFailureCancelsAlreadyRunningUpload(t *testing.T) {
 	if u.executor.Context().Err() == nil {
 		t.Fatal("worker context not canceled")
 	}
-	if _, err := u.StartRound(context.Background(), model.StartRound{ID: "new", Channels: []string{"lapak01"}}); !errors.Is(err, apperror.ErrUnavailable) {
+	if _, err := u.StartSession(context.Background(), model.StartSession{ID: "new", Channels: []string{"lapak01"}}); !errors.Is(err, apperror.ErrUnavailable) {
 		t.Fatal(err)
 	}
 	rows, err := r.List(context.Background())

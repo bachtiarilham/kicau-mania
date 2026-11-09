@@ -1,26 +1,25 @@
+// Package app assembles application repositories, services, workers, and handlers.
 package app
 
 import (
 	"context"
+	"net"
 	"path/filepath"
-	"strings"
-
-	"go.uber.org/zap"
 
 	"kicau.local/edge/config"
-	"kicau.local/edge/internal/apperror"
-	arenaDelivery "kicau.local/edge/internal/core/arena/delivery"
-	arenaRepo "kicau.local/edge/internal/core/arena/repository"
-	arenaUC "kicau.local/edge/internal/core/arena/usecase"
-	arenaWorker "kicau.local/edge/internal/core/arena/worker"
-	delivery "kicau.local/edge/internal/delivery/http"
-	operationUC "kicau.local/edge/internal/edgetocloud/operation/usecase"
-	syncClient "kicau.local/edge/internal/edgetocloud/synchronization/client"
-	syncUC "kicau.local/edge/internal/edgetocloud/synchronization/usecase"
-	"kicau.local/edge/internal/infra/logger"
+	cloudClient "kicau.local/edge/internal/cloud/client"
+	cloudRepo "kicau.local/edge/internal/cloud/repository"
+	cloudUC "kicau.local/edge/internal/cloud/usecase"
+	cloudWorker "kicau.local/edge/internal/cloud/worker"
+	delivery "kicau.local/edge/internal/delivery"
+	engineDelivery "kicau.local/edge/internal/delivery/rest/engine"
+	savingDelivery "kicau.local/edge/internal/delivery/rest/saving"
+	streamingDelivery "kicau.local/edge/internal/delivery/rest/streaming"
+	videoDelivery "kicau.local/edge/internal/delivery/rest/video"
+	websocketDelivery "kicau.local/edge/internal/delivery/websocket"
+	whepDelivery "kicau.local/edge/internal/delivery/whep"
 	"kicau.local/edge/internal/infra/storage/filesystem"
 	"kicau.local/edge/internal/infra/storage/s3"
-	audioDelivery "kicau.local/edge/internal/mediaengine/audio/delivery"
 	"kicau.local/edge/internal/mediaengine/audio/metricsclient"
 	"kicau.local/edge/internal/mediaengine/audio/pubsub"
 	audioUC "kicau.local/edge/internal/mediaengine/audio/usecase"
@@ -28,31 +27,25 @@ import (
 	channelRepo "kicau.local/edge/internal/mediaengine/channel/repository"
 	"kicau.local/edge/internal/mediaengine/media/ffmpeg"
 	"kicau.local/edge/internal/mediaengine/media/mediamtx"
-	savingDelivery "kicau.local/edge/internal/mediaengine/saving/delivery"
-	savingModel "kicau.local/edge/internal/mediaengine/saving/model"
 	savingRepo "kicau.local/edge/internal/mediaengine/saving/repository"
 	savingUC "kicau.local/edge/internal/mediaengine/saving/usecase"
 	savingWorker "kicau.local/edge/internal/mediaengine/saving/worker"
-	streamingDelivery "kicau.local/edge/internal/mediaengine/streaming/delivery"
 	streamingUC "kicau.local/edge/internal/mediaengine/streaming/usecase"
 	streamingWorker "kicau.local/edge/internal/mediaengine/streaming/worker"
-	videoDelivery "kicau.local/edge/internal/mediaengine/video/delivery"
 	videoUC "kicau.local/edge/internal/mediaengine/video/usecase"
 )
 
 type Container struct {
-	ArenaStore      *arenaRepo.SQLite
-	Arena           *arenaUC.UseCase
-	Background      *arenaWorker.Worker
-	Synchronization *syncUC.UseCase
-	Commands        *syncUC.Commands
-	ChannelCatalog  *channelRepo.Catalog
-	MediaServer     *mediamtx.Server
-	Video           *videoUC.UseCase
-	Audio           *audioUC.UseCase
-	Streaming       *streamingUC.UseCase
-	Saving          *savingUC.UseCase
-	Handlers        delivery.Handlers
+	Background     *cloudWorker.Worker
+	Engine         *cloudUC.Engine
+	Commands       *cloudUC.Commands
+	ChannelCatalog *channelRepo.Catalog
+	MediaServer    *mediamtx.Server
+	Video          *videoUC.UseCase
+	Audio          *audioUC.UseCase
+	Streaming      *streamingUC.UseCase
+	Saving         *savingUC.UseCase
+	Handlers       delivery.Handlers
 }
 
 // NewMedia is also used by -render-config: rendering does not start processes.
@@ -73,11 +66,13 @@ func NewContainer(ctx context.Context, c config.Config) (*Container, error) {
 	if e != nil {
 		return nil, e
 	}
-	recordingFiles, recordingError := savingRepo.NewFiles(filepath.Join(c.DataDir, "queue"))
-	var repo savingUC.RecordingRepository = recordingFiles
-	if recordingError != nil {
-		logger.Warn("recording repository unavailable; judging remains available", zap.Error(recordingError))
-		repo = unavailableRecordings{}
+	repo, err := savingRepo.NewFiles(filepath.Join(c.DataDir, "queue"))
+	if err != nil {
+		return nil, err
+	}
+	journal, err := cloudRepo.New(c.DataDir)
+	if err != nil {
+		return nil, err
 	}
 	var objectStorage savingUC.Storage
 	if c.S3Bucket != "" {
@@ -94,43 +89,33 @@ func NewContainer(ctx context.Context, c config.Config) (*Container, error) {
 	audio := audioUC.New(audioUC.Options{SampleRate: c.SampleRate, Threshold: c.Threshold}, sources, ffmpeg.AudioDecoder{Binary: c.FFmpeg}, pubsub.New(), remote, audioJobs)
 	streaming := streamingUC.New(sources, ffmpeg.Restreamer{Binary: c.FFmpeg}, c.Destinations, streamingJobs)
 	saving := savingUC.New(savingUC.Options{DataDir: c.DataDir, MaxRound: c.MaxRound, MinFreeBytes: c.MinFreeBytes}, sources, repo, ffmpeg.Recorder{Binary: c.FFmpeg}, objectStorage, filesystem.Disk{}, savingJobs)
-	store, err := arenaRepo.Open(filepath.Join(c.DataDir, "arena.sqlite"))
+	engine := cloudUC.NewEngine(cloudUC.EngineOptions{
+		ArenaID: c.ArenaID, EngineID: c.EngineID, PlaybackBaseURL: c.WebRTCBase,
+		HeartbeatTimeout: c.HeartbeatTimeout, CommandsConfigured: c.CloudCommandsURL != "",
+	}, sources, mediaServer, saving, streaming, journal,
+		cloudEndpoint(c.CloudHeartbeatURL, c.CloudToken), cloudEndpoint(c.CloudMediaUpdatesURL, c.CloudToken), cloudEndpoint(c.CloudPlaybackAuthorizeURL, c.CloudToken))
+	host, port, _ := net.SplitHostPort(c.WebRTCListen)
+	playback, err := whepDelivery.New(engine, "http://"+net.JoinHostPort(host, port))
 	if err != nil {
-		audioJobs.Close()
-		streamingJobs.Close()
-		savingJobs.Close()
 		return nil, err
 	}
-	var packages arenaUC.PackageSource
-	if c.CloudPackagesURL != "" {
-		packages = syncClient.New(c.CloudPackagesURL, c.CloudToken)
-	}
-	arena := arenaUC.New(store, mediaServer, arenaUC.Options{ArenaID: c.ArenaID, EngineID: c.EngineID, BackupDir: c.BackupDir, PackageSource: packages})
-	if err := arena.Recover(ctx); err != nil {
-		store.Close()
-		audioJobs.Close()
-		streamingJobs.Close()
-		savingJobs.Close()
-		return nil, err
-	}
-	var cloud syncUC.Cloud
-	if c.CloudSyncURL != "" {
-		cloud = syncClient.New(c.CloudSyncURL, c.CloudToken)
-	}
-	var commands syncUC.CommandCloud
+	var commands cloudUC.CommandCloud
 	if c.CloudCommandsURL != "" {
-		commands = syncClient.New(c.CloudCommandsURL, c.CloudToken)
+		commands = cloudClient.New(c.CloudCommandsURL, c.CloudToken)
 	}
-	return &Container{ArenaStore: store, Arena: arena, Background: arenaWorker.New(), Synchronization: syncUC.New(store, cloud), Commands: syncUC.NewCommands(store, commands, operationUC.New(streaming, saving), c.ArenaID, c.EngineID), ChannelCatalog: sources, MediaServer: mediaServer, Video: video, Audio: audio, Streaming: streaming, Saving: saving, Handlers: delivery.Handlers{Arena: arenaDelivery.New(arena, strings.HasPrefix(c.LocalPublicURL, "https://")), Video: videoDelivery.New(video), Audio: audioDelivery.New(audio, c.Origins), Streaming: streamingDelivery.New(streaming), Saving: savingDelivery.New(saving)}}, nil
+	return &Container{
+		Background: cloudWorker.New(), Engine: engine,
+		Commands:       cloudUC.NewCommands(journal, commands, cloudUC.NewCommandExecutor(streaming, saving), c.ArenaID, c.EngineID),
+		ChannelCatalog: sources, MediaServer: mediaServer, Video: video, Audio: audio, Streaming: streaming, Saving: saving,
+		Handlers: delivery.Handlers{Engine: engineDelivery.New(engine), WHEP: playback, Video: videoDelivery.New(video), WebSocket: websocketDelivery.New(audio, c.Origins), Streaming: streamingDelivery.New(streaming), Saving: savingDelivery.New(saving)},
+	}, nil
 }
 
-type unavailableRecordings struct{}
-
-func (unavailableRecordings) Save(context.Context, savingModel.Recording) error {
-	return apperror.ErrUnavailable
-}
-func (unavailableRecordings) List(context.Context) ([]savingModel.Recording, error) {
-	return nil, apperror.ErrUnavailable
+func cloudEndpoint(endpoint, token string) cloudUC.Poster {
+	if endpoint == "" {
+		return nil
+	}
+	return cloudClient.New(endpoint, token)
 }
 
 func mediaSources(catalog *channelRepo.Catalog) []mediamtx.Source {

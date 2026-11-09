@@ -138,7 +138,7 @@ func (u *UseCase) recover(ctx context.Context) error {
 	}
 	return nil
 }
-func (u *UseCase) StartRound(ctx context.Context, req model.StartRound) ([]model.Recording, error) {
+func (u *UseCase) StartSession(ctx context.Context, req model.StartSession) ([]model.Recording, error) {
 	// Serialize submissions and shutdown, but never hold business state locks
 	// while scheduling or waiting for worker callbacks.
 	u.ops.Lock()
@@ -171,7 +171,7 @@ func (u *UseCase) StartRound(ctx context.Context, req model.StartRound) ([]model
 	}
 	return records, nil
 }
-func (u *UseCase) reserve(ctx context.Context, req model.StartRound) ([]model.Recording, error) {
+func (u *UseCase) reserve(ctx context.Context, req model.StartSession) ([]model.Recording, error) {
 	u.mu.Lock()
 	defer u.mu.Unlock()
 	if u.closing || !u.started {
@@ -267,7 +267,7 @@ func (u *UseCase) finishRecording(r model.Recording, processErr error) {
 	}
 	logger.Info("recording completed", zap.String("recording", r.ID), zap.String("state", r.State))
 }
-func (u *UseCase) StopRound(ctx context.Context, id string) error {
+func (u *UseCase) StopSession(ctx context.Context, id string) error {
 	if !identifier.Valid(id) {
 		return apperror.ErrInvalid
 	}

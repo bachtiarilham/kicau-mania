@@ -4,7 +4,7 @@ $ErrorActionPreference='Stop'
 $appRoot=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 Push-Location $appRoot
 try {
-    foreach ($entry in @('api','lan-config','event-package')) {
+    foreach ($entry in @('api','lan-config')) {
         $name=if($entry -eq 'api'){'local-server'}else{$entry}
         & go build -o "bin/$name.exe" "./cmd/$entry"
         if($LASTEXITCODE -ne 0){throw "Build failed: $entry"}

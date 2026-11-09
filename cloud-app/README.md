@@ -1,50 +1,92 @@
-# Cloud exchange
+# Cloud-app: fondasi backend online
 
-Migrasi PostgreSQL dan contoh query untuk fase CRUD tersedia di [panduan SQL](db/README.md).
+Cloud-app akan menangani login, registrasi, penilaian, CRUD, dan kendali engine arena secara online. Fase sekarang hanya menyediakan fondasi HTTP/PostgreSQL serta [kontrak engine](docs/ENGINE-CONTRACT.md). Endpoint bisnis dan engine belum aktif.
 
-Penerima sinkronisasi untuk arena offline-first. Layanan ini menyimpan paket event yang disiapkan, perubahan arena, dan antrean perintah media. Website pendaftaran, CRUD peserta, penyusunan paket dari data bisnis, serta publikasi hasil belum diimplementasikan di sini.
+ERD, migrasi, view, materialized view, dan query bisnis **ditahan sampai rancangan database disetujui**. File SQL lama tetap ada sebagai draft, bukan skema siap deploy. Aplikasi tidak menjalankan migrasi otomatis.
 
-## Jalankan
+## Menjalankan
 
-Go 1.25+, tanpa database eksternal:
+Prasyarat Go 1.25+. Jalankan dari folder cloud-app:
 
 ```powershell
 Copy-Item .env.example .env
-# Isi CLOUD_ADMIN_TOKEN dan CLOUD_ENGINES_JSON dengan token acak yang berbeda.
-go mod download
-go test ./...
-go build -o bin/cloud-api.exe ./cmd/api
-./bin/cloud-api.exe -env .env
+go run ./cmd/api -env .env
 ```
 
-Default HTTP loopback `127.0.0.1:8091`; tempatkan reverse proxy HTTPS di depannya untuk akses arena. `CLOUD_DATABASE` menunjuk SSD persisten. Proses memuat `.env`; environment proses mengungguli file. Token minimum 32 karakter, placeholder `REPLACE_` ditolak. Berikan token mesin unik per pasangan `arena_id`/`engine_id`, terpisah dari token operator dan password juri. Jangan taruh database atau `.env` pada direktori publik.
+Default HTTP `127.0.0.1:8091`; gunakan reverse proxy HTTPS pada VPS. Isi DATABASE_URL untuk PostgreSQL yang ingin diperiksa. URL kosong diperbolehkan pada fase fondasi: proses tetap berjalan dan readiness mengembalikan 503. Database tidak terjangkau juga menghasilkan 503; proses dapat kembali ready saat koneksi pulih tanpa fallback SQLite.
 
-```dotenv
-CLOUD_ENGINES_JSON='[{"arena_id":"arena01","engine_id":"engine01","token":"TOKEN_MESIN_UNIK_MINIMAL_32_KARAKTER"}]'
+| Endpoint aktif | Fungsi |
+| --- | --- |
+| GET /healthz | 200 ketika HTTP hidup. |
+| GET /readyz | 200 jika PostgreSQL dapat di-ping; 503 jika belum dikonfigurasi/tidak tersedia. |
+
+Readiness ini hanya memeriksa koneksi, belum memeriksa tabel, view, migrasi, atau kesiapan fitur bisnis. Route login/CRUD/engine yang belum dibuat mengembalikan 404. Tidak ada response sukses tiruan.
+
+## Konfigurasi
+
+| Env | Default / fungsi |
+| --- | --- |
+| HTTP_ADDR | 127.0.0.1:8091 |
+| DATABASE_URL | Kosong; URL/connection string PostgreSQL privat. |
+| DB_MAX_CONNS / DB_MIN_CONNS | 10 / 0; mengungguli opsi pool dalam DATABASE_URL. |
+| DB_CONNECT_TIMEOUT | 5s; batas koneksi database. |
+| DB_HEALTH_TIMEOUT | 2s; batas pemeriksaan readiness. |
+| HTTP_REQUEST_TIMEOUT | 15s; deadline context request dan batas baca HTTP. |
+| SHUTDOWN_TIMEOUT | 10s; waktu menyelesaikan HTTP sebelum koneksi ditutup. |
+| ALLOWED_ORIGINS | https://dev.megaallstararena.com; daftar origin eksplisit dipisahkan koma, tanpa slash akhir. |
+| APP_ENV | development memakai console; production memakai JSON stdout. |
+| SERVICE_NAME / LOG_DIR | cloud-app / ./logs. |
+
+Environment proses mengungguli dotenv, termasuk nilai kosong. Nilai konfigurasi salah menghentikan startup dengan pesan yang tidak menampilkan kredensial. Deadline request harus diteruskan oleh UseCase/repository; ini bukan mekanisme untuk menghentikan goroutine secara paksa.
+
+## Membaca kode
+
+```text
+cmd/api/main.go → config → server → app → router → handler → UseCase
 ```
 
-## Kontrak
+| Folder | Tanggung jawab |
+| --- | --- |
+| cmd/api | Entry point, pemuatan konfigurasi, logger, dan sinyal proses. |
+| config | Validasi env tanpa membuka koneksi. |
+| internal/app | Merakit pool, UseCase readiness, dan handler; menutup dependency. |
+| internal/server | Listener HTTP, timeout, dan graceful shutdown. |
+| internal/delivery | Router utama yang merangkai handler dan middleware. |
+| internal/delivery/middleware | Auth boundary, CORS, request ID, logging, recovery, batas body 2 MiB. |
+| internal/delivery/rest | Handler health/readiness dan format response JSON di rest/response. |
+| internal/health/usecase | Menentukan readiness melalui interface database, tanpa import HTTP atau adapter. |
+| internal/auth/model | Identitas pengguna/engine yang tidak bergantung pada transport; belum ada login. |
+| internal/apperror | Error aplikasi dan pemetaan aman melalui delivery/rest/response. |
+| internal/infra/postgres | Connection pool pgx; tanpa SQL bisnis atau migrasi. |
+| internal/infra/logger | Pola Zap seperti local-app/park-server-v3, file JSON dan redaksi rahasia. |
+| docs | Kontrak transport yang belum diaktifkan. |
+| db | ERD dan SQL draft yang dibekukan. |
 
-Semua endpoint di bawah memakai `Authorization: Bearer ...`; `/healthz` public. Payload paket dan perintah mengikuti model di `internal/exchange/model` dan file demo dari `local-app/cmd/event-package`.
+Handler hanya parsing, validasi sintaks, ekstraksi auth/context, pemanggilan UseCase, pemetaan DTO, dan HTTP response. Validasi semantik/otorisasi bisnis serta koordinasi lintas domain berada di UseCase. Repository tidak memanggil repository lain. Model identitas memungkinkan UseCase autentikasi kelak memenuhi interface middleware tanpa mengimpor HTTP.
 
-| Endpoint | Auth | Fungsi |
-| --- | --- | --- |
-| `POST /api/v1/engines/:engine/changes` | mesin terkait | Terima `{changes:[...]}`, kembalikan `{acknowledged:[id...]}` setelah commit |
-| `GET /api/v1/engines/:engine/commands` | mesin terkait | Ambil perintah media |
-| `POST /api/v1/engines/:engine/commands/results` | mesin terkait | Simpan hasil eksekusi idempotent |
-| `GET /api/v1/engines/:engine/events/:event/package` | mesin terkait | Unduh snapshot privat event yang telah disiapkan |
-| `POST /api/v1/operator/packages` | admin | Unggah snapshot JSON dengan versi meningkat |
-| `POST /api/v1/operator/commands` | admin | Antrekan perintah media dengan expiry maksimal 15 menit |
-| `GET /api/v1/operator/commands/:engine/:command` | admin | Baca status/hasil perintah |
+## Aturan repository setelah ERD disetujui
 
-Perintah yang diterima hanya `restream.start`, `restream.stop`, `recording.start`, dan `recording.stop`. Tidak tersedia perintah cloud untuk mengubah skor atau lifecycle ronde penilaian. Contoh payload perintah:
+Response REST mengikuti format aktual park-server-v3: `{"success":true,"message":"...","data":{...}}` dan `{"success":false,"message":"...","errors":...}`. Data/errors dihilangkan jika nil; tidak ada pembungkus meta. Error internal tidak dikirim mentah dan dapat menyertakan `errors.request_id`. Response health/readiness juga memakai format tersebut. Pagination cursor memakai `data.items`, `data.next_cursor` (jika ada), dan `data.has_more`. Response 204 tidak memiliki body. Kontrak response engine juga memakai envelope ini dengan data non-null; request engine tetap berupa payload langsung. Endpoint pendamping tetap belum aktif sampai autentikasi dan repository tersedia.
 
-```json
-{"id":"stop-stream-001","arena_id":"arena01","engine_id":"engine01","kind":"restream.stop","payload":{"target":"youtube"},"expires_at":"GANTI_DENGAN_RFC3339_MAKSIMAL_15_MENIT_KE_DEPAN"}
-```
+- List/detail bisnis membaca view; create/update/delete menulis tabel sumber dalam transaksi.
+- Mutasi menggunakan RETURNING id lalu membaca representasi view dalam transaksi yang sama.
+- Pembacaan internal untuk transaksi/locking dan autentikasi sensitif memakai jalur terbatas yang sesuai; hash password tidak masuk view operasional.
+- Materialized view untuk rekap administratif yang menerima keterlambatan refresh, bukan nilai operasional yang wajib langsung terbaru.
 
-SQLite menggunakan WAL/FULL. Identitas mesin dicek per request. Pengiriman ulang perubahan yang sama diakui tanpa insert ganda; perubahan isi dengan ID sama ditolak. Paket hanya dapat diunduh engine tujuan. Arena tetap melakukan validasi semantik lengkap terhadap snapshot dan menolak penggantian roster setelah event berjalan.
+SQL draft tidak otomatis memenuhi aturan multi-arena terbaru. Implementasi repository serta query menunggu review ERD.
 
-Data perubahan disimpan sebagai journal; ini belum berupa proyeksi rekap publik atau database CRUD lomba. Integrasi web berikutnya perlu membaca journal melalui repository/usecase dan menerapkan kebijakan publikasi. Cloud tidak mengambil alih otoritas skor arena saat WAN terputus. Backup database cloud dan proteksi reverse proxy dikelola deployment.
+## Penghapusan legacy dan batas fitur
 
-Validasi: `go test ./...`, `go build ./...`, `go vet ./...`. Tes end-to-end dua aplikasi ada di `local-app/scripts/tests/cloud-exchange.cjs`; panduan LAN dan skenario offline ada di `local-app/OFFLINE-FIRST.md`.
+Exchange SQLite, paket event offline, penerima sinkronisasi skor, endpoint exchange lama, serta token admin/registry mesin berbasis env lama telah dihapus. File database lama tidak dibaca dan tidak dihapus otomatis. Arsipkan data lama melalui prosedur operasional sebelum memutuskan penghapusannya.
+
+Boundary autentikasi pengguna dan mesin tersedia sebagai middleware terpisah, tetapi belum dipasang pada route bisnis karena verifier dan repository belum dibuat. Tidak ada akun, token, maupun akses arena default.
+
+Kontrak command, heartbeat, metadata, tiket playback, dan otorisasi engine ada di [ENGINE-CONTRACT.md](docs/ENGINE-CONTRACT.md). Frontend LAN belum dapat diintegrasikan end-to-end sebelum endpoint tersebut diimplementasikan.
+
+## Logging dan verifikasi
+
+Header umum dikelola middleware bersama: `X-Content-Type-Options: nosniff`, `Cache-Control: no-store`, dan request ID. CORS memeriksa origin serta menangani preflight sebelum handler, dengan X-Request-ID diekspos ke frontend yang diizinkan. Limits hanya membatasi body/deadline; auth hanya menangani autentikasi. Content-Type JSON tetap dimiliki helper response. Kebijakan ini berlaku juga pada response error dan route yang tidak ditemukan.
+
+Log mencakup request ID, route template, method, status, latency, service, hostname, serta caller. Body, query, Authorization, dan raw path tidak dicatat oleh access logger. File `${LOG_DIR}/app.log` memakai JSON; rotasi/retensi dikelola deployment. Kegagalan membuka file log tetap memungkinkan stdout.
+
+Verifikasi fase ini: `go build ./...`, pemeriksaan dependency/referensi legacy, dan diff. Suite tes tidak dijalankan otomatis sesuai permintaan. Uji integrasi database, auth, CRUD, dan engine dilakukan pada fase berikutnya. Petunjuk SQL lama tersedia sebagai draft di [db/README.md](db/README.md).

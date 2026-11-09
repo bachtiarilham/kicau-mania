@@ -15,6 +15,7 @@ var Log = zap.NewNop()
 var file *os.File
 
 type ctxLoggerKey struct{}
+type ctxRequestIDKey struct{}
 
 // Init runs after dotenv is loaded. Logging failures never prevent arena startup.
 func Init() {
@@ -72,7 +73,17 @@ func Sync() {
 }
 
 func WithRequestID(ctx context.Context, requestID string) context.Context {
+	ctx = context.WithValue(ctx, ctxRequestIDKey{}, requestID)
 	return WithContext(ctx, zap.String("requestId", requestID))
+}
+
+// RequestID returns correlation metadata without depending on the HTTP layer.
+func RequestID(ctx context.Context) string {
+	if ctx == nil {
+		return ""
+	}
+	id, _ := ctx.Value(ctxRequestIDKey{}).(string)
+	return id
 }
 
 func WithContext(ctx context.Context, fields ...zap.Field) context.Context {

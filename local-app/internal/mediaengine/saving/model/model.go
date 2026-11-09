@@ -2,12 +2,13 @@ package model
 
 import "time"
 
-type StartRound struct {
+type StartSession struct {
 	ID       string   `json:"id" binding:"required"`
 	Channels []string `json:"channels" binding:"required,min=1,max=24"`
 }
 
 type Recording struct {
+	Version     int64     `json:"version,omitempty"`
 	ID          string    `json:"id"`
 	RoundID     string    `json:"round_id"`
 	ChannelID   string    `json:"channel_id"`

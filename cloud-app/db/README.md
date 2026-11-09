@@ -1,6 +1,8 @@
 # Kontrak baca PostgreSQL cloud-app
 
-SQL ini memakai skema dari `db-dump/full_db.dump` pada PostgreSQL 18. Ada 16 view untuk list/detail dan satu materialized view untuk rekap administratif. Integrasi repository Go merupakan fase terpisah. Cloud exchange masih berjalan dengan SQLite.
+> **DRAFT — DIBEKUKAN MENUNGGU PERSETUJUAN ERD.** Migrasi dan contoh query di sini merupakan artefak desain sebelumnya. Jangan terapkan pada database aplikasi sampai disesuaikan dengan ERD yang disetujui. Instruksi di bawah dipertahankan sebagai referensi pengujian terisolasi setelah pembekuan dicabut; aplikasi tidak menjalankan migrasi otomatis.
+
+SQL ini memakai skema dari `db-dump/full_db.dump` pada PostgreSQL 18. Ada 16 view untuk list/detail dan satu materialized view untuk rekap administratif. Integrasi repository Go merupakan fase berikutnya. Cloud-app kini hanya menyediakan fondasi koneksi PostgreSQL; implementasi exchange SQLite lama telah dihapus.
 
 ## Restore dan migrasi
 

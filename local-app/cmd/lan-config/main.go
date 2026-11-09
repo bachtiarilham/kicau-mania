@@ -146,12 +146,12 @@ func run() error {
     }
     @outside not remote_ip 127.0.0.1 ::1 %s
     respond @outside 403
-    @application path / /arena /arena/* /api/v1/* /healthz
+    @application path / /api/v1/* /healthz /readyz
     handle @application {
         reverse_proxy 127.0.0.1:8090
     }
     handle {
-        reverse_proxy 127.0.0.1:8889
+        respond 404
     }
 }
 `, certDir, values["LOCAL_PUBLIC_URL"], ip.String(), values["LAN_READ_CIDR"])

@@ -18,8 +18,10 @@ jam 12 berhenti
 jam 1 lanjut lagi
 maksimal jam 5 
 
-start/stop by button. 
+start/stop round by button. 
 
 juri hanya bisa menilai pada sesi penjurian. 
 
 data media by sistem, gak bisa diubah oleh user. 
+
+offline first tidak jadi. berarti full online semuanya, network error, berarti lomba gak jalan 

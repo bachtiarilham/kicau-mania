@@ -1,3 +1,4 @@
+// Package mediamtx configures and manages the local MediaMTX server.
 package mediamtx
 
 import (
@@ -41,7 +42,7 @@ func New(opts Options) *Server {
 	}}
 }
 func (s *Server) WHEP(id string) string {
-	return strings.TrimRight(s.opts.WebRTCBase, "/") + "/" + id + "/whep"
+	return strings.TrimRight(s.opts.WebRTCBase, "/") + "/api/v1/playback/" + id + "/whep"
 }
 
 func (s *Server) MediaStatus() media.Status {
@@ -75,15 +76,6 @@ func (s *Server) Render() error {
 			"permissions": []any{
 				map[string]any{"action": "read", "path": ""},
 			}},
-	}
-	// An empty IP list allows every IP in MediaMTX; omit the optional rule.
-	if len(s.opts.ReadCIDRs) > 0 {
-		authUsers = append(authUsers, map[string]any{
-			"user": "any",
-			"ips":  s.opts.ReadCIDRs,
-			"permissions": []any{
-				map[string]any{"action": "read", "path": ""},
-			}})
 	}
 	cfg := map[string]any{
 		"logLevel":                "warn",

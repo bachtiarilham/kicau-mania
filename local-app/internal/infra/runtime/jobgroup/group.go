@@ -1,3 +1,5 @@
+// Package jobgroup manages background job admission, cancellation, and shutdown.
+//
 // Job groups provide cancellation and admission control for local jobs.
 // Domain workers supply scheduling; usecases supply business operations.
 package jobgroup

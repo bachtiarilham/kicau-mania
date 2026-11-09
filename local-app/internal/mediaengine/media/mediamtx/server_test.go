@@ -45,11 +45,11 @@ func TestGeneratedConfigPreservesUpstreamMapping(t *testing.T) {
 	if cfg["webrtcAllowOrigin"] != "http://arena.test" || cfg["webrtcAllowOrigins"] != nil {
 		t.Fatal("MediaMTX v1.15.3 CORS schema mismatch")
 	}
-	if mediaServer.WHEP("two") != "http://arena.test:8889/two/whep" {
+	if mediaServer.WHEP("two") != "http://arena.test:8889/api/v1/playback/two/whep" {
 		t.Fatal(mediaServer.WHEP("two"))
 	}
 	users := cfg["authInternalUsers"].([]any)
-	if len(users) != 2 {
+	if len(users) != 1 {
 		t.Fatal("media ACL changed")
 	}
 	mediaServer.Close()

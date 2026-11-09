@@ -18,23 +18,25 @@ import (
 
 type Config struct {
 	// Aplikasi
-	Listen           string
-	Token            string
-	DataDir          string
-	RuntimeDir       string
-	Origins          []string
-	ArenaID          string
-	EngineID         string
-	BackupDir        string
-	CloudSyncURL     string
-	CloudCommandsURL string
-	CloudPackagesURL string
-	CloudToken       string
-	FrontendOrigin   string
-	LocalPublicURL   string
-	LANServerIP      string
-	DNSAddress       string
-	DNSUpstreams     []string
+	Listen                    string
+	Token                     string
+	DataDir                   string
+	RuntimeDir                string
+	Origins                   []string
+	ArenaID                   string
+	EngineID                  string
+	CloudCommandsURL          string
+	CloudHeartbeatURL         string
+	CloudMediaUpdatesURL      string
+	CloudPlaybackAuthorizeURL string
+	HeartbeatInterval         time.Duration
+	HeartbeatTimeout          time.Duration
+	CloudToken                string
+	FrontendOrigin            string
+	LocalPublicURL            string
+	LANServerIP               string
+	DNSAddress                string
+	DNSUpstreams              []string
 
 	// Media / NVR
 	FFmpeg         string
@@ -115,33 +117,36 @@ func Load(path string) (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
-	backupDir := getEnv("BACKUP_DIR", "")
-	if backupDir != "" {
-		backupDir, err = filepath.Abs(backupDir)
-		if err != nil {
-			return Config{}, err
-		}
-	}
 
+	heartbeatInterval, err := getEnvAsDuration("HEARTBEAT_INTERVAL", "5s")
+	if err != nil {
+		return Config{}, err
+	}
+	heartbeatTimeout, err := getEnvAsDuration("HEARTBEAT_TIMEOUT", "15s")
+	if err != nil {
+		return Config{}, err
+	}
 	cfg := Config{
 		// Aplikasi
-		Listen:           getEnv("HTTP_ADDR", "127.0.0.1:8090"),
-		Token:            getEnv("API_TOKEN", ""),
-		DataDir:          dataDir,
-		RuntimeDir:       runtimeDir,
-		Origins:          strings.Split(getEnv("ALLOWED_ORIGINS", "http://localhost:3000"), ","),
-		ArenaID:          getEnv("ARENA_ID", "arena01"),
-		EngineID:         getEnv("ENGINE_ID", "engine01"),
-		BackupDir:        backupDir,
-		CloudSyncURL:     getEnv("CLOUD_SYNC_URL", ""),
-		CloudCommandsURL: getEnv("CLOUD_COMMANDS_URL", ""),
-		CloudPackagesURL: getEnv("CLOUD_PACKAGES_URL", ""),
-		CloudToken:       getEnv("CLOUD_ENGINE_TOKEN", ""),
-		FrontendOrigin:   strings.TrimRight(getEnv("FRONTEND_ORIGIN", ""), "/"),
-		LocalPublicURL:   strings.TrimRight(getEnv("LOCAL_PUBLIC_URL", ""), "/"),
-		LANServerIP:      getEnv("LAN_SERVER_IP", ""),
-		DNSAddress:       getEnv("DNS_LISTEN_ADDR", ""),
-		DNSUpstreams:     strings.Split(getEnv("DNS_UPSTREAMS", "1.1.1.1:53,8.8.8.8:53"), ","),
+		Listen:                    getEnv("HTTP_ADDR", "127.0.0.1:8090"),
+		Token:                     getEnv("API_TOKEN", ""),
+		DataDir:                   dataDir,
+		RuntimeDir:                runtimeDir,
+		Origins:                   strings.Split(getEnv("ALLOWED_ORIGINS", "http://localhost:3000"), ","),
+		ArenaID:                   getEnv("ARENA_ID", "arena01"),
+		EngineID:                  getEnv("ENGINE_ID", "engine01"),
+		CloudCommandsURL:          getEnv("CLOUD_COMMANDS_URL", ""),
+		CloudHeartbeatURL:         getEnv("CLOUD_HEARTBEAT_URL", ""),
+		CloudMediaUpdatesURL:      getEnv("CLOUD_MEDIA_UPDATES_URL", ""),
+		CloudPlaybackAuthorizeURL: getEnv("CLOUD_PLAYBACK_AUTHORIZE_URL", ""),
+		HeartbeatInterval:         heartbeatInterval,
+		HeartbeatTimeout:          heartbeatTimeout,
+		CloudToken:                getEnv("CLOUD_ENGINE_TOKEN", ""),
+		FrontendOrigin:            strings.TrimRight(getEnv("FRONTEND_ORIGIN", ""), "/"),
+		LocalPublicURL:            strings.TrimRight(getEnv("LOCAL_PUBLIC_URL", ""), "/"),
+		LANServerIP:               getEnv("LAN_SERVER_IP", ""),
+		DNSAddress:                getEnv("DNS_LISTEN_ADDR", ""),
+		DNSUpstreams:              strings.Split(getEnv("DNS_UPSTREAMS", "1.1.1.1:53,8.8.8.8:53"), ","),
 
 		// Media / NVR
 		FFmpeg:         getEnv("FFMPEG_BIN", "ffmpeg"),
@@ -149,9 +154,9 @@ func Load(path string) (Config, error) {
 		MediaConfig:    filepath.Join(runtimeDir, "mediamtx.yml"),
 		RTSPListen:     getEnv("RTSP_ADDR", "127.0.0.1:8554"),
 		RTSPBase:       getEnv("RTSP_BASE_URL", "rtsp://127.0.0.1:8554"),
-		WebRTCListen:   getEnv("WEBRTC_ADDR", ":8889"),
+		WebRTCListen:   getEnv("WEBRTC_ADDR", "127.0.0.1:8889"),
 		WebRTCLocalUDP: getEnv("WEBRTC_LOCAL_UDP_ADDR", ":8189"),
-		WebRTCBase:     getEnv("WEBRTC_PUBLIC_URL", "http://127.0.0.1:8889"),
+		WebRTCBase:     getEnv("WEBRTC_PUBLIC_URL", "http://127.0.0.1:8090"),
 		ICEHosts:       strings.Split(getEnv("WEBRTC_HOSTS", "127.0.0.1"), ","),
 		ReadCIDRs:      strings.Split(getEnv("MEDIA_READ_CIDRS", "127.0.0.1/32,::1/128"), ","),
 		Channels:       channels,
@@ -190,6 +195,16 @@ func Load(path string) (Config, error) {
 }
 
 func validate(c Config) error {
+	if c.HeartbeatInterval < time.Second || c.HeartbeatTimeout <= c.HeartbeatInterval || c.HeartbeatTimeout > 5*time.Minute {
+		return fmt.Errorf("heartbeat timeout must exceed interval and be at most 5m")
+	}
+	for _, address := range []string{c.WebRTCListen, c.RTSPListen} {
+		host, _, err := net.SplitHostPort(address)
+		if err != nil || net.ParseIP(host) == nil || !net.ParseIP(host).IsLoopback() {
+			return fmt.Errorf("RTSP_ADDR and WEBRTC_ADDR must bind loopback")
+		}
+	}
+
 	if !ValidID(c.ArenaID) || !ValidID(c.EngineID) {
 		return fmt.Errorf("invalid ARENA_ID or ENGINE_ID")
 	}
@@ -202,7 +217,7 @@ func validate(c Config) error {
 			return fmt.Errorf("public URLs must be HTTP(S) origins without a path")
 		}
 	}
-	for _, endpoint := range []string{c.CloudSyncURL, c.CloudCommandsURL, c.CloudPackagesURL} {
+	for _, endpoint := range []string{c.CloudCommandsURL, c.CloudHeartbeatURL, c.CloudMediaUpdatesURL, c.CloudPlaybackAuthorizeURL} {
 		if endpoint == "" {
 			continue
 		}
@@ -230,12 +245,6 @@ func validate(c Config) error {
 			if err != nil || net.ParseIP(host) == nil || n < 1 || n > 65535 {
 				return fmt.Errorf("DNS_UPSTREAMS requires IP:port values")
 			}
-		}
-	}
-	if c.BackupDir != "" {
-		rel, err := filepath.Rel(c.DataDir, c.BackupDir)
-		if err == nil && (rel == "." || (!strings.HasPrefix(rel, ".."+string(filepath.Separator)) && rel != ".." && !filepath.IsAbs(rel))) {
-			return fmt.Errorf("BACKUP_DIR must be outside DATA_DIR, on separate backup storage")
 		}
 	}
 	if !(c.Threshold >= -120 && c.Threshold <= 0) {
