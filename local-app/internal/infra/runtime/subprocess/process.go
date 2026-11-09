@@ -5,6 +5,7 @@ import (
 	"context"
 	"io"
 	"os/exec"
+	"runtime"
 	"sync"
 	"time"
 
@@ -64,11 +65,43 @@ func start(ctx context.Context, binary string, args []string, stdout io.Writer, 
 	if e != nil {
 		return nil, e
 	}
-	if e = cmd.Start(); e != nil {
-		in.Close()
-		return nil, e
-	}
 	p := &process{cmd: cmd, stdin: in, done: make(chan struct{})}
-	go func() { p.err = cmd.Wait(); in.Close(); close(p.done) }()
+	launched := make(chan error, 1)
+	go func() {
+		// Linux parent-death signals belong to the creating OS thread. Keep that
+		// thread alive until this child exits, even while the caller does other work.
+		if runtime.GOOS == "linux" {
+			runtime.LockOSThread()
+			defer runtime.UnlockOSThread()
+		}
+		attach, release, err := protectProcess(cmd)
+		if err != nil {
+			in.Close()
+			launched <- err
+			return
+		}
+		if err = cmd.Start(); err != nil {
+			release()
+			in.Close()
+			launched <- err
+			return
+		}
+		if err = attach(); err != nil {
+			_ = cmd.Process.Kill()
+			_ = cmd.Wait()
+			release()
+			in.Close()
+			launched <- err
+			return
+		}
+		launched <- nil
+		p.err = cmd.Wait()
+		release()
+		in.Close()
+		close(p.done)
+	}()
+	if err := <-launched; err != nil {
+		return nil, err
+	}
 	return p, nil
 }

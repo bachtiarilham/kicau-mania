@@ -15,16 +15,24 @@ func TestSubscriptionsSeparateChannelAudioAndGlobalMetrics(t *testing.T) {
 		t.Fatal(err)
 	}
 	broadcast := audioService.NewBroadcaster()
-	uc := New(Options{}, catalog, nil, broadcast, nil, nil)
+	uc := New(Options{}, catalog, broadcast, nil, nil)
 	if messages, cancel, err := uc.SubscribeAudio("missing"); !errors.Is(err, apperror.ErrNotFound) || messages != nil || cancel != nil {
 		t.Fatal("unknown channel accepted")
 	}
+	uc.started = true
+	if err := uc.Activate([]string{"one", "two"}); err != nil {
+		t.Fatal(err)
+	}
+	defer uc.Deactivate()
 	audio, cancelAudio, err := uc.SubscribeAudio("one")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer cancelAudio()
-	metrics, cancelMetrics := uc.SubscribeMetrics()
+	metrics, cancelMetrics, err := uc.SubscribeMetrics()
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer cancelMetrics()
 	broadcast.Publish("audio:two", []byte("other channel"))
 	select {

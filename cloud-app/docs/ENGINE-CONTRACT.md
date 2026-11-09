@@ -36,13 +36,13 @@ Bentuk setiap command di dalam `data.commands`:
   "id": "command-001",
   "arena_id": "arena01",
   "engine_id": "engine01",
-  "kind": "recording.start",
+  "kind": "media.session.start",
   "payload": {"session_id":"session-001","channels":["gantangan01"]},
   "expires_at": "2026-11-09T12:00:00Z"
 }
 ```
 
-Jenis command: `recording.start`, `recording.stop`, `restream.start`, `restream.stop`. Stop recording memakai `session_id`. Restream memakai `target` dan untuk start menambahkan `channel_id`. Target merujuk allowlist pada engine, bukan URL/kredensial yang dikirim browser. ID dan payload command bersifat tetap; ID sama dengan isi berbeda harus ditolak.
+Jenis command: `media.session.start` dengan payload `{ "id": "session-001", "channels": ["gantangan01"], "restreams": [{ "channel_id": "gantangan01", "target": "youtube" }] }`, serta `media.session.stop` dengan payload `{ "id": "session-001" }`. Restreams boleh kosong. Target mengacu pada allowlist engine. Command lama tidak didukung; ID command dan payload tetap immutable.
 
 Hasil dikirim sebagai `{ "results": [{"id":"command-001","state":"SUCCEEDED","at":"2026-11-09T12:00:01Z"}] }`. State hasil: `SUCCEEDED`, `FAILED`, `EXPIRED`. Response HTTP 200 `{"success":true,"message":"Results saved","data":{"acknowledged":["command-001"]}}` hanya setelah hasil tersimpan/commit. Command belum diakui harus tetap dapat dikirim ulang dengan isi yang sama. Hasil SUCCEEDED menunjukkan aksi engine telah diterima/dijalankan, bukan jaminan rekaman sudah selesai atau terupload.
 
@@ -135,3 +135,11 @@ Cloud tidak meneruskan byte media. Browser harus dapat menjangkau URL HTTPS engi
 ## Batas fase
 
 Tidak ada endpoint login, CRUD, tiket, command, heartbeat, atau metadata aktif pada fondasi ini. Pembekuan SQL berlaku juga untuk tabel pendukung engine. Penerimaan integrasi berikutnya mencakup isolasi arena, hak operator/juri, expiry, command duplikat, restart sebelum acknowledgment, metadata terlambat, serta HTTPS/CORS dan browser LAN nyata.
+
+## Lifecycle media sesi
+
+Mulai mengaktifkan live video/audio, recording, PCM/metrik, serta restream terpilih. Satu sesi nonterminal per engine, termasuk selama FINALIZING. Stop menutup admission WHEP/audio, menghentikan seluruh media, lalu memfinalisasi rekaman; upload dan pelaporan tetap berjalan. Playback hanya untuk channel sesi aktif dan tetap membutuhkan tiket cloud.
+
+Command sukses menyatakan permintaan background telah diterima, bukan media sudah RUNNING atau finalisasi sudah STOPPED. Status lifecycle tersedia pada API operator engine GET `/api/v1/media/sessions/{id}`; kontrak heartbeat/metadata tidak ditambah field pada fase ini. Jangan menyatakan Stop selesai berdasarkan acknowledgment command saja. Endpoint mesin pendamping cloud tetap belum aktif.
+
+Setelah restart, sesi nonterminal menjadi INTERRUPTED tanpa melanjutkan media. Segmen diperiksa/salvage; hasil gagal diberi alasan dan sumber dipertahankan. Gunakan ID sesi baru setelah keputusan operator. Cloud terputus tidak menghentikan recording aktif; pembukaan playback baru tetap ditolak jika grant tidak tersedia.

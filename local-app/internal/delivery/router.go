@@ -15,6 +15,7 @@ import (
 	engineDelivery "kicau.local/edge/internal/delivery/rest/engine"
 	"kicau.local/edge/internal/delivery/rest/response"
 	savingDelivery "kicau.local/edge/internal/delivery/rest/saving"
+	sessionDelivery "kicau.local/edge/internal/delivery/rest/session"
 	streamingDelivery "kicau.local/edge/internal/delivery/rest/streaming"
 	"kicau.local/edge/internal/delivery/websocket"
 	"kicau.local/edge/internal/delivery/whep"
@@ -28,6 +29,7 @@ type Handlers struct {
 	WebSocket *websocket.Handler
 	Streaming *streamingDelivery.Handler
 	Saving    *savingDelivery.Handler
+	Sessions  *sessionDelivery.Handler
 }
 
 func Router(c config.Config, handlers Handlers) *gin.Engine {
@@ -69,6 +71,9 @@ func Router(c config.Config, handlers Handlers) *gin.Engine {
 	websocket.RegisterRoutes(g, handlers.WebSocket)
 	streamingDelivery.RegisterRoutes(g, handlers.Streaming)
 	savingDelivery.RegisterRoutes(g, handlers.Saving)
+	if handlers.Sessions != nil {
+		sessionDelivery.RegisterRoutes(g, handlers.Sessions)
+	}
 	r.NoRoute(func(c *gin.Context) { response.WriteError(c, apperror.ErrNotFound) })
 	r.NoMethod(func(c *gin.Context) { response.JSON(c, 405, false, "method not allowed", nil, nil) })
 	return r

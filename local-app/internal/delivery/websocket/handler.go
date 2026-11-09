@@ -10,7 +10,7 @@ import (
 
 type AudioUseCase interface {
 	SubscribeAudio(string) (<-chan []byte, func(), error)
-	SubscribeMetrics() (<-chan []byte, func())
+	SubscribeMetrics() (<-chan []byte, func(), error)
 }
 
 type Handler struct {
@@ -23,19 +23,25 @@ func New(uc AudioUseCase, origins []string) *Handler {
 }
 
 func (h *Handler) audio(c *gin.Context) {
+	generation := h.stream.generation()
 	messages, cancel, err := h.uc.SubscribeAudio(c.Param("id"))
 	if err != nil {
 		response.WriteError(c, err)
 		return
 	}
 	defer cancel()
-	h.stream.serve(c.Writer, c.Request, messages, gorillaws.BinaryMessage)
+	h.stream.serve(c.Writer, c.Request, messages, gorillaws.BinaryMessage, generation)
 }
 
 func (h *Handler) metrics(c *gin.Context) {
-	messages, cancel := h.uc.SubscribeMetrics()
+	generation := h.stream.generation()
+	messages, cancel, err := h.uc.SubscribeMetrics()
+	if err != nil {
+		response.WriteError(c, err)
+		return
+	}
 	defer cancel()
-	h.stream.serve(c.Writer, c.Request, messages, gorillaws.TextMessage)
+	h.stream.serve(c.Writer, c.Request, messages, gorillaws.TextMessage, generation)
 }
 
 func (h *Handler) Close() { h.stream.Close() }

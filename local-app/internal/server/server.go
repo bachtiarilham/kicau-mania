@@ -41,7 +41,7 @@ func Run(c config.Config) error {
 		return fmt.Errorf("cannot lock RUNTIME_DIR; use a separate directory for each server")
 	}
 	defer runtimeLock.Close()
-	for _, bin := range []string{c.FFmpeg, c.MediaMTX} {
+	for _, bin := range []string{c.FFmpeg, c.FFprobe, c.MediaMTX} {
 		if _, e := exec.LookPath(bin); e != nil {
 			logger.Warn("media executable unavailable; engine control service will continue", zap.String("binary", filepath.Base(bin)), zap.Error(e))
 		}
@@ -74,6 +74,10 @@ func Run(c config.Config) error {
 	stop := startIndependentModules(container.Saving, container.Audio, container.Streaming)
 	defer stop()
 	defer container.Handlers.WebSocket.Close()
+	if err := container.Sessions.Start(); err != nil {
+		return err
+	}
+	defer container.Sessions.Close()
 	if e := container.Background.Start(); e != nil {
 		return e
 	}

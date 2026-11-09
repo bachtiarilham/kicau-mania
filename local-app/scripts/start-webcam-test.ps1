@@ -17,6 +17,7 @@ param(
     [string] $VideoDevice,
     [string] $AudioDevice,
     [string] $FFmpegBin = 'ffmpeg',
+    [string] $FFprobeBin = 'ffprobe',
     [string] $MediaMTXBin,
     [ValidateRange(0, 86400)] [int] $DurationSeconds = 0
 )
@@ -73,6 +74,7 @@ if (-not $MediaMTXBin) {
     $MediaMTXBin = if (Test-Path -LiteralPath $bundledBinary) { $bundledBinary } else { 'mediamtx' }
 }
 $mediaPath = Resolve-Binary $MediaMTXBin
+$ffprobePath = Resolve-Binary $FFprobeBin
 if (-not $InitEnv -and -not $Synthetic -and (-not $VideoDevice -or -not $AudioDevice)) {
     throw 'Specify -VideoDevice and -AudioDevice. Use -ListDevices to see their exact names, or -Synthetic for generated media.'
 }
@@ -87,8 +89,9 @@ if (-not (Test-Path -LiteralPath $envPath)) {
     $content = [System.IO.File]::ReadAllText((Join-Path $appRoot '.env.webcam.example'))
     $content = $content.Replace('REPLACE_WITH_A_RANDOM_SECRET_AT_LEAST_32_CHARACTERS', $token)
     # Double quotes are invalid in Windows filenames; single quotes avoid dotenv interpolation.
-    if ($ffmpegPath.Contains("'") -or $mediaPath.Contains("'")) { throw 'Binary paths containing single quotes are not supported by the env initializer.' }
+    if ($ffmpegPath.Contains("'") -or $mediaPath.Contains("'") -or $ffprobePath.Contains("'")) { throw 'Binary paths containing single quotes are not supported by the env initializer.' }
     $content = $content.Replace('FFMPEG_BIN=ffmpeg', "FFMPEG_BIN='$($ffmpegPath.Replace('\', '/'))'")
+    $content = $content.Replace('FFPROBE_BIN=ffprobe', "FFPROBE_BIN='$($ffprobePath.Replace('\', '/'))'")
     $content = $content.Replace('MEDIAMTX_BIN=./bin/mediamtx-v1.15.3/mediamtx.exe', "MEDIAMTX_BIN='$($mediaPath.Replace('\', '/'))'")
     $file = [System.IO.File]::Open($envPath, [System.IO.FileMode]::CreateNew, [System.IO.FileAccess]::Write)
     try {

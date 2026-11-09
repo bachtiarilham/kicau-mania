@@ -7,3 +7,8 @@ type Process interface {
 	Err() error
 	Stop()
 }
+
+// FinalizationError contains only safe diagnostic text, never paths or process output.
+type FinalizationError string
+
+func (e FinalizationError) Error() string { return string(e) }

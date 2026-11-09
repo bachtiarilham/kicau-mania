@@ -40,6 +40,7 @@ type Config struct {
 
 	// Media / NVR
 	FFmpeg         string
+	FFprobe        string
 	MediaMTX       string
 	MediaConfig    string
 	RTSPListen     string
@@ -150,6 +151,7 @@ func Load(path string) (Config, error) {
 
 		// Media / NVR
 		FFmpeg:         getEnv("FFMPEG_BIN", "ffmpeg"),
+		FFprobe:        getEnv("FFPROBE_BIN", "ffprobe"),
 		MediaMTX:       getEnv("MEDIAMTX_BIN", "mediamtx"),
 		MediaConfig:    filepath.Join(runtimeDir, "mediamtx.yml"),
 		RTSPListen:     getEnv("RTSP_ADDR", "127.0.0.1:8554"),

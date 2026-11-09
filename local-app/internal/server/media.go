@@ -25,10 +25,12 @@ func superviseMedia(ctx context.Context, server mediaServer, retry time.Duration
 			if err := server.Start(ctx); err != nil {
 				logger.Warn("media unavailable; engine control remains available", zap.Error(err))
 			} else {
-				select {
-				case <-ctx.Done():
-				case <-server.Done():
-					logger.Warn("media process stopped; restarting independently")
+				if processDone := server.Done(); processDone != nil {
+					select {
+					case <-ctx.Done():
+					case <-processDone:
+						logger.Warn("media process stopped; restarting independently")
+					}
 				}
 				server.Close()
 			}

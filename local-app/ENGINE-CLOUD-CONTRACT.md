@@ -33,13 +33,13 @@ URL kosong membuat integrasi terkait belum aktif. `/readyz` tetap mengembalikan 
   "id": "command-001",
   "arena_id": "arena01",
   "engine_id": "engine01",
-  "kind": "recording.start",
+  "kind": "media.session.start",
   "payload": { "session_id": "session-001", "channels": ["gantangan01"] },
   "expires_at": "2026-11-09T12:00:00Z"
 }
 ```
 
-Jenis yang tersedia adalah `recording.start`, `recording.stop`, `restream.start`, dan `restream.stop`. Stop recording memakai `session_id`. Restream memakai `target` dan, untuk start, `channel_id`. Target mengacu pada allowlist lokal.
+Jenis command: `media.session.start` dengan payload `{ "id": "session-001", "channels": ["gantangan01"], "restreams": [{ "channel_id": "gantangan01", "target": "youtube" }] }`, serta `media.session.stop` dengan payload `{ "id": "session-001" }`. Restreams boleh kosong. Target mengacu pada allowlist engine. Command lama tidak didukung; ID command dan payload tetap immutable.
 
 Hasil berisi `id`, `state`, dan `at`. State hasil adalah `SUCCEEDED`, `FAILED`, atau `EXPIRED`. Hasil sukses menunjukkan aksi UseCase telah diterima/dijalankan. Cloud membaca kesehatan proses melalui heartbeat. Command disimpan sebelum dieksekusi dan hasil disimpan sebelum dilaporkan. Setelah restart, command yang hasilnya belum pasti direkonsiliasi tanpa memulai ulang pekerjaan start secara otomatis. Operator dapat mengirim command baru setelah meninjau kegagalan.
 
@@ -112,3 +112,11 @@ Frontend menangani izin Local Network Access browser melalui aksi pengguna. Guna
 Heartbeat berjalan default setiap 5 detik dan menjadi usang setelah 15 detik. Cloud menggunakan heartbeat untuk interupsi/resume bisnis. Local-app melanjutkan rekaman berjalan saat cloud terputus dan menyimpan hasil command serta metadata yang belum diakui. Pembukaan playback baru memerlukan otorisasi cloud yang berhasil.
 
 Cloud-app saat ini menyediakan fondasi HTTP/PostgreSQL dan dokumentasi kontrak; endpoint command, heartbeat, media updates, penerbitan tiket, dan otorisasi playback belum aktif. Implementasinya menunggu autentikasi dan repository persisten pada pekerjaan cloud berikutnya. Local-app menolak playback baru ketika endpoint otorisasi belum tersedia.
+
+## Lifecycle media sesi
+
+Mulai mengaktifkan live video/audio, recording, PCM/metrik, serta restream terpilih. Satu sesi nonterminal per engine, termasuk selama FINALIZING. Stop menutup admission WHEP/audio, menghentikan seluruh media, lalu memfinalisasi rekaman; upload dan pelaporan tetap berjalan. Playback hanya untuk channel sesi aktif dan tetap membutuhkan tiket cloud.
+
+Command sukses menyatakan permintaan background telah diterima, bukan media sudah RUNNING atau finalisasi sudah STOPPED. Status lifecycle tersedia pada API operator engine GET `/api/v1/media/sessions/{id}`; kontrak heartbeat/metadata tidak ditambah field pada fase ini. Jangan menyatakan Stop selesai berdasarkan acknowledgment command saja. Endpoint mesin pendamping cloud tetap belum aktif.
+
+Setelah restart, sesi nonterminal menjadi INTERRUPTED tanpa melanjutkan media. Segmen diperiksa/salvage; hasil gagal diberi alasan dan sumber dipertahankan. Gunakan ID sesi baru setelah keputusan operator. Cloud terputus tidak menghentikan recording aktif; pembukaan playback baru tetap ditolak jika grant tidak tersedia.

@@ -18,6 +18,7 @@ import (
 	"kicau.local/edge/config"
 	channelDelivery "kicau.local/edge/internal/delivery/rest/channel"
 	savingDelivery "kicau.local/edge/internal/delivery/rest/saving"
+	sessionDelivery "kicau.local/edge/internal/delivery/rest/session"
 	streamingDelivery "kicau.local/edge/internal/delivery/rest/streaming"
 	websocketDelivery "kicau.local/edge/internal/delivery/websocket"
 	"kicau.local/edge/internal/infra/storage/filesystem"
@@ -28,10 +29,13 @@ import (
 	channelUC "kicau.local/edge/internal/mediaengine/channel/usecase"
 	"kicau.local/edge/internal/mediaengine/media"
 	"kicau.local/edge/internal/mediaengine/media/mediamtx"
-	savingModel "kicau.local/edge/internal/mediaengine/saving/model"
 	savingRepo "kicau.local/edge/internal/mediaengine/saving/repository"
 	savingUC "kicau.local/edge/internal/mediaengine/saving/usecase"
 	savingWorker "kicau.local/edge/internal/mediaengine/saving/worker"
+	sessionModel "kicau.local/edge/internal/mediaengine/session/model"
+	sessionRepo "kicau.local/edge/internal/mediaengine/session/repository"
+	sessionUC "kicau.local/edge/internal/mediaengine/session/usecase"
+	sessionWorker "kicau.local/edge/internal/mediaengine/session/worker"
 	streamingUC "kicau.local/edge/internal/mediaengine/streaming/usecase"
 	streamingWorker "kicau.local/edge/internal/mediaengine/streaming/worker"
 )
@@ -71,14 +75,11 @@ func (f *fakeMedia) start(ctx context.Context, kind, source string) media.Proces
 func (f *fakeMedia) Restream(ctx context.Context, source, _ string) (media.Process, error) {
 	return f.start(ctx, "streaming", source), nil
 }
-func (f *fakeMedia) Record(ctx context.Context, source, file string) (media.Process, error) {
-	if e := os.WriteFile(file, []byte("finalized fixture"), 0600); e != nil {
-		return nil, e
+func (f *fakeMedia) Run(ctx context.Context, source, file string, write func([]byte)) error {
+	if err := os.WriteFile(file, []byte("media fixture"), 0600); err != nil {
+		return err
 	}
-	return f.start(ctx, "saving", source), nil
-}
-func (f *fakeMedia) Audio(ctx context.Context, source string, write func([]byte)) error {
-	f.events <- observed{"audio", source, ctx.Done()}
+	f.events <- observed{"pipeline", source, ctx.Done()}
 	timer := time.NewTicker(10 * time.Millisecond)
 	defer timer.Stop()
 	for {
@@ -90,6 +91,12 @@ func (f *fakeMedia) Audio(ctx context.Context, source string, write func([]byte)
 		}
 	}
 }
+func (f *fakeMedia) Finalize(_ context.Context, parts []string, file string) error {
+	if len(parts) == 0 {
+		return os.ErrNotExist
+	}
+	return os.WriteFile(file, []byte("validated fixture"), 0600)
+}
 
 type testDisk struct{ filesystem.Disk }
 
@@ -98,6 +105,7 @@ type testContainer struct {
 	Audio     *audioUC.UseCase
 	Streaming *streamingUC.UseCase
 	Saving    *savingUC.UseCase
+	Sessions  *sessionUC.UseCase
 	Handlers  Handlers
 }
 
@@ -118,82 +126,87 @@ func fixture(t *testing.T) (*testContainer, config.Config, *fakeMedia) {
 	}
 	media := &fakeMedia{events: make(chan observed, 10)}
 	v := channelUC.New(catalog, mediaServer)
-	a := audioUC.New(audioUC.Options{SampleRate: 16000, Threshold: -35}, catalog, media, audioService.NewBroadcaster(), nil, audioWorker.New())
+	a := audioUC.New(audioUC.Options{SampleRate: 16000, Threshold: -35}, catalog, audioService.NewBroadcaster(), nil, audioWorker.New())
 	s := streamingUC.New(catalog, media, map[string]string{"youtube": "rtmps://example.test/live/key"}, streamingWorker.New())
-	save := savingUC.New(savingUC.Options{DataDir: dir, MaxRound: time.Hour, MinFreeBytes: 100}, catalog, repo, media, nil, testDisk{}, savingWorker.New())
-	c := &testContainer{Channels: v, Audio: a, Streaming: s, Saving: save, Handlers: Handlers{Channels: channelDelivery.New(v), WebSocket: websocketDelivery.New(a, cfg.Origins), Streaming: streamingDelivery.New(s), Saving: savingDelivery.New(save)}}
+	save := savingUC.New(repo, nil, savingWorker.New())
+	journal, e := sessionRepo.New(filepath.Join(dir, "sessions"))
+	if e != nil {
+		t.Fatal(e)
+	}
+	sessions := sessionUC.New(sessionUC.Options{DataDir: dir, MaxDuration: time.Hour, MinFreeBytes: 100, Targets: map[string]string{"youtube": "configured"}}, journal, repo, catalog, media, media, a, s, testDisk{}, sessionWorker.New(), mediaServer)
+	sockets := websocketDelivery.New(a, cfg.Origins)
+	sessions.BindConnections(nil, sockets)
+	c := &testContainer{Channels: v, Audio: a, Streaming: s, Saving: save, Sessions: sessions, Handlers: Handlers{Channels: channelDelivery.New(v), WebSocket: sockets, Streaming: streamingDelivery.New(s), Saving: savingDelivery.New(save), Sessions: sessionDelivery.New(sessions)}}
+
 	t.Cleanup(func() {
+		sessions.Close()
 		c.Handlers.WebSocket.Close()
 		save.Close()
 		s.Close()
 		a.Close()
 		media.wg.Wait()
 	})
-	for _, start := range []func() error{save.Start, a.Start, s.Start} {
+	for _, start := range []func() error{save.Start, a.Start, s.Start, sessions.Start} {
 		if e = start(); e != nil {
 			t.Fatal(e)
 		}
 	}
 	return c, cfg, media
 }
-func TestStopStreamingDoesNotStopOtherDomains(t *testing.T) {
+func waitStopped(t *testing.T, c *testContainer, id string) {
+	t.Helper()
+	until := time.Now().Add(3 * time.Second)
+	for time.Now().Before(until) {
+		s, err := c.Sessions.Get(context.Background(), id)
+		if err == nil && s.State == "STOPPED" {
+			return
+		}
+		time.Sleep(time.Millisecond * 10)
+	}
+	t.Fatal("session did not finalize")
+}
+func TestStopSessionStopsAllMedia(t *testing.T) {
 	c, _, media := fixture(t)
-	pcm, unsubscribe, e := c.Audio.SubscribeAudio("lapak01")
-	if e != nil {
-		t.Fatal(e)
+	_, err := c.Sessions.StartSession(context.Background(), sessionModel.StartRequest{ID: "session1", Channels: []string{"lapak01"}, Restreams: []sessionModel.Restream{{ChannelID: "lapak01", Target: "youtube"}}})
+	if err != nil {
+		t.Fatal(err)
 	}
-	defer unsubscribe()
-	if _, e = c.Saving.StartSession(context.Background(), savingModel.StartSession{ID: "round1", Channels: []string{"lapak01"}}); e != nil {
-		t.Fatal(e)
+	pcm, cancel, err := c.Audio.SubscribeAudio("lapak01")
+	if err != nil {
+		t.Fatal(err)
 	}
-	if e = c.Streaming.StartRestream("lapak01", "youtube"); e != nil {
-		t.Fatal(e)
-	}
+	defer cancel()
 	events := map[string]observed{}
-	for len(events) < 3 {
+	for len(events) < 2 {
 		select {
 		case event := <-media.events:
-			if event.source != "rtsp://127.0.0.1:8554/lapak01" {
-				t.Fatal("domain bypassed NVR source resolution", event)
-			}
 			events[event.kind] = event
 		case <-time.After(2 * time.Second):
-			t.Fatal("workers not started", events)
+			t.Fatal("media not started")
 		}
-	}
-	if e = c.Streaming.StopRestream("youtube"); e != nil {
-		t.Fatal(e)
 	}
 	select {
-	case <-events["streaming"].done:
-	default:
-		t.Fatal("streaming process survived stop")
-	}
-	for _, kind := range []string{"audio", "saving"} {
-		select {
-		case <-events[kind].done:
-			t.Fatal("streaming stopped another domain", kind)
-		default:
-		}
-	}
-	channels := c.Channels.Channels()
-	if len(channels) != 1 || channels[0].WHEP != "http://192.0.2.2:8889/api/v1/playback/lapak01/whep" {
-		t.Fatal("restream changed local video metadata")
-	}
-	select {
-	case b := <-pcm:
-		if len(b) != 6400 {
-			t.Fatal("audio frame changed")
-		}
+	case <-pcm:
 	case <-time.After(time.Second):
-		t.Fatal("audio stopped")
+		t.Fatal("PCM missing")
 	}
-	if e = c.Saving.StopSession(context.Background(), "round1"); e != nil {
-		t.Fatal(e)
+	if _, err = c.Sessions.StopSession(context.Background(), "session1"); err != nil {
+		t.Fatal(err)
 	}
-	records, _, e := c.Saving.Recordings(context.Background(), "", 25)
-	if e != nil || len(records) != 1 || records[0].State != "READY" {
-		t.Fatalf("saving finalization: %+v %v", records, e)
+	waitStopped(t, c, "session1")
+	for kind, event := range events {
+		select {
+		case <-event.done:
+		default:
+			t.Fatal("media survived stop", kind)
+		}
+	}
+	if _, _, err = c.Audio.SubscribeAudio("lapak01"); err == nil {
+		t.Fatal("audio admitted outside session")
+	}
+	records, _, err := c.Saving.Recordings(context.Background(), "", 25)
+	if err != nil || len(records) != 1 || records[0].State != "READY" {
+		t.Fatal(records, err)
 	}
 }
 
@@ -237,23 +250,25 @@ func TestExistingHTTPContracts(t *testing.T) {
 		method, path, body string
 		want               int
 	}{
-		{"POST", "/api/v1/media/recording-sessions", `{`, 400},
-		{"POST", "/api/v1/media/recording-sessions", `{"id":"r1","channels":["lapak01","lapak01"]}`, 400},
-		{"POST", "/api/v1/media/recording-sessions", `{"id":"r1","channels":["lapak01"]}`, 202},
-		{"POST", "/api/v1/media/recording-sessions", `{"id":"r2","channels":["lapak01"]}`, 409},
+		{"POST", "/api/v1/media/sessions", `{`, 400},
+		{"POST", "/api/v1/media/sessions", `{"id":"r1","channels":["lapak01","lapak01"]}`, 400},
+		{"POST", "/api/v1/media/sessions", `{"id":"r1","channels":["lapak01"]}`, 202},
+		{"POST", "/api/v1/media/sessions", `{"id":"r2","channels":["lapak01"]}`, 409},
 		{"GET", "/api/v1/recordings?limit=abc", "", 400},
 		{"GET", "/api/v1/recordings?limit=0", "", 400},
-		{"POST", "/api/v1/media/recording-sessions/r1/stop", "", 204},
-		{"POST", "/api/v1/restreams", `{"channel_id":"lapak01","target":"missing"}`, 404},
-		{"POST", "/api/v1/restreams", `{"channel_id":"lapak01","target":"youtube"}`, 202},
-		{"POST", "/api/v1/restreams", `{"channel_id":"lapak01","target":"youtube"}`, 409},
+		{"GET", "/api/v1/media/sessions/r1", "", 200},
+		{"POST", "/api/v1/media/sessions/r1/stop", "", 202},
+		{"POST", "/api/v1/restreams", `{"channel_id":"lapak01","target":"missing"}`, 405},
+		{"POST", "/api/v1/restreams", `{"channel_id":"lapak01","target":"youtube"}`, 405},
+		{"POST", "/api/v1/restreams", `{"channel_id":"lapak01","target":"youtube"}`, 405},
 		{"GET", "/api/v1/restreams", "", 200},
-		{"DELETE", "/api/v1/restreams/youtube", "", 204},
+		{"DELETE", "/api/v1/restreams/youtube", "", 404},
 	} {
 		if got, _ := request(tc.method, tc.path, tc.body, true); got != tc.want {
 			t.Fatalf("%s %s: got %d want %d", tc.method, tc.path, got, tc.want)
 		}
 	}
+	waitStopped(t, c, "r1")
 	status, body = request("GET", "/api/v1/recordings?limit=25", "", true)
 	if status != 200 {
 		t.Fatal(status)
@@ -267,10 +282,10 @@ func TestExistingHTTPContracts(t *testing.T) {
 		t.Fatal(e)
 	}
 	recordings := page.Items
-	if len(recordings) != 1 || len(recordings[0]) != 9 || string(recordings[0]["state"]) != `"READY"` || recordings[0]["file"] != nil || page.NextCursor != "" || page.HasMore || string(body["success"]) != "true" {
+	if len(recordings) != 1 || len(recordings[0]) != 10 || string(recordings[0]["state"]) != `"READY"` || recordings[0]["file"] != nil || page.NextCursor != "" || page.HasMore || string(body["success"]) != "true" {
 		t.Fatal(string(body["data"]))
 	}
-	preflight := httptest.NewRequest("OPTIONS", "/api/v1/media/recording-sessions", nil)
+	preflight := httptest.NewRequest("OPTIONS", "/api/v1/media/sessions", nil)
 	preflight.Header.Set("Origin", "http://arena.test")
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, preflight)
@@ -280,6 +295,9 @@ func TestExistingHTTPContracts(t *testing.T) {
 }
 func TestAudioWebSocketWireContracts(t *testing.T) {
 	c, cfg, _ := fixture(t)
+	if _, err := c.Sessions.StartSession(context.Background(), sessionModel.StartRequest{ID: "websocket-session", Channels: []string{"lapak01"}}); err != nil {
+		t.Fatal(err)
+	}
 	srv := httptest.NewServer(Router(cfg, c.Handlers))
 	defer srv.Close()
 	for _, tc := range []struct {

@@ -7,7 +7,8 @@ Jika belum memahami hubungan antarkomponen, mulai dari [Memahami mediaengine](ME
 ## Mulai membaca
 
 - Startup: cmd/api/main.go → config/config.go → internal/server/server.go → internal/app/container.go.
-- Rekaman: internal/mediaengine/saving/model/model.go → internal/delivery/rest/saving/handler.go → internal/mediaengine/saving/usecase/saving.go → internal/mediaengine/saving/repository/recording.go.
+- Sesi: mediaengine/session/model → delivery/rest/session → mediaengine/session/usecase → mediaengine/session/repository.
+- Rekaman/upload: saving/model → delivery/rest/saving → saving/usecase/query.go atau upload.go → saving/repository.
 - Playback: internal/delivery/whep/handler.go → internal/cloud/usecase/playback.go → client cloud → MediaMTX.
 - Upload: UseCase saving → worker saving → adapter S3 → manifest → worker metadata.
 
@@ -29,9 +30,10 @@ Lihat [alur end-to-end](ALUR-END-TO-END.md) dan [kontrak cloud](ENGINE-CLOUD-CON
 | internal/apperror | Error aplikasi bersama. |
 | internal/core/identifier | Validasi format identifier. |
 | internal/mediaengine/channel | Identitas, katalog sumber, dan informasi playback tanpa membocorkan kredensial. |
-| internal/mediaengine/audio | Decode PCM, analisis audio, worker, dan service broadcasting/pengiriman metrik. |
+| internal/mediaengine/audio | Analisis PCM dari pipeline sesi, distribusi dan pengiriman metrik best effort. |
 | internal/mediaengine/streaming | Lifecycle restream. |
-| internal/mediaengine/saving | Rekaman, manifest, antrean upload, recovery media. |
+| internal/mediaengine/session | Koordinasi lifecycle media, retry, recovery dan finalisasi. |
+| internal/mediaengine/saving | Manifest, query rekaman, antrean upload dan retry. |
 | internal/mediaengine/media | Kontrak proses serta adapter FFmpeg/MediaMTX. |
 | internal/cloud | Model pesan, UseCase komunikasi, client HTTP, journal, dan scheduler cloud. |
 | internal/infra | Logger, DNS, filesystem/S3, subprocess, lifecycle goroutine. |
@@ -208,7 +210,7 @@ Handler REST menerima interface kecil yang didefinisikan di file handler pemakai
 | File | Fungsi |
 | --- | --- |
 | [audio_test.go](internal/mediaengine/audio/usecase/audio_test.go) | Memastikan subscription audio per channel terpisah dari subscription metrik global dan memvalidasi channel. |
-| [audio.go](internal/mediaengine/audio/usecase/audio.go) | Mengatur capture tiap channel, analisis PCM, publikasi mediaengine/audio/metrik, subscription, dan pengiriman metrik melalui interface. Worker menerima callback dari UseCase. |
+| [audio.go](internal/mediaengine/audio/usecase/audio.go) | Lifecycle modul dan subscription channel aktif; tidak capture otomatis. |
 
 
 ### internal/mediaengine/audio/worker
@@ -216,8 +218,7 @@ Handler REST menerima interface kecil yang didefinisikan di file handler pemakai
 | File | Fungsi |
 | --- | --- |
 | [backend.go](internal/mediaengine/audio/worker/backend.go) | Antrean metrik best effort dan satu loop pengiriman ke backend. Metrik yang gagal dikirim tidak menjadi outbox persisten. |
-| [capture.go](internal/mediaengine/audio/worker/capture.go) | Loop capture per channel, jeda reconnect setelah gangguan, dan penghentian melalui context. |
-| [worker_test.go](internal/mediaengine/audio/worker/worker_test.go) | Menguji reconnect/cancel, batas antrean, backend gagal, dan shutdown ketika pengiriman berlangsung. |
+| [worker_test.go](internal/mediaengine/audio/worker/worker_test.go) | Fixture antrean terbatas, backend gagal dan cancellation. |
 | [worker.go](internal/mediaengine/audio/worker/worker.go) | State worker, antrean metrik terbatas, jobgroup, dan lifecycle Start/Close. |
 
 
@@ -248,9 +249,7 @@ Handler REST menerima interface kecil yang didefinisikan di file handler pemakai
 
 | File | Fungsi |
 | --- | --- |
-| [audio.go](internal/mediaengine/media/ffmpeg/audio.go) | `AudioDecoder` menjalankan FFmpeg untuk menghasilkan PCM dan meneruskannya ke callback capture. |
 | [input.go](internal/mediaengine/media/ffmpeg/input.go) | Menyusun argumen input RTSP bersama: TCP, timeout, serta pembatasan output log. |
-| [recording.go](internal/mediaengine/media/ffmpeg/recording.go) | `Recorder` merekam video stream-copy dan audio AAC opsional ke fragmented MP4. Mengembalikan kontrak `media.Process`. |
 | [streaming.go](internal/mediaengine/media/ffmpeg/streaming.go) | `Restreamer` melakukan encode H.264/AAC dan mengirim ke RTSP atau keluaran FLV untuk target RTMP/RTMPS. |
 
 
@@ -266,15 +265,15 @@ Handler REST menerima interface kecil yang didefinisikan di file handler pemakai
 
 | File | Fungsi |
 | --- | --- |
-| [handler.go](internal/delivery/rest/saving/handler.go) | Parsing request mulai/stop/daftar rekaman, memanggil UseCase, dan membentuk response yang aman untuk API. |
-| [router.go](internal/delivery/rest/saving/router.go) | Mendaftarkan `/media/recording-sessions`, alias lama `/rounds`, endpoint stop, dan `/recordings`. Semua berada di bawah `/api/v1`. |
+| [handler.go](internal/delivery/rest/saving/handler.go) | Query pagination dan DTO rekaman dengan diagnostik opsional; tidak membocorkan path file. |
+| [router.go](internal/delivery/rest/saving/router.go) | GET /recordings. Kontrol media berada pada handler sesi. |
 
 
 ### internal/mediaengine/saving/model
 
 | File | Fungsi |
 | --- | --- |
-| [model.go](internal/mediaengine/saving/model/model.go) | Permintaan mulai sesi dan metadata rekaman: channel, file, status, waktu, object key, dan informasi retry/upload. |
+| [model.go](internal/mediaengine/saving/model/model.go) | Manifest rekaman kompatibel, segmen/gangguan opsional serta status retry upload. |
 
 
 ### internal/mediaengine/saving/repository
@@ -289,32 +288,27 @@ Handler REST menerima interface kecil yang didefinisikan di file handler pemakai
 
 | File | Fungsi |
 | --- | --- |
-| [saving_test.go](internal/mediaengine/saving/usecase/saving_test.go) | Menguji lifecycle rekaman, validasi, recovery partial, disk guard, kegagalan spawn, retry upload setelah restart, dan cleanup kegagalan startup. |
-| [saving.go](internal/mediaengine/saving/usecase/saving.go) | Dependency, options, state bersama, constructor, startup, abort startup, dan shutdown. |
-| [session.go](internal/mediaengine/saving/usecase/session.go) | Mulai/stop sesi, reservasi, rollback, finalisasi, dan kegagalan reservasi. |
+| [saving_test.go](internal/mediaengine/saving/usecase/saving_test.go) | Fixture persistensi retry upload setelah restart dan object key stabil. |
+| [saving.go](internal/mediaengine/saving/usecase/saving.go) | Dependency manifest/storage/worker, constructor, startup dan shutdown uploader. |
 | [query.go](internal/mediaengine/saving/usecase/query.go) | Pagination rekaman dan pencarian berdasarkan sesi. |
-| [recovery.go](internal/mediaengine/saving/usecase/recovery.go) | Memulihkan status manifest saat startup. |
 | [upload.go](internal/mediaengine/saving/usecase/upload.go) | Memilih upload siap jalan, melakukan retry, dan menyimpan hasil. |
-| [limits.go](internal/mediaengine/saving/usecase/limits.go) | Memeriksa kapasitas disk dan batas durasi rekaman. |
 
 
 ### internal/mediaengine/saving/worker
 
 | File | Fungsi |
 | --- | --- |
-| [guard.go](internal/mediaengine/saving/worker/guard.go) | Timer berkala untuk memanggil pemeriksaan batas disk/durasi dari UseCase. |
-| [recording.go](internal/mediaengine/saving/worker/recording.go) | Menunggu proses recorder selesai, menjalankan callback finalisasi, menghentikan proses, dan menunggu seluruh completion. |
 | [upload.go](internal/mediaengine/saving/worker/upload.go) | `StartUploadLoop()` menjadwalkan callback upload; `UploadWithTimeout()` memberi deadline satu upload. Pemilihan file dan retry state tetap di UseCase. |
-| [worker_test.go](internal/mediaengine/saving/worker/worker_test.go) | Menguji urutan siklus upload, penundaan guard, penantian finalisasi, timeout/cancel upload, dan shutdown proses recorder. |
-| [worker.go](internal/mediaengine/saving/worker/worker.go) | Lifecycle worker recording/upload/guard dengan jobgroup dan context bersama. |
+| [worker_test.go](internal/mediaengine/saving/worker/worker_test.go) | Fixture penjadwalan upload, timeout dan cancellation. |
+| [worker.go](internal/mediaengine/saving/worker/worker.go) | Lifecycle uploader; tidak mengelola proses recording. |
 
 
 ### internal/delivery/rest/streaming
 
 | File | Fungsi |
 | --- | --- |
-| [handler.go](internal/delivery/rest/streaming/handler.go) | Handler list/start/stop restream; memetakan request ke UseCase. |
-| [router.go](internal/delivery/rest/streaming/router.go) | Mendaftarkan GET/POST `/restreams` dan DELETE `/restreams/:target` di bawah `/api/v1`. |
+| [handler.go](internal/delivery/rest/streaming/handler.go) | Mengembalikan daftar status restream melalui interface pembaca. |
+| [router.go](internal/delivery/rest/streaming/router.go) | GET /restreams. Mulai/Stop hanya melalui sesi media. |
 
 
 ### internal/mediaengine/streaming/model
@@ -400,7 +394,7 @@ DATA_DIR berisi media/manifest, commands/, dan media-updates/. RUNTIME_DIR beris
 | [recording_metadata.go](internal/cloud/usecase/recording_metadata.go) | Membaca manifest, membuat hash update, menulis antrean, mengirim metadata, dan memeriksa acknowledgment. |
 | [command_polling.go](internal/cloud/usecase/command_polling.go) | Polling command, validasi identitas, deduplikasi/recovery, persistensi hasil, dan acknowledgment. |
 | [command_polling_test.go](internal/cloud/usecase/command_polling_test.go) | Tes command kedaluwarsa, kegagalan laporan, dan deduplikasi setelah restart; tidak dijalankan otomatis. |
-| [command_execution.go](internal/cloud/usecase/command_execution.go) | CommandExecutor mengoordinasi tindakan recording/restream dan rekonsiliasi setelah restart. |
+| [command_execution.go](internal/cloud/usecase/command_execution.go) | Memanggil interface sesi untuk media.session.start/stop dan rekonsiliasi restart. |
 
 ### internal/cloud/client
 
@@ -433,3 +427,27 @@ DATA_DIR berisi media/manifest, commands/, dan media-updates/. RUNTIME_DIR beris
 | --- | --- |
 | [broadcaster.go](internal/mediaengine/audio/service/broadcaster.go) | Broadcaster mendistribusikan audio/metrik berdasarkan topic; subscriber lambat tidak menahan capture. Constructor NewBroadcaster. |
 | [metrics_client.go](internal/mediaengine/audio/service/metrics_client.go) | MetricsClient mengirim metrik JSON melalui HTTP; timeout, header, kebijakan 2xx, dan larangan redirect dipertahankan. Constructor NewMetricsClient. |
+
+### internal/mediaengine/session
+
+| File | Fungsi |
+| --- | --- |
+| [model/session.go](internal/mediaengine/session/model/session.go) | Payload Mulai, status sesi/channel, finalisasi dan gangguan. |
+| [repository/journal.go](internal/mediaengine/session/repository/journal.go) | Journal sesi JSON atomik per ID, tanpa memanggil repository lain. |
+| [usecase/session.go](internal/mediaengine/session/usecase/session.go) | Interface dependency, constructor, validasi, reservasi, Start/Stop, admission WHEP dan guard. |
+| [usecase/recording.go](internal/mediaengine/session/usecase/recording.go) | Pipeline per channel, segmen percobaan, retry, teardown, finalisasi dan recovery. |
+| [usecase/session_test.go](internal/mediaengine/session/usecase/session_test.go) | Fixture context background, admission barrier, idempoten, restart dan kegagalan finalisasi. |
+| [worker/worker.go](internal/mediaengine/session/worker/worker.go) | Pekerjaan background, kelompok pipeline, context dan penantian retry. |
+| [handler sesi](internal/delivery/rest/session/handler.go) | Interface handler, parsing dan response POST Mulai/Stop serta GET status. |
+
+### Pipeline dan analisis sesi
+
+| File | Fungsi |
+| --- | --- |
+| [pipeline.go](internal/mediaengine/media/ffmpeg/pipeline.go) | FFmpeg recording A/V + PCM, drain terbatas dan flush fragmen. |
+| [finalizer.go](internal/mediaengine/media/ffmpeg/finalizer.go) | ffprobe, salvage partial, kompatibilitas codec, concat stream-copy, validasi dan commit atomik. |
+| [audio/session.go](internal/mediaengine/audio/usecase/session.go) | Aktivasi channel, penghentian subscription, ingest PCM, analyzer/broadcast dan fencing metrik. |
+| [parent_windows.go](internal/infra/runtime/subprocess/parent_windows.go) | Job Object mengakhiri proses media jika engine crash. |
+| [parent_linux.go](internal/infra/runtime/subprocess/parent_linux.go) | Parent-death signal Linux untuk proses media. |
+
+Panduan: [Memahami mediaengine](MEMAHAMI-MEDIAENGINE.md). Penerimaan: [SESSION-ACCEPTANCE.md](SESSION-ACCEPTANCE.md).

@@ -1,292 +1,130 @@
-# Memahami mediaengine: dari kamera sampai rekaman dan cloud
+# Memahami mediaengine: satu sesi untuk semua media
 
-Panduan ini untuk developer yang ingin memahami alur sebelum membaca semua file. Penjelasan mengikuti implementasi saat ini. Mulailah dari gambaran media, kemudian satu alur fitur; tidak perlu membuka seluruh folder sekaligus.
+Local-app adalah engine media. Cloud menangani login, registrasi, penilaian, dan aturan perlombaan. Tombol **Mulai** membuat satu sesi media; **Stop** menghentikan semua media sesi dan memfinalisasi rekaman. HTTP server, supervisor MediaMTX, uploader, heartbeat, dan pelaporan metadata tetap hidup.
 
-## 1. Pegangan utama: Go mengendalikan, MediaMTX dan FFmpeg mengolah media
+## Mulai membaca dari sini
 
-Local-app menjalankan live LAN, analisis audio, rekaman, restream, dan upload. Login pengguna, peserta, nilai juri, dan aturan perlombaan menjadi urusan cloud-app.
+1. [Model sesi](internal/mediaengine/session/model/session.go): payload, status, dan hasil yang disimpan.
+2. [Handler sesi](internal/delivery/rest/session/handler.go): parsing JSON dan response 202.
+3. [UseCase sesi](internal/mediaengine/session/usecase/session.go): validasi, reservasi, admission playback, dan koordinasi.
+4. [Recording sesi](internal/mediaengine/session/usecase/recording.go): percobaan per channel, retry, penghentian, finalisasi, dan restart.
+5. [Journal sesi](internal/mediaengine/session/repository/journal.go): penyimpanan JSON atomik.
+6. [Worker sesi](internal/mediaengine/session/worker/worker.go): goroutine dan penantian pekerjaan background.
 
-Ada dua alur yang perlu dibedakan:
+Handler memanggil interface UseCase. UseCase sesi memanggil audio/restream melalui interface serta memakai model rekaman; tidak mengimpor handler, HTTP, repository konkret, atau adapter. Container di [app](internal/app/container.go) memasang implementasinya. Repository tidak memanggil repository lain.
 
-| Alur | Contoh | Yang bergerak |
-| --- | --- | --- |
-| Kontrol | Mulai rekaman channel gantangan01 | Request JSON, pemanggilan UseCase, status pekerjaan |
-| Media | Kamera mengirim video/audio | Stream RTSP/WebRTC, PCM, dan file MP4 |
+## Peta tanggung jawab
 
-Request mulai rekaman tidak membawa byte video. Request tersebut meminta Go menjalankan proses FFmpeg yang mengambil stream dari MediaMTX.
+| Folder | Tugas |
+| --- | --- |
+| `mediaengine/session` | Pemilik lifecycle tunggal seluruh media, retry channel, disk/duration guard, dan recovery. |
+| `mediaengine/channel` | Katalog channel dan alamat playback tanpa membocorkan kredensial sumber. |
+| `mediaengine/audio` | Analisis PCM, distribusi PCM/metrik, dan pengiriman metrik best effort. Tidak membuka kamera sendiri. |
+| `mediaengine/streaming` | Menjalankan dan memulihkan restream yang dipilih oleh sesi. Tidak punya endpoint mutasi. |
+| `mediaengine/saving` | Manifest rekaman, query daftar, upload S3, dan retry upload. Tidak mengendalikan proses recording. |
+| `mediaengine/media/ffmpeg` | Pipeline recording/PCM, pemeriksaan/penggabungan MP4, dan adapter restream. |
+| `mediaengine/media/mediamtx` | Server RTSP/WebRTC dan sumber on-demand. |
+| `delivery/rest/session` | API Mulai/Stop/status. |
+| `delivery/whep` | Otorisasi playback cloud, proxy SDP, registry sesi WHEP, dan teardown. |
+| `delivery/websocket` | Koneksi audio binary/metrik text dengan subprotocol `edge-v1`. |
+| `infra/runtime` | Eksekusi proses OS dan jobgroup background. |
+| `cloud` | Polling command, heartbeat, grant playback, dan pelaporan metadata. |
+
+## Ketika aplikasi baru dinyalakan
+
+Server mengunci DATA_DIR dan RUNTIME_DIR, merakit dependency, serta menjalankan supervisor MediaMTX dan worker. Modul audio hanya menyiapkan broadcaster, analyzer, dan pengiriman metrik. Belum ada pipeline recording/PCM atau restream. Kamera di MediaMTX memakai sumber on-demand.
+
+Journal aktif dari boot sebelumnya menjadi `INTERRUPTED`; media tidak dilanjutkan otomatis. Segmen yang tertinggal diperiksa dan diselamatkan sebelum server menerima sesi baru. Startup dapat menunggu pemeriksaan rekaman berukuran besar.
+
+## Ketika Mulai ditekan
+
+```http
+POST /api/v1/media/sessions
+Authorization: Bearer <token-operator>
+Content-Type: application/json
+
+{"id":"session-001","channels":["gantangan01","gantangan02"],"restreams":[{"channel_id":"gantangan01","target":"youtube"}]}
+```
+
+`restreams` boleh kosong. Satu target hanya dapat dipakai sekali per sesi. Target harus terdaftar pada `RESTREAM_TARGETS_JSON`; channel restream harus termasuk daftar channel sesi. Daftar ini tetap sampai sesi berakhir. Gunakan ID baru untuk sesi berikutnya.
+
+UseCase memeriksa ID, katalog, channel duplikat, target, kapasitas disk, dan sesi aktif. Sesi lain, termasuk sesi yang masih FINALIZING, ditolak dengan 409. Journal identitas/config sesi disimpan sebelum pekerjaan dimulai, diikuti reservasi manifest per channel. Request berulang dengan ID dan konfigurasi persis sama mengembalikan sesi aktif yang sama selama belum Stop; ID lama tidak dipakai ulang.
+
+HTTP 202 berarti pekerjaan diterima. Pekerjaan berjalan dengan context worker, sehingga browser ditutup atau request berakhir tidak menghentikan recording. Pantau `GET /api/v1/media/sessions/:id` untuk status aktual.
 
 ```mermaid
 flowchart LR
-    C["Kamera / NVR / sumber uji"] -->|RTSP| M["MediaMTX lokal"]
-    M -->|WebRTC lewat LAN| B["Browser operator / juri"]
-    M -->|RTSP lokal| A["FFmpeg decode audio"]
-    A -->|PCM| G["Go: analisis dan distribusi audio"]
-    M -->|RTSP lokal| R["FFmpeg recording"]
-    R --> F["MP4 video + audio"]
-    F --> U["Go uploader S3"]
-    M -->|RTSP lokal| S["FFmpeg restream"]
-    S --> T["Target streaming terkonfigurasi"]
+    Source[Kamera / NVR RTSP] --> MTX[MediaMTX on-demand]
+    MTX --> Browser[WebRTC langsung melalui LAN]
+    MTX --> Pipeline[Satu FFmpeg per channel sesi]
+    Pipeline --> Segment[Segmen fMP4 video + audio]
+    Pipeline --> PCM[Pipe PCM mono 16 kHz]
+    PCM --> Analyzer[Analyzer + broadcaster]
+    Analyzer --> WS[WebSocket PCM / metrik]
+    Analyzer --> Metrics[Pengiriman metrik best effort]
+    MTX --> Restream[FFmpeg restream opsional]
+    Restream --> Target[Target terdaftar]
+    Segment --> Final[Validasi + concat stream-copy]
+    Final --> Ready[Manifest READY]
+    Ready --> S3[Uploader + retry]
 ```
 
-Signaling browser melewati gateway WHEP dan otorisasi cloud. Setelah koneksi terbentuk, media WebRTC mengalir dari MediaMTX ke browser; tidak dibungkus menjadi response JSON.
+Pipeline menyalin video dan mengubah audio rekaman menjadi AAC. Output kedua adalah PCM mono 16 kHz, frame 200 ms. Drain pipe memakai antrean terbatas 16 frame; broadcaster memakai antrean 8 pesan per subscriber, antrean metrik backend 128 pesan. Konsumen lambat boleh kehilangan frame PCM/metrik tanpa menahan penulisan recording. Restream tetap bisa memakai FFmpeg tambahan; jumlah proses bukan selalu sama dengan jumlah channel.
 
-## 2. Fungsi lima kelompok di mediaengine
+## Live untuk operator dan juri
 
-| Folder | Pertanyaan yang dijawab | Mulai membaca |
-| --- | --- | --- |
-| `channel` | Channel apa yang tersedia dan URL playback-nya apa? | [channel/usecase/channel.go](internal/mediaengine/channel/usecase/channel.go) |
-| `audio` | Bagaimana mengambil PCM, menghitung metrik, dan membagikannya? | [audio/usecase/audio.go](internal/mediaengine/audio/usecase/audio.go) |
-| `streaming` | Bagaimana memulai/menghentikan restream ke target? | [streaming/usecase/streaming.go](internal/mediaengine/streaming/usecase/streaming.go) |
-| `saving` | Bagaimana sesi direkam, dipulihkan, lalu diupload? | [saving/usecase/session.go](internal/mediaengine/saving/usecase/session.go) |
-| `media` | Bagaimana konfigurasi MediaMTX dan argumen FFmpeg dibentuk? | [media/mediamtx/server.go](internal/mediaengine/media/mediamtx/server.go) |
+Frontend tetap di cloud. Setelah login, browser meminta tiket live dan URL engine arena ke cloud. Browser lalu mengirim SDP WHEP dengan Bearer tiket ke gateway LAN. Gateway meminta grant cloud, memperoleh admission sesi aktif, dan meneruskan signaling ke MediaMTX loopback. Byte media WebRTC bergerak melalui LAN.
 
-Nama `streaming` pada kode saat ini merujuk **restream ke target**. Live browser melalui LAN ditangani MediaMTX dan gateway WHEP. Nama `saving` mencakup **recording beserta antrean upload**.
+Hanya channel dalam sesi aktif yang dapat membuka playback/audio baru. Registry gateway mengaitkan sesi upstream dengan generasi media. URL Location rahasia dipakai PATCH/DELETE. Lease admission memastikan Stop menunggu POST yang sudah diterima sebelum menutup seluruh playback. Registry dikosongkan dan generasi berganti saat teardown; playback lama tidak ikut sesi berikutnya.
 
-## 3. Arti lapisan kode dan interface
+Tiket cloud tetap wajib. Cloud terputus menolak playback baru, sementara recording dan playback yang sudah tersambung terus berjalan sampai Stop atau koneksinya terputus. Endpoint pendamping cloud belum aktif dalam pekerjaan ini. HTTPS terpercaya, origin, ICE, firewall UDP, dan izin akses LAN browser masih harus disiapkan.
 
-```text
-Handler → UseCase → Repository / Service
-                       ↓
-                 Filesystem / FFmpeg / S3
-```
+## Ketika satu channel gagal
 
-| Komponen | Pekerjaan |
-| --- | --- |
-| Handler | Membaca request/auth/context, validasi sintaks, memanggil UseCase, memetakan DTO, mengirim response |
-| UseCase | Memeriksa aturan operasi, mengoordinasi dependency, dan menentukan perubahan status |
-| Repository | Membaca/menulis katalog atau manifest; tidak memanggil repository lain |
-| Service/adapter | Menjalankan kemampuan teknis seperti FFmpeg, broadcaster, atau upload S3 |
-| Worker | Menjalankan pekerjaan background, penjadwalan/retry, dan menunggu proses |
-| Model | Bentuk data yang digunakan kontrak dan logika fitur |
+Channel menjadi RETRYING, sesi menjadi DEGRADED, dan channel lain terus berjalan. Pipeline mencoba kembali setelah 5 detik; setiap percobaan memakai nama segmen baru. Restream memiliki retry sendiri dan tidak mematikan recording saat target gagal. Status kembali RUNNING setelah seluruh channel dan restream pulih.
 
-Contoh: UseCase saving menerima interface `Recorder`. Container memasang `ffmpeg.Recorder` sebagai implementasinya. UseCase memutuskan kapan merekam; adapter FFmpeg membentuk argumen; subprocess menjalankan proses OS.
+Manifest mencatat awal/akhir setiap percobaan serta gangguan. `source_interruption` menandai celah sumber; `restart_uncertain` menandai interval percobaan yang terputus tanpa penutupan bersih, bukan klaim bahwa seluruh interval kehilangan media. GET status sesi memperlihatkan `channel_states`, `attempts`, `segment_count`, `gaps`, `recording_state`, dan alasan kegagalan. Tidak ada kredensial RTSP atau path file lokal dalam response.
 
-Worker menerima fungsi/callback dari UseCase. Karena itu, kode bisa tampak bolak-balik: UseCase meminta worker memantau proses, lalu worker memanggil callback UseCase ketika proses selesai. Ini pemisahan penjadwalan dari aturan perubahan status.
-
-## 4. Bagaimana aplikasi mulai berjalan?
-
-Urutan bacanya:
-
-1. [cmd/api/main.go](cmd/api/main.go): memuat konfigurasi dan menjalankan server.
-2. [app/container.go](internal/app/container.go): membuat katalog, MediaMTX, adapter FFmpeg, repository, worker, UseCase, dan handler. Ini tempat melihat implementasi apa yang dipasang pada setiap interface.
-3. [server/server.go](internal/server/server.go): mengunci direktori, menjalankan supervisor MediaMTX, memulai saving/audio/streaming, kemudian worker komunikasi cloud.
-4. [delivery/router.go](internal/delivery/router.go): memasang middleware serta route REST, WHEP, dan WebSocket.
-
-Supervisor MediaMTX berjalan secara asynchronous. Proses startup HTTP tidak berarti seluruh kamera sudah tersambung. Audio/restream memiliki retry ketika sumber belum tersedia.
-
-Saat startup modul:
-
-- Saving membaca manifest lama, menyiapkan direktori, memulai upload jika S3 dikonfigurasi, dan menjalankan pemeriksaan batas disk/durasi.
-- Audio memulai capture untuk seluruh channel yang dikonfigurasi. Pengiriman metrik backend hanya dimulai jika backend diisi.
-- Streaming menyiapkan pengelola pekerjaan; restream dimulai setelah ada request/command.
-
-`/healthz` menunjukkan HTTP hidup. `/readyz` memeriksa status proses MediaMTX, heartbeat cloud, dan konfigurasi komunikasi yang diperlukan; bukan bukti bahwa setiap kamera dan upload sudah sehat.
-
-## 5. Alur katalog channel dan live LAN
-
-### Katalog
-
-```text
-GET /api/v1/channels
-→ delivery/rest/channel/handler.go
-→ channel/usecase.Channels()
-→ repository katalog + interface playback
-→ DTO ChannelResponse
-```
-
-`channel/model.Channel` hanya menyimpan identitas. `PlaybackChannel` menambahkan URL WHEP publik. Kredensial kamera tetap berada pada konfigurasi sumber, tidak dikirim melalui response katalog.
-
-### Menonton live
-
-```text
-Browser meminta tiket ke cloud
-→ POST /api/v1/playback/:channel/whep membawa SDP dan tiket
-→ gateway WHEP memanggil UseCase cloud untuk validasi
-→ signaling diteruskan ke MediaMTX loopback
-→ browser menerima SDP dan Location sesi
-→ MediaMTX mengirim media WebRTC melalui LAN
-```
-
-File utamanya: [gateway WHEP](internal/delivery/whep/handler.go), [otorisasi playback](internal/cloud/usecase/playback.go), dan [server MediaMTX](internal/mediaengine/media/mediamtx/server.go).
-
-Tiket salah/expired atau cloud tidak tersedia menolak pembukaan sesi baru. URL sesi dari Location adalah capability privat untuk PATCH/DELETE. Perangkat juga harus mempunyai akses LAN, HTTPS yang dipercaya, CORS yang benar, serta izin browser yang diperlukan.
-
-**Batas implementasi:** endpoint pendamping cloud untuk tiket/otorisasi belum aktif. Adanya kode gateway lokal belum berarti login dan live dari frontend cloud sudah tersambung end-to-end.
-
-## 6. Alur audio: PCM dan metrik adalah dua keluaran
-
-```text
-audio.UseCase.Start()
-→ worker capture per channel
-→ decoder FFmpeg membaca RTSP lokal
-→ PCM mono 16 kHz, signed 16-bit little-endian
-→ Analyze()
-→ broadcaster
-   ├── audio:{channel} → WebSocket binary PCM
-   └── metrics:        → WebSocket text JSON metrik
-→ antrean backend metrik jika dikonfigurasi
-```
-
-Urutan file: [audio UseCase](internal/mediaengine/audio/usecase/audio.go) → [decoder](internal/mediaengine/media/ffmpeg/audio.go) → [analyzer](internal/mediaengine/audio/model/analyzer.go) → [broadcaster](internal/mediaengine/audio/service/broadcaster.go).
-
-WebSocket audio tersedia pada `/api/v1/channels/:id/audio`, sedangkan metrik pada `/api/v1/metrics`. Handler berada di [delivery/websocket](internal/delivery/websocket/handler.go), bukan di domain audio.
-
-Metrik saat ini berisi peak dBFS, RMS dBFS, active_ms berdasarkan ambang, dan window_ms. Ini belum berupa penilaian kualitas kicauan atau deteksi otomatis peserta.
-
-Subscriber lambat dapat kehilangan frame. Antrean backend juga bersifat best effort: jika penuh, metrik dapat dibuang; pengiriman gagal dicatat. Jangan menyamakannya dengan antrean upload rekaman yang persisten. Mekanisme ini menjaga capture tidak tertahan oleh konsumen lambat.
-
-Audio dari live WebRTC tidak melewati broadcaster PCM ini. Kedua jalur membaca media yang sama untuk tujuan berbeda: playback browser dan pemrosesan audio khusus.
-
-## 7. Alur restream
-
-Contoh request kontrol:
-
-```json
-{"channel_id":"gantangan01","target":"youtube"}
-```
-
-```text
-POST /api/v1/restreams
-→ handler REST streaming
-→ StartRestream(channel, target)
-→ validasi channel dan target allowlist
-→ worker.Launch()
-→ ffmpeg.Restreamer
-→ proses FFmpeg mengirim ke tujuan
-```
-
-UseCase menyimpan status target; worker menangani proses dan reconnect. Target yang sudah aktif ditolak sebagai konflik. Saat koneksi/proses putus, worker mencoba lagi setelah jeda 5 detik sampai dibatalkan.
-
-`DELETE /api/v1/restreams/:target` membatalkan pekerjaan target dan menunggu proses selesai. `GET /api/v1/restreams` membaca status yang disimpan UseCase.
-
-Status RUNNING menandakan proses berhasil dimulai, bukan konfirmasi bahwa platform tujuan sudah menayangkan siaran. Implementasi sekarang memakai encoding video H.264 ulang; belum ada pemilihan stream-copy otomatis.
-
-Mulai membaca [UseCase streaming](internal/mediaengine/streaming/usecase/streaming.go), lalu [worker restream](internal/mediaengine/streaming/worker/restream.go) dan [adapter FFmpeg](internal/mediaengine/media/ffmpeg/streaming.go).
-
-## 8. Alur rekaman: ikuti satu sesi dahulu
-
-Contoh request:
+## Ketika Stop ditekan
 
 ```http
-POST /api/v1/media/recording-sessions
-Content-Type: application/json
-Authorization: Bearer TOKEN_OPERATOR_LOKAL
+POST /api/v1/media/sessions/session-001/stop
+Authorization: Bearer <token-operator>
 ```
 
-```json
-{"id":"session-001","channels":["gantangan01","gantangan02"]}
-```
+Response 202 mengembalikan status STOPPING; ini belum berarti semua media sudah berhenti. Stop berulang idempoten. Urutan pekerjaan:
 
-ID channel harus sudah ada pada konfigurasi. Satu request dapat membuat satu rekaman per channel; file MP4 mengandung video dan audio jika sumber memiliki audio. Sesi media ini tidak mengelola lifecycle ronde penjurian.
+1. Tutup admission, cancel context pipeline/retry, dan nonaktifkan subscription/audio metrik.
+2. Tunggu POST WHEP yang telah mendapat admission, kemudian tutup sesi upstream dan WebSocket. Kegagalan teardown WHEP memicu penutupan MediaMTX; supervisor menjalankannya kembali. Jika penutupan tidak dapat dipastikan, sesi tidak dinyatakan STOPPED.
+3. Hentikan restream dan tunggu seluruh pipeline recording/PCM keluar. FFmpeg menerima `q`; setelah batas 15 detik proses dipaksa berhenti dan segmen diperiksa saat finalisasi.
+4. Masuk FINALIZING. Segmen yang memiliki media divalidasi dengan ffprobe, partial diremux ke artefak salvage terpisah, lalu codec/extradata dibandingkan.
+5. Gabungkan segmen berurutan memakai stream-copy ke file sementara. Validasi hasil, flush, lalu rename atomik ke MP4 final.
+6. Rekaman valid menjadi READY; kegagalan menjadi FAILED dengan alasan. Sesi menjadi STOPPED setelah semua hasil ditentukan. Upload tidak menjadi syarat Stop selesai. Bila penyimpanan status akhir gagal, sesi tetap FINALIZING dengan alasan; Stop dapat diulang untuk menyelesaikan pencatatan tanpa menimpa hasil upload yang sudah tersimpan.
 
-```mermaid
-sequenceDiagram
-    participant H as Handler REST
-    participant U as UseCase saving
-    participant J as Repository manifest
-    participant F as FFmpeg
-    participant W as Worker pemantau
-    H->>U: StartSession(id, channels)
-    U->>U: Validasi dan periksa kapasitas
-    U->>J: Simpan reservasi RECORDING
-    U->>F: Mulai tulis file .partial
-    U->>W: Watch proses + callback finalisasi
-    U-->>H: Daftar rekaman, HTTP 202
-    F-->>W: Proses selesai
-    W->>U: finishRecording(error)
-    U->>J: Simpan READY atau FAILED
-```
+Tidak ditambahkan frame hitam/audio senyap pada celah. Durasi MP4 dapat lebih pendek daripada waktu sesi; `gaps` menjelaskan gangguannya. Codec yang berubah membuat finalisasi gagal. Sumber segmen dipertahankan untuk pemeriksaan, tanpa transcoding otomatis. Artefak sumber/salvage menggunakan disk tambahan dan tidak dibersihkan otomatis pada fase ini.
 
-Urutan konkretnya:
-
-1. Handler membaca JSON dan memanggil `StartSession()`.
-2. `reserve()` memeriksa lifecycle engine, format ID, daftar channel, duplikasi, konflik sesi, serta ruang disk. Sesi lain tidak boleh dimulai ketika masih ada recording aktif pada engine ini.
-3. Dibuat ID rekaman dan manifest RECORDING per channel sebelum proses dimulai.
-4. Adapter recorder menjalankan FFmpeg untuk menulis file `.mp4.partial`; worker memantau proses tersebut.
-5. Jika startup salah satu rekaman gagal, UseCase melakukan rollback terhadap pekerjaan/reservasi terkait.
-6. Ketika proses selesai, `finishRecording()` memeriksa hasil. Proses sukses dengan file partial berukuran positif dapat di-commit menjadi nama final `.mp4`, lalu READY. Selain itu hasil menjadi FAILED.
-
-**HTTP 202 bukan berarti file selesai atau sudah diupload.** Baca status rekaman melalui `GET /api/v1/recordings`.
-
-Untuk menghentikan sesi, panggil `POST /api/v1/media/recording-sessions/:id/stop`. UseCase meminta penghentian proses, lalu menunggu callback finalisasi. Subprocess mencoba mengakhiri FFmpeg dengan `q` agar container MP4 ditutup; jika tidak selesai dalam batasnya, proses dapat dipaksa berhenti.
-
-### File mana yang dibuka saat mengerjakan saving?
-
-| Perlu memahami | Buka |
-| --- | --- |
-| Dependency, state, startup/shutdown | [saving.go](internal/mediaengine/saving/usecase/saving.go) |
-| Mulai/stop, rollback, finalisasi | [session.go](internal/mediaengine/saving/usecase/session.go) |
-| Daftar rekaman dan pencarian sesi | [query.go](internal/mediaengine/saving/usecase/query.go) |
-| Pemulihan manifest setelah restart | [recovery.go](internal/mediaengine/saving/usecase/recovery.go) |
-| Antrean upload dan retry | [upload.go](internal/mediaengine/saving/usecase/upload.go) |
-| Kapasitas disk dan batas durasi | [limits.go](internal/mediaengine/saving/usecase/limits.go) |
-| Penulisan/pembacaan manifest | [repository/recording.go](internal/mediaengine/saving/repository/recording.go) |
-| Pemantauan dan penghentian proses | [worker/recording.go](internal/mediaengine/saving/worker/recording.go) |
-
-Keenam file UseCase berada dalam package yang sama. Semuanya menggunakan satu `UseCase`, map proses aktif, mutex, dan state lifecycle bersama; bukan enam service yang berjalan sendiri-sendiri.
-
-## 9. Alur upload dan pelaporan cloud
+## Status dan penyimpanan
 
 ```text
-Manifest READY
-→ worker menjalankan uploadPending()
-→ UseCase memilih rekaman yang boleh diupload
-→ adapter S3 mengirim file dengan object key tetap
-→ manifest disimpan sebagai UPLOADED, atau dijadwalkan retry
-→ worker cloud membaca versi manifest
-→ metadata dijournal dan dikirim sampai acknowledged
+STARTING → RUNNING ↔ DEGRADED → STOPPING → FINALIZING → STOPPED
+restart sebelum terminal → INTERRUPTED
+kegagalan startup → FAILED
 ```
 
-Upload dimulai hanya jika S3 dikonfigurasi. Worker melakukan satu pass, lalu menunggu 5 detik sebelum pass berikutnya. Rekaman ditunda jika masih ada recording dalam sesi yang sama atau NextAttempt belum tiba. Batas satu upaya upload adalah 30 menit; retry memakai backoff yang tersimpan pada manifest.
-
-Upload file dan pengiriman metadata adalah dua pekerjaan terpisah. Jika metadata belum diakui cloud, file yang sudah berhasil diupload tidak otomatis dikirim ulang hanya karena acknowledgment metadata belum masuk. Metadata belum diakui tetap berada dalam journal cloud.
-
-Adapter S3 ada di [infra/storage/s3/s3.go](internal/infra/storage/s3/s3.go). Pelaporan metadata berada di [cloud/usecase/recording_metadata.go](internal/cloud/usecase/recording_metadata.go). Endpoint penerima metadata cloud masih memerlukan implementasi pendamping.
-
-## 10. Data yang disimpan dan arti status
-
-| Lokasi/field | Arti |
+| Lokasi | Isi |
 | --- | --- |
-| `DATA_DIR/recordings/` | File MP4 dan file partial yang sedang/belum selesai |
-| `DATA_DIR/queue/` | Manifest JSON rekaman: status, file, object key, versi, dan retry |
-| `DATA_DIR/commands/` | Journal command cloud, hasil, dan acknowledgment |
-| `DATA_DIR/media-updates/` | Journal metadata yang menunggu/sudah mendapat acknowledgment |
-| `RUNTIME_DIR/mediamtx.yml` | Konfigurasi MediaMTX hasil generate, bukan database/rekaman |
-| `round_id` dan awalan object key `rounds/` | Nama lama yang dipertahankan untuk kompatibilitas penyimpanan; dipakai sebagai referensi sesi media |
+| `DATA_DIR/media-sessions/<id>.json` | Identitas, pilihan channel/restream, state dan status channel sesi. |
+| `DATA_DIR/queue/<recording-id>.json` | Manifest hasil dan retry upload, ditambah field opsional segments/gaps/error. |
+| `DATA_DIR/recordings/` | Segmen per percobaan, salvage, dan MP4 final. |
+| `DATA_DIR/commands/` | Journal command/hasil/ack cloud. |
+| `RUNTIME_DIR/mediamtx.yml` | Konfigurasi media hasil render. |
 
-| Status rekaman | Makna |
-| --- | --- |
-| RECORDING | Reservasi/pekerjaan recording belum difinalisasi; bukan bukti setiap frame berhasil direkam |
-| READY | File final tersedia dan menunggu upload bila S3 aktif |
-| UPLOADED | Upload telah dilaporkan sukses dan status disimpan |
-| FAILED | Startup/finalisasi rekaman gagal |
-| INTERRUPTED | Recovery menemukan recording lama tanpa penanda file final yang tersedia |
+`round_id` dan object key `rounds/<session>/<channel>/<recording>.mp4` tetap dipertahankan untuk kompatibilitas. Manifest READY/UPLOADED lama tetap diproses. File partial tidak dianggap lengkap hanya karena berukuran positif. Proses media dimiliki engine melalui Job Object Windows/parent-death signal Linux, agar crash engine tidak membiarkan recording lama berjalan.
 
-Saat restart, recovery tidak melanjutkan proses FFmpeg lama. Manifest RECORDING diperiksa: jika nama file final ada dan ukurannya positif, status dapat menjadi READY; jika tidak, menjadi INTERRUPTED. Recovery ini tidak otomatis memperbaiki semua file partial atau membuktikan validitas seluruh isi MP4.
+## Upload dan cloud setelah Stop
 
-## 11. Apa yang terjadi jika ada gangguan?
+Worker saving tetap memilih manifest READY dan menyimpan status UPLOADED atau jadwal retry. Worker cloud tetap mengirim metadata sampai mendapat acknowledgment. Command cloud yang diterima sekarang hanya `media.session.start` dan `media.session.stop`; hasil sukses command berarti permintaan lifecycle diterima, bukan finalisasi selesai. Command lama tidak didukung.
 
-| Gangguan | Perilaku saat ini |
-| --- | --- |
-| Sumber audio terputus | Worker capture mencoba tersambung lagi |
-| Restream berhenti | Worker mencoba menjalankan ulang sampai target dihentikan |
-| Satu channel gagal mulai recording | UseCase melakukan rollback pekerjaan/reservasi terkait |
-| Disk terlalu sedikit / durasi habis | Guard meminta penghentian recording aktif yang terkena batas |
-| S3 gagal | Rekaman tetap READY dan retry dijadwalkan |
-| Cloud terputus | Recording aktif berlanjut; playback baru yang butuh otorisasi ditolak; metadata menunggu |
-| Aplikasi restart | Manifest dan journal dipakai untuk recovery; proses lama tidak otomatis dianggap masih berjalan |
+## Batas verifikasi
 
-Saat shutdown normal, worker cloud dihentikan sebelum modul media difinalisasi. Koneksi WebSocket ditutup. Saving menunggu callback finalisasi sebelum menutup worker-nya; supervisor MediaMTX dihentikan setelah modul media. Jangan membalik urutan ini tanpa memahami ketergantungan proses.
-
-## 12. Urutan belajar yang disarankan
-
-1. Baca `channel/usecase/channel.go`: alur pendek, tidak ada proses background.
-2. Ikuti satu start/stop recording dari handler ke `session.go`, recorder FFmpeg, worker pemantau, lalu callback finalisasi.
-3. Baca `upload.go` dan manifest repository untuk memahami antrean persisten.
-4. Baca audio untuk memahami subscription dan frame yang dapat di-drop.
-5. Baca restream untuk memahami reconnect dan cancellation.
-6. Terakhir buka container/server untuk melihat semua komponen dirangkai dan dihentikan.
-
-Ketika bingung, tentukan dahulu apakah yang dicari adalah request kontrol, byte media, state bisnis operasi, atau penjadwalan background. Empat hal ini berada pada komponen berbeda.
-
-Panduan ini menjelaskan perilaku kode, bukan hasil uji kamera/CPU atau bukti integrasi cloud sudah selesai. Lihat [README](README.md) untuk konfigurasi, [peta kode](PETA-KODE.md) untuk indeks seluruh file, dan [kontrak cloud](ENGINE-CLOUD-CONTRACT.md) untuk payload komunikasi.
+Lihat [skenario penerimaan](SESSION-ACCEPTANCE.md). Build dan percobaan sumber sintetis tidak membuktikan playback browser LAN, HTTPS, target restream nyata, atau S3 produksi sudah siap. Penerimaan operasional memerlukan perangkat dan jaringan arena.

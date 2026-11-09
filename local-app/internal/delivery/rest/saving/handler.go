@@ -12,8 +12,6 @@ import (
 
 // RecordingUseCase contains only the recording operations exposed by this handler.
 type RecordingUseCase interface {
-	StartSession(context.Context, model.StartSession) ([]model.Recording, error)
-	StopSession(context.Context, string) error
 	Recordings(context.Context, string, int) ([]model.Recording, string, error)
 }
 
@@ -21,28 +19,6 @@ type Handler struct{ uc RecordingUseCase }
 
 func New(uc RecordingUseCase) *Handler {
 	return &Handler{uc: uc}
-}
-
-func (h *Handler) startSession(c *gin.Context) {
-	var req model.StartSession
-	if e := c.ShouldBindJSON(&req); e != nil {
-		response.BadRequest(c, "invalid request syntax", nil)
-		return
-	}
-	out, e := h.uc.StartSession(c.Request.Context(), req)
-	if e != nil {
-		response.WriteError(c, e)
-		return
-	}
-	response.Accepted(c, "Recording session requested", views(out))
-}
-
-func (h *Handler) stopSession(c *gin.Context) {
-	if e := h.uc.StopSession(c.Request.Context(), c.Param("id")); e != nil {
-		response.WriteError(c, e)
-		return
-	}
-	response.NoContent(c)
 }
 
 func (h *Handler) recordings(c *gin.Context) {
@@ -62,7 +38,7 @@ func (h *Handler) recordings(c *gin.Context) {
 func views(records []model.Recording) []gin.H {
 	out := []gin.H{}
 	for _, r := range records {
-		out = append(out, gin.H{
+		view := gin.H{
 			"id":           r.ID,
 			"round_id":     r.RoundID,
 			"channel_id":   r.ChannelID,
@@ -72,7 +48,17 @@ func views(records []model.Recording) []gin.H {
 			"next_attempt": r.NextAttempt,
 			"started_at":   r.StartedAt,
 			"ended_at":     r.EndedAt,
-		})
+		}
+		if len(r.Segments) > 0 {
+			view["segment_count"] = len(r.Segments)
+		}
+		if len(r.Gaps) > 0 {
+			view["gaps"] = r.Gaps
+		}
+		if r.Error != "" {
+			view["error"] = r.Error
+		}
+		out = append(out, view)
 	}
 	return out
 }

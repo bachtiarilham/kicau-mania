@@ -43,7 +43,7 @@ func TestCommandExpiryAndAcknowledgmentLoss(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cloud := &commandCloud{failReport: true, commands: []cloudmodel.Command{{ID: "expired", ArenaID: "arena", EngineID: "engine", Kind: "restream.start", ExpiresAt: time.Now().Add(-time.Minute), Payload: []byte(`{}`)}, {ID: "fresh", ArenaID: "arena", EngineID: "engine", Kind: "restream.stop", ExpiresAt: time.Now().Add(time.Minute), Payload: []byte(`{}`)}}}
+	cloud := &commandCloud{failReport: true, commands: []cloudmodel.Command{{ID: "expired", ArenaID: "arena", EngineID: "engine", Kind: "media.session.start", ExpiresAt: time.Now().Add(-time.Minute), Payload: []byte(`{}`)}, {ID: "fresh", ArenaID: "arena", EngineID: "engine", Kind: "media.session.stop", ExpiresAt: time.Now().Add(time.Minute), Payload: []byte(`{}`)}}}
 	r := &runner{}
 	u := cloudUC.NewCommands(store, cloud, r, "arena", "engine")
 	if u.Poll(ctx) == nil {
@@ -68,7 +68,7 @@ func TestCommandExpiryAndAcknowledgmentLoss(t *testing.T) {
 	if err != nil || len(results) != 0 {
 		t.Fatal("results not acknowledged")
 	}
-	cloud.commands[1].Kind = "recording.start"
+	cloud.commands[1].Kind = "media.session.start.changed"
 	if u.Poll(ctx) == nil {
 		t.Fatal("command identity reused")
 	}

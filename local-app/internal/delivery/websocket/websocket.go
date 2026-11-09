@@ -1,6 +1,7 @@
 package websocket
 
 import (
+	"context"
 	"net/http"
 	"sync"
 	"time"
@@ -14,6 +15,7 @@ type websocketStream struct {
 	mu      sync.Mutex
 	conns   map[*gorillaws.Conn]struct{}
 	closed  bool
+	epoch   uint64
 }
 
 func newWebsocketStream(origins []string) *websocketStream {
@@ -30,13 +32,13 @@ func newWebsocketStream(origins []string) *websocketStream {
 		return false
 	}}}
 }
-func (h *websocketStream) serve(w http.ResponseWriter, r *http.Request, messages <-chan []byte, messageType int) {
+func (h *websocketStream) serve(w http.ResponseWriter, r *http.Request, messages <-chan []byte, messageType int, expected ...uint64) {
 	conn, e := h.upgrade.Upgrade(w, r, nil)
 	if e != nil {
 		return
 	}
 	h.mu.Lock()
-	if h.closed {
+	if h.closed || (len(expected) > 0 && expected[0] != h.epoch) {
 		h.mu.Unlock()
 		conn.Close()
 		return
@@ -79,6 +81,17 @@ func (h *websocketStream) serve(w http.ResponseWriter, r *http.Request, messages
 			}
 		}
 	}
+}
+
+func (h *websocketStream) generation() uint64 { h.mu.Lock(); defer h.mu.Unlock(); return h.epoch }
+func (h *Handler) CloseSessions(context.Context) error {
+	h.stream.mu.Lock()
+	defer h.stream.mu.Unlock()
+	h.stream.epoch++
+	for c := range h.stream.conns {
+		c.Close()
+	}
+	return nil
 }
 
 func (h *websocketStream) Close() {

@@ -1,76 +1,58 @@
 # Alur end-to-end engine media
 
-Panduan belajar khusus beserta jalur baca kode tersedia di [Memahami mediaengine](MEMAHAMI-MEDIAENGINE.md). Dokumen ini merangkum alur integrasi aplikasi secara keseluruhan.
-
-Local-app mengelola media. Cloud-app mengelola pengguna, registrasi, penilaian, dan status perlombaan. Engine tidak menyediakan login juri lokal atau database lomba.
+Panduan rinci: [Memahami mediaengine](MEMAHAMI-MEDIAENGINE.md). Local-app hanya mengelola media. Login, registrasi, nilai dan status perlombaan tetap menjadi tanggung jawab cloud.
 
 ## Startup
 
-`cmd/api/main.go` memuat env → `config/config.go` memvalidasi konfigurasi → `internal/server/server.go` mengunci direktori data/runtime dan membuka listener → `internal/app/container.go` merakit dependency.
+`cmd/api/main.go` → konfigurasi env → server mengunci DATA_DIR/RUNTIME_DIR → app merakit dependency → supervisor MediaMTX dan worker audio/upload/restream disiapkan → recovery sesi → worker komunikasi cloud → HTTP server.
 
-Server menjalankan supervisor MediaMTX, modul saving/audio/restream, lalu worker command, heartbeat, dan metadata. `/healthz` menyatakan proses HTTP hidup; `/readyz` memerlukan MediaMTX berjalan, heartbeat segar, dan konfigurasi komunikasi lengkap.
+Tidak ada capture audio atau recording otomatis. MediaMTX menggunakan sumber on-demand. Journal nonterminal dari boot sebelumnya ditandai INTERRUPTED, segmen diperiksa/finalisasi, dan media tidak dilanjutkan otomatis. `/healthz` menyatakan proses HTTP hidup; `/readyz` memeriksa MediaMTX dan komunikasi cloud, bukan keberhasilan semua kamera.
 
-## Live operator/juri melalui LAN
+## Mulai media
+
+Operator memanggil POST `/api/v1/media/sessions` dengan id, channels, dan restreams opsional. Jalur baca: [model](internal/mediaengine/session/model/session.go) → [handler](internal/delivery/rest/session/handler.go) → [UseCase](internal/mediaengine/session/usecase/session.go) → [journal](internal/mediaengine/session/repository/journal.go).
+
+UseCase memvalidasi pilihan dan disk, menolak sesi aktif lain, menyimpan journal, lalu mereservasi manifest per channel. Setelah diterima dengan 202, worker sesi menjalankan pipeline per channel dan guard. Satu FFmpeg menghasilkan segmen fMP4 A/V dan PCM; analyzer/broadcaster menerima PCM. Restream yang dipilih memakai adapter tersendiri.
+
+Channel gagal dicoba lagi setiap 5 detik dengan segmen baru. Channel lain tetap berjalan. Status GET `/api/v1/media/sessions/:id` memperlihatkan RUNNING/DEGRADED, status channel dan hasil finalisasi.
+
+## Live dari frontend cloud
 
 ```mermaid
 sequenceDiagram
-    participant B as Browser frontend cloud
+    participant B as Browser operator/juri
     participant C as Cloud-app
-    participant L as Gateway local-app
+    participant L as Local-app LAN
     participant M as MediaMTX loopback
-    B->>C: Login dan minta akses channel
-    C-->>B: Tiket singkat dan URL LAN per arena
-    B->>L: POST WHEP + Bearer tiket + SDP
-    L->>C: Validasi tiket, arena, engine, channel
+    B->>C: Login dan minta tiket channel arena
+    C-->>B: Tiket singkat dan URL LAN
+    B->>L: POST WHEP + tiket + SDP
+    L->>C: Validasi tiket dan scope
     C-->>L: Grant pengguna dan expiry
-    L->>M: POST signaling tanpa token cloud
-    M-->>L: SDP + Location sesi
+    L->>L: Admission channel sesi aktif
+    L->>M: Signaling WHEP
+    M-->>L: SDP + Location
     L-->>B: SDP + Location gateway
-    M-->>B: Media WebRTC melalui LAN
+    M-->>B: Media WebRTC LAN
+    B->>C: Kirim penilaian melalui REST cloud
 ```
 
-Jalur kode: `internal/delivery/whep/handler.go` membaca request → `internal/cloud/usecase/playback.go` memvalidasi akses melalui cloud → gateway meneruskan signaling ke MediaMTX. Tiket salah scope, kedaluwarsa, atau cloud tidak terjangkau menolak sesi baru. PATCH/DELETE memakai URL sesi rahasia dari WHEP; URL jangan dibagikan.
+Frontend tidak perlu dipisah. Request nilai menuju cloud, sedangkan playback menuju engine sesuai arena. Cloud tidak membawa byte video. Channel di luar sesi aktif menolak playback/subscription baru. Cloud mati menolak playback baru tetapi tidak menghentikan recording aktif. Endpoint pendamping cloud masih belum aktif. HTTPS, CORS, ICE, izin LAN browser dan firewall harus diverifikasi pada arena.
 
-Cloud memilih engine sesuai arena dan memeriksa penugasan operator/juri. HTTPS, CORS, rute LAN, ICE, firewall UDP, dan izin jaringan lokal browser harus benar. Frontend cloud tidak otomatis membuat LAN terjangkau dari internet.
+## Stop dan hasil
 
-## Command cloud ke engine
+POST `/api/v1/media/sessions/:id/stop` → 202 STOPPING → tutup admission/retry/audio → drain POST WHEP yang telah diterima → tutup WHEP/WebSocket → hentikan restream dan pipeline → FINALIZING → validasi/concat segmen → READY atau FAILED per recording → STOPPED.
 
-Worker polling → UseCase commands memeriksa arena/engine, expiry, ID/payload → repository menulis JSON command → UseCase operation mengoordinasi saving/restream → repository menyimpan hasil → client melaporkan hasil → journal mencatat acknowledgment.
+Kegagalan menutup playback upstream memicu restart MediaMTX; Stop tidak selesai selama teardown belum dipastikan. FFmpeg dihentikan graceful dengan `q` sebelum batas kill. Finalisasi menggunakan stream-copy dan commit sementara/flush/rename. Gangguan disimpan, celah dilewati. Codec antarsegmen tidak cocok membuat finalisasi gagal dan sumber dipertahankan.
 
-Command duplikat memakai hasil tersimpan. ID sama dengan payload berbeda ditolak. Command tanpa hasil setelah restart direkonsiliasi melalui manifest; start yang hasilnya tidak pasti tidak dieksekusi ulang secara buta. Cloud perlu command baru jika operator memutuskan retry pekerjaan.
+Uploader tetap hidup setelah Stop. Manifest READY → upload S3 → UPLOADED atau retry persisten. Metadata hasil dikirim worker cloud sampai acknowledged. ID/object key lama tidak berubah; field segments/gaps/error bersifat opsional.
 
-## Rekam, upload, dan metadata
+## Command cloud
 
-Handler saving → UseCase saving → repository manifest dan service FFmpeg. Sesi menghasilkan MP4 video/audio per channel. Manifest merekam lifecycle, file, serta status upload; setiap penyimpanan menaikkan version.
+Scheduler polling → UseCase memeriksa scope/expiry/deduplikasi → journal command → CommandExecutor memanggil UseCase sesi → hasil diterima disimpan → report cloud → acknowledgment journal.
 
-Worker upload membaca manifest siap upload, memakai adapter S3, dan memperbarui status. Jika S3 belum dikonfigurasi, hasil selesai tetap lokal. Retry mengikuti worker saving yang sudah ada.
+Jenis command: `media.session.start` dengan payload Mulai; `media.session.stop` dengan `{ "id": "session-001" }`. Command lama ditolak. Setelah restart, start tidak dieksekusi ulang secara buta; sesi INTERRUPTED memerlukan keputusan operator dan ID sesi baru. Endpoint cloud, ERD dan SQL bisnis tidak diimplementasikan di sini.
 
-Worker metadata membaca manifest → membuat update dengan ID deterministik dan version → repository menyimpan JSON → client mengirim batch → cloud deduplikasi/mengakui ID → repository menandai acknowledged. Local path dan kredensial sumber tidak dikirim. Cloud wajib mengabaikan versi lama setelah versi baru diterapkan.
+## Penerimaan
 
-## Putus koneksi dan restart
-
-Heartbeat default tiap 5 detik melaporkan status media dan jumlah pekerjaan. Cloud terputus membuat engine tidak ready setelah kegagalan/batas heartbeat; rekaman aktif tetap berjalan. Command baru menunggu jaringan pulih, metadata menunggu acknowledgment, dan playback baru ditolak. Sesi WebRTC yang sudah terbentuk mengikuti lifecycle koneksi media.
-
-Shutdown menghentikan HTTP, worker cloud, modul media, lalu supervisor MediaMTX dan melepas lock. Startup berikutnya memakai recovery manifest dan journal command, tanpa SQLite.
-
-Lihat [kontrak cloud](ENGINE-CLOUD-CONTRACT.md) untuk payload dan batas implementasi cloud saat ini, serta [peta kode](PETA-KODE.md) untuk fungsi setiap file.
-
-## Delivery berdasarkan protokol
-
-Gateway WHEP berada di internal/delivery/whep. Handler dan pengelola koneksi WebSocket berada di internal/delivery/websocket; handler meminta subscription melalui interface SubscribeAudio/SubscribeMetrics, lalu transport mengirim frame. Container membuat kedua handler, router HTTP memasang middleware origin/auth yang sesuai, dan shutdown menutup koneksi melalui WebSocket.Close(). Katalog channel REST tetap di delivery/rest/channel.
-
-## Jalur baca domain cloud
-
-- Command: `internal/cloud/worker/scheduler.go` → `usecase/command_polling.go` → `client/command_api.go` → `repository/journal.go` → `usecase/command_execution.go` → UseCase recording/restream.
-- Heartbeat: `usecase/heartbeat.go`; hasil acknowledgment memperbarui state Engine pada `connection.go`, lalu readiness dibaca melalui `status.go`.
-- Playback: handler WHEP → `usecase/playback.go` → client HTTP cloud → validasi grant di UseCase.
-- Metadata: `usecase/recording_metadata.go` → journal → client → acknowledgment. Format hash dan urutan persistensi tidak berubah.
-
-Nama file relatif di atas berada di bawah `internal/cloud`, kecuali handler WHEP dan domain media.
-## Membaca alur media
-
-Katalog channel: `delivery/rest/channel` → `mediaengine/channel/usecase` → katalog repository dan interface playback. Identitas tetap berupa Channel tanpa kredensial; hasil playback berupa PlaybackChannel. ChannelResponse adalah DTO HTTP di handler.
-
-Audio: UseCase tetap meminta interface Broadcaster/MetricSender; container memasang implementasi dari `mediaengine/audio/service`. Worker capture, retry, dan antrean metrik tetap berjalan seperti sebelumnya.
-
-Recording berada dalam satu package `mediaengine/saving/usecase`: `saving.go` untuk state/startup/shutdown, `session.go` untuk lifecycle sesi, `query.go` untuk daftar/pencarian, `recovery.go` untuk startup recovery, `upload.go` untuk upload/retry, dan `limits.go` untuk kapasitas/durasi. Seluruh file memakai instance serta mutex yang sama.
+[Skenario penerimaan media](SESSION-ACCEPTANCE.md) mencakup start/stop, channel gagal, PCM lambat, restream, race playback, restart, finalisasi, disk dan upload. Suite tes tidak dijalankan otomatis.

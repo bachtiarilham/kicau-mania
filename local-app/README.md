@@ -36,6 +36,7 @@ Gunakan `.env.webcam.example` dan script webcam di `scripts/` untuk webcam/mikro
 | CLOUD_PLAYBACK_AUTHORIZE_URL | Validasi tiket playback pengguna. |
 | HEARTBEAT_TIMEOUT | Batas heartbeat dianggap segar, default 15 detik. |
 | DATA_DIR | Rekaman/manifest, journal command, dan antrean metadata. |
+| FFPROBE_BIN | ffprobe untuk validasi segmen/MP4, default `ffprobe`. |
 | RUNTIME_DIR | Konfigurasi MediaMTX dan file runtime. |
 | S3_* | Bucket, endpoint, region, dan kredensial upload. |
 
@@ -63,11 +64,12 @@ Delivery dipisahkan menurut fungsi: `internal/delivery/router.go` merangkai semu
 | GET /api/v1/channels | Token operator; katalog tanpa kredensial sumber. |
 | POST /api/v1/playback/:channel/whep | Tiket cloud; buka sesi WebRTC. |
 | PATCH/DELETE /api/v1/playback/:channel/whep/:session | URL sesi WHEP rahasia sebagai capability. |
-| POST /api/v1/media/recording-sessions | Token operator; mulai sesi media. |
-| POST /api/v1/media/recording-sessions/:id/stop | Token operator; hentikan rekaman. |
+| POST /api/v1/media/sessions | Token operator; mulai seluruh media sesi, HTTP 202. |
+| POST /api/v1/media/sessions/:id/stop | Token operator; hentikan seluruh media lalu finalisasi, HTTP 202. |
+| GET /api/v1/media/sessions/:id | Token operator; status channel, gangguan, dan finalisasi. |
 | GET /api/v1/recordings | Token operator; daftar/status rekaman. |
 
-Route audio/restream tetap di router domain. Alias `/api/v1/rounds`, endpoint arena, akun lokal, dan UI penilaian dihapus. Field `round_id` dalam manifest lama tetap untuk kompatibilitas penyimpanan; pada API baru ID tersebut adalah ID sesi media.
+WebSocket audio/metrik hanya menerima subscription selama sesi aktif. GET `/api/v1/restreams` tetap tersedia; kontrol mutasi recording/restream yang terpisah dihapus. Alias `/api/v1/rounds`, endpoint arena, akun lokal, dan UI penilaian dihapus. Field `round_id` dalam manifest lama tetap untuk kompatibilitas penyimpanan; pada API baru ID tersebut adalah ID sesi media.
 
 ## Ketahanan dan logging
 
@@ -94,8 +96,9 @@ Semua komunikasi engine ke cloud berada di `internal/cloud`. Mulai dari `worker/
 
 - `channel`: identitas, repository katalog, dan UseCase daftar playback; handler JSON di `delivery/rest/channel`. Domain video lama sudah digabung ke channel.
 - `audio`: analisis dan worker audio; `service` berisi Broadcaster dan MetricsClient, disuntikkan melalui interface UseCase.
-- `saving/usecase`: satu UseCase dengan file menurut alur: saving, session, query, recovery, upload, dan limits.
+- `session`: lifecycle terpadu, journal, pipeline per channel, retry, recovery, finalisasi, dan guard.
+- `saving/usecase`: query manifest dan upload; recording dikendalikan sesi.
 - `streaming`: lifecycle restream yang sudah ada.
 - `media`: kontrak proses dan adapter FFmpeg/MediaMTX.
 
-Perapian ini tidak mengubah codec, pengaktifan analisis audio, recorder, retry, atau kontrak endpoint. Mekanisme disk guard, rollback, finalisasi, dan recovery tetap dipertahankan.
+Audio tidak lagi capture saat startup. Satu FFmpeg per channel menghasilkan recording video copy/audio AAC dan PCM mono 16 kHz. Mulai/Stop memakai satu sesi; pantau status hingga STOPPED. Detail dan contoh request tersedia di [panduan mediaengine](MEMAHAMI-MEDIAENGINE.md); [skenario penerimaan](SESSION-ACCEPTANCE.md) mencatat batas verifikasi.

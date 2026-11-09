@@ -64,9 +64,10 @@ func (s *Server) Render() error {
 	paths := map[string]any{}
 	for _, in := range s.opts.Sources {
 		paths[in.ID] = map[string]any{
-			"source":         in.URL,
-			"rtspTransport":  "tcp",
-			"sourceOnDemand": false,
+			"source":                   in.URL,
+			"rtspTransport":            "tcp",
+			"sourceOnDemand":           true,
+			"sourceOnDemandCloseAfter": "1s",
 		}
 	}
 	authUsers := []any{
@@ -157,3 +158,6 @@ func (s *Server) Close() {
 		s.cancel = nil
 	}
 }
+
+// Restart closes existing connections; the supervisor starts a fresh process.
+func (s *Server) Restart() error { s.Close(); return nil }

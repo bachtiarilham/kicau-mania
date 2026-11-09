@@ -22,7 +22,7 @@ func (u *UseCase) uploadPending(ctx context.Context) {
 	}
 	activeRounds := map[string]bool{}
 	for _, r := range records {
-		if r.State == "RECORDING" {
+		if r.State == "RECORDING" || r.State == "FINALIZING" {
 			activeRounds[r.RoundID] = true
 		}
 	}

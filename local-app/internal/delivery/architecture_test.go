@@ -33,7 +33,7 @@ func domainOf(pkg string) string {
 		return "cloud"
 	}
 	switch parts[1] + "/" + parts[2] {
-	case "mediaengine/channel", "mediaengine/audio", "mediaengine/saving", "mediaengine/streaming":
+	case "mediaengine/session", "mediaengine/channel", "mediaengine/audio", "mediaengine/saving", "mediaengine/streaming":
 		return parts[1] + "/" + parts[2]
 	}
 	return ""

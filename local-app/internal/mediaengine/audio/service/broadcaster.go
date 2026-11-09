@@ -37,3 +37,15 @@ func (b *Broadcaster) Publish(topic string, payload []byte) {
 		}
 	}
 }
+
+// Reset closes all old session subscriptions while keeping the broadcaster reusable.
+func (b *Broadcaster) Reset() {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	for _, subscribers := range b.subs {
+		for c := range subscribers {
+			close(c)
+		}
+	}
+	b.subs = map[string]map[chan []byte]struct{}{}
+}

@@ -1,60 +1,69 @@
-**Ya, di level enterprise keduanya sangat umum digunakan**, tetapi dengan aturan arsitektur yang ketat.
-
-Di perusahaan skala besar, view dan materialized view tidak dipakai asal-asalan, melainkan ditempatkan sesuai perannya dalam memisahkan jalur baca (*read path*) dan tulis (*write path*).
-
-Berikut alasan dan cara enterprise menggunakannya:
 
 ---
 
-### 1. Bagaimana Enterprise Menggunakan View Biasa
+### 2. Sederhanakan Komputasi Media Lokal (Tetap Wajib Diperbaiki)
 
-Enterprise memanfaatkan View biasa terutama untuk **abstraksi arsitektur**, **keamanan**, dan **kontrak API internal**:
+Meskipun logika bisnisnya online, hukum pemrosesan hardware lokal tetap berlaku. Tiga optimasi ini tetap harus dilakukan agar edge server stabil:
 
-* **Membatasi Data Sensitif (Security & Compliance / PII):**
-Aplikasi backend atau analis tidak diberi izin menyentuh tabel inti secara langsung. Schema view (seperti `cloud_read` pada kasus Anda) menyaring kolom sensitif seperti hash kata sandi, NIK, nomor rekening, atau token sesi.
-* **Memisahkan Skema Database dari Kode Aplikasi:**
-Jika tim data/DBA ingin memecah tabel atau mengubah struktur tabel internal (*refactoring*), kode aplikasi di Go/Java tidak perlu dirombak total. Cukup definisikan ulang View-nya agar output kolom tetap sesuai kontrak lama.
-* **CQRS Sederhana (Command Query Responsibility Segregation):**
-Mutasi (`INSERT`/`UPDATE`/`DELETE`) diarahkan langsung ke tabel sumber dalam transaksi ACID, sedangkan seluruh pembacaan (`SELECT`) diarahkan ke layer view.
-* **Standarisasi Business Logic Dasar:**
-Menghindari pengembang menulis ulang rumus yang sama di banyak service (misal: penentuan status `is_current` pada langganan atau filter penghapusan `deleted_at IS NULL`).
+#### A. Pangkas Subprocess FFmpeg (Gabungkan Audio & DVR)
 
-> **Catatan Enterprise:** View biasa dihindari jika melibatkan *nested view* (view memanggil view lain hingga berlapis-lapis) atau join lebih dari belasan tabel besar tanpa filter ketat, karena PostgreSQL optimizer bisa kesulitan menghasilkan rencana eksekusi (*query plan*) yang efisien.
+Jangan jalankan 24 FFmpeg untuk audio ditambah 24 FFmpeg untuk rekaman (total 48 child process).
 
----
-
-### 2. Bagaimana Enterprise Menggunakan Materialized View
-
-Materialized View digunakan sebagai **cache database tingkat internal** untuk menghindari kalkulasi ulang yang mahal:
-
-* **Dashboard & Rekap Administratif:**
-Laporan harian, rekap skor per kompetisi, total penjualan per merchant, atau metrik bulanan. Daripada menghitung jutaan baris transaksi setiap kali dashboard dibuka, aplikasi cukup membaca snapshot materialized view.
-* **Pelaporan Akhir Periode (Batch Processing):**
-Setelah event atau ronde berakhir, sistem memanggil `REFRESH MATERIALIZED VIEW CONCURRENTLY`. Fitur `CONCURRENTLY` ini krusial di enterprise karena proses refresh tidak mengunci (*lock*) operasi `SELECT` yang sedang berjalan di web/mobile app.
-* **Menyajikan Data Denormalisasi:**
-Menyatukan data dari berbagai tabel relasional ke dalam satu representasi datar yang siap diindeks secara khusus untuk pencarian cepat.
-
----
-
-### Kapan Enterprise Mulai Menghindari Materialized View?
-
-Materialized View bawaan database relasional (PostgreSQL/Oracle) memiliki batasan saat skala data mencapai tingkat *hyper-scale* (puluhan/ratusan juta baris):
-
-1. **Kebutuhan Real-Time Tinggi:**
-Jika rekap harus berubah dalam hitungan sub-detik tanpa jeda refresh, enterprise beralih ke:
-* **Incremental Materialized Views / Streaming Tools** (misal: ClickHouse, Materialize, atau Apache Flink).
-* **In-Memory Cache:** Redis / KeyDB untuk leaderboard real-time.
+* Jalankan **1 proses FFmpeg per kamera** dengan dual-output:
+* Output 1 $\rightarrow$ Langsung simpan file `.mp4` (stream-copy, 0% CPU).
+* Output 2 $\rightarrow$ Pipe PCM audio mentah ke Go untuk menghitung metrik dBFS.
 
 
-2. **Beban Refresh Penuh:**
-Di PostgreSQL, `REFRESH` standar menghitung ulang seluruh data dari nol. Jika datanya sudah terlampau masif, proses refresh memakan I/O dan CPU database transaksi (OLTP). Di tahap ini, enterprise memindahkan agregasi berat ke **Data Warehouse** (BigQuery, Snowflake) atau database OLAP.
+
+
+* **Keuntungan:** Menghemat 50% CPU and RAM edge server, serta mengurangi separuh socket TCP loopback ke MediaMTX.
+
+
+
+#### B. Gunakan Fragmented MP4 (`fMP4`) untuk Rekaman
+
+Karena internet bisa sewaktu-waktu *error* dan pertandingan harus dihentikan tiba-tiba, kemungkinan sesi rekaman dimatikan secara mendadak sangat tinggi:
+
+* Jangan pakai MP4 standar yang mengandalkan pengiriman huruf `q` di stdin.
+
+
+* Pasang flag `-movflags +frag_keyframe+empty_moov+default_base_moof`.
+* **Efeknya:** Jika internet mati lalu server dimatikan paksa (*force stop*), video rekaman dari ronde yang sempat berjalan tetap utuh dan valid untuk diunggah nanti ke cloud storage.
+
+
+
+#### C. Matikan Transcoding pada Restream YouTube
+
+* Untuk restream ke YouTube/sosmed, pastikan parameter ingest kamera sudah H.264 + AAC.
+* Gunakan flag `-c copy` tanpa merender ulang video (`libx264`).
+
+
+* CPU mini PC Anda bisa fokus sepenuhnya untuk routing jaringan dan WebSocket audio/metrik ke cloud.
+
+
 
 ---
 
-### Kesimpulan untuk Arsitektur Proyek Anda
+### Alur yang Lebih Ramping untuk Model Full-Online
 
-Pola yang diminta pada proyek Anda—membuat schema khusus `cloud_read` dengan **View biasa untuk CRUD/Detail** dan **Materialized View untuk Rekap Skor**—adalah **best practice enterprise standar** untuk arsitektur sistem berbasis PostgreSQL:
+```text
+[ Browser Juri ]                [ Cloud API ]
+       │ (1. Minta Tiket)             │
+       ├─────────────────────────────>│
+       │<─────────────────────────────┤ (2. Tiket Diberikan)
+       │                              │
+       │ (3. WHEP SDP + Tiket)        │
+       ▼                              │
+[ Go WHEP Gateway ] ── (Validasi) ────┘ (Jika internet mati -> Tolak)
+       │ (Tiket Valid)
+       ▼
+[ MediaMTX ] ──(WebRTC LAN)──> [ Browser Juri ]
+       │
+       ▼ (24x Stream Lokal)
+[ 24x FFmpeg Pipeline Tunggal ]
+       ├── Output File : MP4 Frag (Siap di-upload ke S3 saat sesi selesai)
+       └── Output Pipe : PCM Mono 16kHz ──> [ Go Audio Meter ] ──> Sync Metrik ke Cloud
 
-1. **Aman:** Akses ke tabel inti tetap terkendali.
-2. **Kinerja Terjaga:** Query CRUD mendapat data terbaru secara instan, sementara agregasi perhitungan skor tidak membebani transaksi arena.
-3. **Mudah Dirawat:** Repository Go memiliki kontrak baca yang bersih dan terisolasi.
+```
+
+Dengan bentuk ini, sistem Anda tetap **100% patuh pada kendali cloud**, tetapi tidak lagi membuang-buang daya komputasi di edge server lokal.
