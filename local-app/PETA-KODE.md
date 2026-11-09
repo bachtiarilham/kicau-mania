@@ -2,6 +2,8 @@
 
 Indeks ini menjelaskan source, tes, script, konfigurasi contoh, dan dokumentasi local-app. Data operasional dan env privat tidak diindeks.
 
+Jika belum memahami hubungan antarkomponen, mulai dari [Memahami mediaengine](MEMAHAMI-MEDIAENGINE.md), lalu gunakan indeks ini untuk membuka file yang dibutuhkan.
+
 ## Mulai membaca
 
 - Startup: cmd/api/main.go → config/config.go → internal/server/server.go → internal/app/container.go.
@@ -55,6 +57,7 @@ Handler REST menerima interface kecil yang didefinisikan di file handler pemakai
 | [go.sum](go.sum) | Checksum dependency untuk verifikasi modul yang diunduh. Dikelola tooling Go. |
 | [PETA-KODE.md](PETA-KODE.md) | Indeks fungsi folder dan file engine media. |
 | [README.md](README.md) | Panduan menjalankan engine, env, API, LAN/HTTPS, dan batas operasi. |
+| [MEMAHAMI-MEDIAENGINE.md](MEMAHAMI-MEDIAENGINE.md) | Panduan belajar alur kontrol/media, startup, live, audio, restream, recording, upload, recovery, dan jalur baca kode. |
 
 
 ### cmd/api

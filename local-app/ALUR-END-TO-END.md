@@ -1,5 +1,7 @@
 # Alur end-to-end engine media
 
+Panduan belajar khusus beserta jalur baca kode tersedia di [Memahami mediaengine](MEMAHAMI-MEDIAENGINE.md). Dokumen ini merangkum alur integrasi aplikasi secara keseluruhan.
+
 Local-app mengelola media. Cloud-app mengelola pengguna, registrasi, penilaian, dan status perlombaan. Engine tidak menyediakan login juri lokal atau database lomba.
 
 ## Startup

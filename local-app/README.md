@@ -4,6 +4,8 @@ Local-app menjalankan live WebRTC LAN, restream, pengolahan audio, rekaman MP4 v
 
 Mulai membaca dari [alur end-to-end](ALUR-END-TO-END.md), [peta folder/file](PETA-KODE.md), dan [kontrak cloud](ENGINE-CLOUD-CONTRACT.md).
 
+Untuk memahami engine media dari awal, buka **[Memahami mediaengine](MEMAHAMI-MEDIAENGINE.md)**. Panduan ini mengikuti alur dari kamera, live LAN, PCM/metrik, sesi rekaman, sampai upload dan recovery, dengan jalur baca kode per fitur.
+
 ## Menjalankan
 
 Prasyarat: Go 1.25+, FFmpeg dengan libx264/aac, dan MediaMTX v1.15.3. Windows dan Linux didukung. Dari direktori local-app:
