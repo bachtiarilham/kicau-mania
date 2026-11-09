@@ -1,18 +1,25 @@
 package delivery
 
 import (
+	"context"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 
 	"kicau.local/edge/internal/delivery/rest/response"
 	"kicau.local/edge/internal/mediaengine/saving/model"
-	"kicau.local/edge/internal/mediaengine/saving/usecase"
 )
 
-type Handler struct{ uc *usecase.UseCase }
+// RecordingUseCase contains only the recording operations exposed by this handler.
+type RecordingUseCase interface {
+	StartSession(context.Context, model.StartSession) ([]model.Recording, error)
+	StopSession(context.Context, string) error
+	Recordings(context.Context, string, int) ([]model.Recording, string, error)
+}
 
-func New(uc *usecase.UseCase) *Handler {
+type Handler struct{ uc RecordingUseCase }
+
+func New(uc RecordingUseCase) *Handler {
 	return &Handler{uc: uc}
 }
 

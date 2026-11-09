@@ -5,14 +5,18 @@ import (
 
 	"kicau.local/edge/internal/delivery/rest/response"
 	"kicau.local/edge/internal/mediaengine/video/model"
-	"kicau.local/edge/internal/mediaengine/video/usecase"
 )
 
-type Handler struct {
-	uc *usecase.UseCase
+// ChannelUseCase provides the channel data needed by this handler.
+type ChannelUseCase interface {
+	Channels() []model.Channel
 }
 
-func New(uc *usecase.UseCase) *Handler {
+type Handler struct {
+	uc ChannelUseCase
+}
+
+func New(uc ChannelUseCase) *Handler {
 	return &Handler{uc}
 }
 

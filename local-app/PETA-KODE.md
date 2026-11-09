@@ -38,6 +38,8 @@ Lihat [alur end-to-end](ALUR-END-TO-END.md) dan [kontrak cloud](ENGINE-CLOUD-CON
 
 Handler membaca request dan memanggil UseCase. UseCase mengoordinasi aturan/layanan melalui interface. Repository mengelola penyimpanan dan tidak memanggil repository lain. Adapter infrastruktur tidak bergantung pada handler atau UseCase.
 
+Handler REST menerima interface kecil yang didefinisikan di file handler pemakainya: `RecordingUseCase` untuk saving, `RestreamUseCase` untuk streaming, `ChannelUseCase` untuk video, dan `EngineUseCase` untuk status engine. Container tetap membangun implementasi konkret dan menyuntikkannya melalui constructor. Interface engine memakai tipe hasil `usecase.EngineStatus` yang sudah ada; model tidak dipindahkan. WHEP, WebSocket, dan health cloud-app juga sudah menerima interface. DTO, helper response, dan container tetap konkret.
+
 ## Indeks file
 
 ### Root

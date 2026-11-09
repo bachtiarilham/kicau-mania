@@ -8,9 +8,14 @@ import (
 	"net/http"
 )
 
-type Handler struct{ engine *usecase.Engine }
+// EngineUseCase exposes operational status without requiring a concrete engine.
+type EngineUseCase interface {
+	Status() usecase.EngineStatus
+}
 
-func New(engine *usecase.Engine) *Handler { return &Handler{engine: engine} }
+type Handler struct{ engine EngineUseCase }
+
+func New(engine EngineUseCase) *Handler { return &Handler{engine: engine} }
 func (h *Handler) Ready(c *gin.Context) {
 	status := h.engine.Status()
 	code := http.StatusOK

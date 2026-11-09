@@ -5,12 +5,18 @@ import (
 
 	"kicau.local/edge/internal/delivery/rest/response"
 	"kicau.local/edge/internal/mediaengine/streaming/model"
-	"kicau.local/edge/internal/mediaengine/streaming/usecase"
 )
 
-type Handler struct{ uc *usecase.UseCase }
+// RestreamUseCase contains only the restream operations exposed by this handler.
+type RestreamUseCase interface {
+	Restreams() []model.RestreamView
+	StartRestream(string, string) error
+	StopRestream(string) error
+}
 
-func New(uc *usecase.UseCase) *Handler {
+type Handler struct{ uc RestreamUseCase }
+
+func New(uc RestreamUseCase) *Handler {
 	return &Handler{uc}
 }
 
