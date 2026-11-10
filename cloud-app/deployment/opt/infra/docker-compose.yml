@@ -1,0 +1,23 @@
+name: gateway
+services:
+  nginx:
+    image: nginx:1.28-alpine
+    container_name: global_reverse_proxy
+    restart: unless-stopped
+    ports: ['80:80', '443:443']
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./certs:/etc/letsencrypt:ro
+      - ./acme:/var/www/acme:ro
+    networks:
+      web_gateway:
+        ipv4_address: ${GATEWAY_NGINX_IP:-172.30.20.2}
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+networks:
+  web_gateway:
+    external: true

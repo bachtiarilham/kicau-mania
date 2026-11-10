@@ -1,92 +1,81 @@
-# Cloud-app: fondasi backend online
+# Cloud-app: backend bisnis online
 
-Cloud-app akan menangani login, registrasi, penilaian, CRUD, dan kendali engine arena secara online. Fase sekarang hanya menyediakan fondasi HTTP/PostgreSQL serta [kontrak engine](docs/ENGINE-CONTRACT.md). Endpoint bisnis dan engine belum aktif.
+Backend Go memakai **Gin**, pgx dan PostgreSQL. Tersedia autentikasi email/password serta Google, CRUD persiapan arena, registrasi/pembayaran, penilaian/revisi juri, dan pengesahan pemenang. Operasi penuh memerlukan migrasi database dan konfigurasi layanan terkait.
 
-ERD, migrasi, view, materialized view, dan query bisnis **ditahan sampai rancangan database disetujui**. File SQL lama tetap ada sebagai draft, bukan skema siap deploy. Aplikasi tidak menjalankan migrasi otomatis.
+Mulai dari [alur bisnis dan peta kode](docs/ALUR-BISNIS.md), [kontrak API](docs/API.md), lalu [panduan SQL/migrasi](db/README.md). Hasil pemeriksaan dan batas integrasi dicatat pada [verifikasi backend](docs/VERIFIKASI-BACKEND.md).
 
 ## Menjalankan
 
-Prasyarat Go 1.25+. Jalankan dari folder cloud-app:
+Dari `cloud-app`, dengan Go 1.25+:
 
 ```powershell
 Copy-Item .env.example .env
+# Isi DATABASE_URL; terapkan migrasi secara manual sesuai db/README.md.
 go run ./cmd/api -env .env
 ```
 
-Default HTTP `127.0.0.1:8091`; gunakan reverse proxy HTTPS pada VPS. Isi DATABASE_URL untuk PostgreSQL yang ingin diperiksa. URL kosong diperbolehkan pada fase fondasi: proses tetap berjalan dan readiness mengembalikan 503. Database tidak terjangkau juga menghasilkan 503; proses dapat kembali ready saat koneksi pulih tanpa fallback SQLite.
+Default listener `127.0.0.1:8091`, untuk dipasang di belakang reverse proxy HTTPS VPS. Header forwarding hanya dipercaya dari `TRUSTED_PROXIES`. Tidak ada migrasi otomatis atau fallback database lokal.
 
-| Endpoint aktif | Fungsi |
-| --- | --- |
-| GET /healthz | 200 ketika HTTP hidup. |
-| GET /readyz | 200 jika PostgreSQL dapat di-ping; 503 jika belum dikonfigurasi/tidak tersedia. |
+`GET /healthz` menyatakan proses hidup. `GET /readyz` memeriksa koneksi, struktur read/workflow yang diperlukan, serta role sistem; keduanya juga menerima HEAD. Database belum dikonfigurasi atau migrasi belum lengkap menghasilkan readiness 503. Fitur yang belum tersedia karena konfigurasi Google/SMTP kosong menghasilkan 503, tanpa response sukses tiruan.
 
-Readiness ini hanya memeriksa koneksi, belum memeriksa tabel, view, migrasi, atau kesiapan fitur bisnis. Route login/CRUD/engine yang belum dibuat mengembalikan 404. Tidak ada response sukses tiruan.
+## Akun awal
+
+Role sistem disiapkan migrasi, tetapi tidak ada akun/password bawaan. Buat superadmin secara eksplisit menggunakan environment proses:
+
+```powershell
+$env:BOOTSTRAP_ADMIN_NAME = 'Nama admin'
+$env:BOOTSTRAP_ADMIN_EMAIL = 'email-admin-yang-Anda-miliki'
+$env:BOOTSTRAP_ADMIN_PHONE = '+62nomor-telepon'
+# Isi BOOTSTRAP_ADMIN_PASSWORD melalui mekanisme rahasia environment Anda.
+go run ./cmd/bootstrap-admin -env .env
+```
+
+Password tidak diterima melalui argumen CLI dan tidak dicetak. Password wajib 12â€“256 byte; nomor akun memakai format E.164. Bootstrap membuat akun terverifikasi dan menolak email/nomor yang sudah digunakan. Jangan menyimpan nilai rahasia bootstrap dalam source control.
 
 ## Konfigurasi
 
-| Env | Default / fungsi |
+Environment proses mengungguli dotenv, termasuk nilai kosong.
+
+| Env | Fungsi/default |
 | --- | --- |
-| HTTP_ADDR | 127.0.0.1:8091 |
-| DATABASE_URL | Kosong; URL/connection string PostgreSQL privat. |
-| DB_MAX_CONNS / DB_MIN_CONNS | 10 / 0; mengungguli opsi pool dalam DATABASE_URL. |
-| DB_CONNECT_TIMEOUT | 5s; batas koneksi database. |
-| DB_HEALTH_TIMEOUT | 2s; batas pemeriksaan readiness. |
-| HTTP_REQUEST_TIMEOUT | 15s; deadline context request dan batas baca HTTP. |
-| SHUTDOWN_TIMEOUT | 10s; waktu menyelesaikan HTTP sebelum koneksi ditutup. |
-| ALLOWED_ORIGINS | https://dev.megaallstararena.com; daftar origin eksplisit dipisahkan koma, tanpa slash akhir. |
-| APP_ENV | development memakai console; production memakai JSON stdout. |
-| SERVICE_NAME / LOG_DIR | cloud-app / ./logs. |
+| DATABASE_URL | Koneksi privat PostgreSQL; kosong membuat readiness 503. |
+| DB_MAX_CONNS / DB_MIN_CONNS | 10 / 0. |
+| DB_CONNECT_TIMEOUT / DB_HEALTH_TIMEOUT | 5s / 2s. |
+| HTTP_ADDR | 127.0.0.1:8091. |
+| HTTP_REQUEST_TIMEOUT / SHUTDOWN_TIMEOUT | 15s / 10s. |
+| ALLOWED_ORIGINS | Origin browser eksplisit; default frontend dev. |
+| FRONTEND_PUBLIC_URL | Origin halaman verifikasi/reset; default https://dev.megaallstararena.com. |
+| TRUSTED_PROXIES | CIDR reverse proxy; default loopback IPv4/IPv6. |
+| GOOGLE_CLIENT_ID | Kosong menonaktifkan jalur Google; login password tetap terpisah. |
+| SMTP_HOST / SMTP_PORT / SMTP_FROM | Server, port, alamat pengirim; port default 587. |
+| SMTP_USER / SMTP_PASSWORD | Kredensial SMTP privat. |
+| SMTP_MODE | starttls atau tls. |
+| SMTP_ALLOW_INSECURE | false; true hanya diperbolehkan pada SMTP loopback development. |
+| MV_REFRESH_INTERVAL / MV_REFRESH_TIMEOUT | 60s / 2m. |
+| APP_ENV / SERVICE_NAME / LOG_DIR | Mode logging Zap, nama layanan, lokasi app.log. |
 
-Environment proses mengungguli dotenv, termasuk nilai kosong. Nilai konfigurasi salah menghentikan startup dengan pesan yang tidak menampilkan kredensial. Deadline request harus diteruskan oleh UseCase/repository; ini bukan mekanisme untuk menghentikan goroutine secara paksa.
+Untuk frontend pengembangan lokal, ubah **ALLOWED_ORIGINS dan FRONTEND_PUBLIC_URL** menjadi origin loopback HTTP yang sama, misalnya `http://localhost:3000`. Cookie refresh memakai HttpOnly, SameSite=Lax, path `/`, serta Secure dan prefix `__Host-` ketika frontend memakai HTTPS. Domain cookie tidak diperlebar ke seluruh subdomain.
 
-## Membaca kode
+## Batas arsitektur
 
-```text
-cmd/api/main.go → config → server → app → router → handler → UseCase
-```
+Handler hanya parsing/sintaks, auth/context, pemanggilan UseCase, DTO dan response. Aturan bisnis serta koordinasi lintas domain berada pada UseCase melalui interface. Repository tidak memanggil repository lain. Goroutine pemeliharaan berada pada worker, bukan UseCase.
 
-| Folder | Tanggung jawab |
-| --- | --- |
-| cmd/api | Entry point, pemuatan konfigurasi, logger, dan sinyal proses. |
-| config | Validasi env tanpa membuka koneksi. |
-| internal/app | Merakit pool, UseCase readiness, dan handler; menutup dependency. |
-| internal/server | Listener HTTP, timeout, dan graceful shutdown. |
-| internal/delivery | Router utama yang merangkai handler dan middleware. |
-| internal/delivery/middleware | Auth boundary, CORS, request ID, logging, recovery, batas body 2 MiB. |
-| internal/delivery/rest | Handler health/readiness dan format response JSON di rest/response. |
-| internal/health/usecase | Menentukan readiness melalui interface database, tanpa import HTTP atau adapter. |
-| internal/auth/model | Identitas pengguna/engine yang tidak bergantung pada transport; belum ada login. |
-| internal/apperror | Error aplikasi dan pemetaan aman melalui delivery/rest/response. |
-| internal/infra/postgres | Connection pool pgx; tanpa SQL bisnis atau migrasi. |
-| internal/infra/logger | Pola Zap seperti local-app/park-server-v3, file JSON dan redaksi rahasia. |
-| docs | Kontrak transport yang belum diaktifkan. |
-| db | ERD dan SQL draft yang dibekukan. |
+SQL berada pada `db/queries/*.sql`, dinamai dengan komentar `-- name:`, dan di-embed ke binary. Tidak ada duplikasi SQL bisnis di Go. GET bisnis memakai view; INSERT/UPDATE/DELETE langsung ke tabel sumber. Pembacaan internal untuk otorisasi, autentikasi dan locking memakai jalur terbatas. Response mutasi membaca view biasa dalam transaksi yang sama.
 
-Handler hanya parsing, validasi sintaks, ekstraksi auth/context, pemanggilan UseCase, pemetaan DTO, dan HTTP response. Validasi semantik/otorisasi bisnis serta koordinasi lintas domain berada di UseCase. Repository tidak memanggil repository lain. Model identitas memungkinkan UseCase autentikasi kelak memenuhi interface middleware tanpa mengimpor HTTP.
+Materialized view dipakai laporan administratif; rekap aktif dan keputusan pemenang membaca data terbaru. Worker melakukan refresh awal, setiap interval, serta setelah notifikasi commit pembayaran/pembatalan/penutupan. Snapshot dan metadata waktunya dibaca dalam satu statement.
 
-## Aturan repository setelah ERD disetujui
+## Kontrak HTTP
 
-Response REST mengikuti format aktual park-server-v3: `{"success":true,"message":"...","data":{...}}` dan `{"success":false,"message":"...","errors":...}`. Data/errors dihilangkan jika nil; tidak ada pembungkus meta. Error internal tidak dikirim mentah dan dapat menyertakan `errors.request_id`. Response health/readiness juga memakai format tersebut. Pagination cursor memakai `data.items`, `data.next_cursor` (jika ada), dan `data.has_more`. Response 204 tidak memiliki body. Kontrak response engine juga memakai envelope ini dengan data non-null; request engine tetap berupa payload langsung. Endpoint pendamping tetap belum aktif sampai autentikasi dan repository tersedia.
+Envelope bersama: `{"success":true,"message":"...","data":...}` atau `{"success":false,"message":"...","errors":...}`. Field nil dihilangkan. Pagination: `data.items`, `data.next_cursor` bila ada, dan `data.has_more`; limit 1â€“100, cursor mengikuti ID. Response 204 tidak berisi body.
 
-- List/detail bisnis membaca view; create/update/delete menulis tabel sumber dalam transaksi.
-- Mutasi menggunakan RETURNING id lalu membaca representasi view dalam transaksi yang sama.
-- Pembacaan internal untuk transaksi/locking dan autentikasi sensitif memakai jalur terbatas yang sesuai; hash password tidak masuk view operasional.
-- Materialized view untuk rekap administratif yang menerima keterlambatan refresh, bukan nilai operasional yang wajib langsung terbaru.
+Header bersama meliputi request ID, nosniff, no-store, dan CORS origin eksplisit. Gin recovery tidak mengirim detail panic; log hanya memakai pola route, bukan body, token atau URL mentah. Internal error memakai pesan aman; error encoding JSON ditangani sebelum header dikirim.
 
-SQL draft tidak otomatis memenuhi aturan multi-arena terbaru. Implementasi repository serta query menunggu review ERD.
+## Batas integrasi dan verifikasi
 
-## Penghapusan legacy dan batas fitur
+Belum ada frontend, payment gateway/refund, pengiriman video, maupun endpoint komunikasi engine aktif. Tombol fase ronde saat ini mengubah status bisnis tanpa memulai/menghentikan local-app. Kontrak media tetap tersedia di [ENGINE-CONTRACT.md](docs/ENGINE-CONTRACT.md), untuk fase integrasi selanjutnya. Metadata rekaman hanya dapat dibaca sesuai hak registrasi.
 
-Exchange SQLite, paket event offline, penerima sinkronisasi skor, endpoint exchange lama, serta token admin/registry mesin berbasis env lama telah dihapus. File database lama tidak dibaca dan tidak dihapus otomatis. Arsipkan data lama melalui prosedur operasional sebelum memutuskan penghapusannya.
+Build dan pemeriksaan SQL/HTTP dilakukan pada PostgreSQL sementara dengan SMTP lokal serta verifier Google fixture. Suite tes Go tidak dijalankan otomatis. Google sign-in dan email produksi tetap memerlukan konfigurasi serta penerimaan dengan layanan sebenarnya.
 
-Boundary autentikasi pengguna dan mesin tersedia sebagai middleware terpisah, tetapi belum dipasang pada route bisnis karena verifier dan repository belum dibuat. Tidak ada akun, token, maupun akses arena default.
+## Deployment VPS
 
-Kontrak command, heartbeat, metadata, tiket playback, dan otorisasi engine ada di [ENGINE-CONTRACT.md](docs/ENGINE-CONTRACT.md). Frontend LAN belum dapat diintegrasikan end-to-end sebelum endpoint tersebut diimplementasikan.
-
-## Logging dan verifikasi
-
-Header umum dikelola middleware bersama: `X-Content-Type-Options: nosniff`, `Cache-Control: no-store`, dan request ID. CORS memeriksa origin serta menangani preflight sebelum handler, dengan X-Request-ID diekspos ke frontend yang diizinkan. Limits hanya membatasi body/deadline; auth hanya menangani autentikasi. Content-Type JSON tetap dimiliki helper response. Kebijakan ini berlaku juga pada response error dan route yang tidak ditemukan.
-
-Log mencakup request ID, route template, method, status, latency, service, hostname, serta caller. Body, query, Authorization, dan raw path tidak dicatat oleh access logger. File `${LOG_DIR}/app.log` memakai JSON; rotasi/retensi dikelola deployment. Kegagalan membuka file log tetap memungkinkan stdout.
-
-Verifikasi fase ini: `go build ./...`, pemeriksaan dependency/referensi legacy, dan diff. Suite tes tidak dijalankan otomatis sesuai permintaan. Uji integrasi database, auth, CRUD, dan engine dilakukan pada fase berikutnya. Petunjuk SQL lama tersedia sebagai draft di [db/README.md](db/README.md).
+Pipeline GitHub Actions membangun image AMD64/ARM64, memublikasikan ke GHCR privat dan deploy melalui SSH saat push ke main. Migrasi tetap manual. Ikuti [runbook deployment](deployment/devops_runbook.md) untuk setup VPS, GitHub secrets, HTTPS, bootstrap dan rollback.

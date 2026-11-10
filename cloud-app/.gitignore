@@ -6,3 +6,15 @@
 /logs/
 /runtime/
 *.exe
+
+# VPS downloads and deployment runtime secrets
+/deployment/**/certs/
+/deployment/**/data/
+/deployment/**/releases/
+/deployment/**/incoming/
+/deployment/**/state/
+/deployment/**/app.env
+/deployment/**/database.env
+/deployment/**/*.pem
+/deployment/**/*.key
+/deployment/**/*.dump

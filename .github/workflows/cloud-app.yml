@@ -1,0 +1,129 @@
+name: Cloud-app CI/CD
+on:
+  pull_request:
+    paths: ['cloud-app/**', '.github/workflows/cloud-app.yml', '.gitattributes', 'db-dump/full_db.dump']
+  push:
+    branches: [main]
+    paths: ['cloud-app/**', '.github/workflows/cloud-app.yml', '.gitattributes', 'db-dump/full_db.dump']
+permissions:
+  contents: read
+concurrency:
+  group: cloud-app-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: cloud-app/go.mod
+          cache-dependency-path: cloud-app/go.sum
+      - name: Build and vet (no automatic Go test suite)
+        working-directory: cloud-app
+        run: |
+          go build ./...
+          go vet ./...
+      - name: Validate workflow
+        run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12 -shellcheck= .github/workflows/cloud-app.yml
+      - name: Validate shell, Compose and Nginx
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y shellcheck
+          find cloud-app/deployment -name '*.sh' -print0 | xargs -0 shellcheck -x -P SCRIPTDIR
+          bash cloud-app/deployment/check.sh
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - name: Build native acceptance image
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: cloud-app
+          file: cloud-app/deployment/opt/apps/kicau-mania/app/Dockerfile
+          load: true
+          tags: kicau-cloud-check:${{ github.sha }}
+          cache-from: type=gha,scope=cloud-check
+          cache-to: type=gha,mode=max,scope=cloud-check
+      - name: Exercise deployment and database persistence
+        env:
+          CHECK_IMAGE: kicau-cloud-check:${{ github.sha }}
+        run: bash cloud-app/deployment/acceptance.sh
+  image:
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        if: github.event_name == 'push'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build both architectures; publish only from main
+        id: build
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: cloud-app
+          file: cloud-app/deployment/opt/apps/kicau-mania/app/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name == 'push' }}
+          tags: ghcr.io/bachtiarilham/kicau-mania-cloud:${{ github.sha }}
+          labels: org.opencontainers.image.source=https://github.com/bachtiarilham/kicau-mania
+          cache-from: type=gha,scope=cloud-multiarch
+          cache-to: type=gha,mode=max,scope=cloud-multiarch
+      - name: Require private package visibility
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          visibility=$(gh api /users/bachtiarilham/packages/container/kicau-mania-cloud --jq .visibility)
+          test "$visibility" = private || { echo 'Registry package must be private'; exit 1; }
+  deploy:
+    if: github.event_name == 'push'
+    needs: image
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: development
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Package and deploy the same commit
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+          IMAGE_DIGEST: ${{ needs.image.outputs.digest }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          [[ $VPS_HOST =~ ^[a-zA-Z0-9.-]+$ && $VPS_USER =~ ^[a-z_][a-z0-9_-]*$ ]]
+          VPS_PORT=${VPS_PORT:-22}
+          [[ $VPS_PORT =~ ^[0-9]{1,5}$ && $IMAGE_DIGEST =~ ^sha256:[0-9a-f]{64}$ ]]
+          [[ -n $VPS_SSH_KEY && -n $VPS_KNOWN_HOSTS ]]
+          keys=$(mktemp -d)
+          trap 'rm -rf -- "$keys"' EXIT
+          umask 077
+          printf '%s\n' "$VPS_SSH_KEY" > "$keys/key"
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > "$keys/known_hosts"
+          opts=(-i "$keys/key" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=$keys/known_hosts" -o ConnectTimeout=10)
+          bundle="$RUNNER_TEMP/cloud-release.tgz"
+          bash cloud-app/deployment/package.sh "$GITHUB_SHA" "$bundle"
+          remote="/opt/apps/kicau-mania/incoming/$GITHUB_SHA"
+          ssh "${opts[@]}" -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" "mkdir -p '$remote'"
+          scp "${opts[@]}" -P "$VPS_PORT" "$bundle" "$VPS_USER@$VPS_HOST:$remote/release.tgz"
+          ssh "${opts[@]}" -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" \
+            "tar -xzf '$remote/release.tgz' -C '$remote' && bash '$remote/scripts/app/deploy.sh' '$remote' 'ghcr.io/bachtiarilham/kicau-mania-cloud@$IMAGE_DIGEST' '$GITHUB_SHA'"

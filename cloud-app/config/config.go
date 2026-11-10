@@ -14,12 +14,18 @@ import (
 )
 
 type Config struct {
-	HTTPAddress                       string
-	DatabaseURL                       string
-	DBMaxConns, DBMinConns            int32
-	DBConnectTimeout, DBHealthTimeout time.Duration
-	RequestTimeout, ShutdownTimeout   time.Duration
-	AllowedOrigins                    []string
+	HTTPAddress                                                    string
+	DatabaseURL                                                    string
+	DBMaxConns, DBMinConns                                         int32
+	DBConnectTimeout, DBHealthTimeout                              time.Duration
+	RequestTimeout, ShutdownTimeout                                time.Duration
+	AllowedOrigins                                                 []string
+	TrustedProxies                                                 []string
+	FrontendURL, GoogleClientID, CookieName                        string
+	CookieSecure                                                   bool
+	SMTPHost, SMTPPort, SMTPUser, SMTPPassword, SMTPFrom, SMTPMode string
+	SMTPAllowInsecure                                              bool
+	MVRefreshInterval, MVRefreshTimeout                            time.Duration
 }
 
 func Load(path string) (Config, error) {
@@ -73,6 +79,9 @@ func Load(path string) (Config, error) {
 			c.AllowedOrigins = append(c.AllowedOrigins, origin)
 			seen[origin] = true
 		}
+	}
+	if err := loadBusiness(&c); err != nil {
+		return c, err
 	}
 	return c, nil
 }

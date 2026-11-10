@@ -1,13 +1,11 @@
 package middleware
 
-import "net/http"
+import "github.com/gin-gonic/gin"
 
-// SecurityHeaders applies shared policy independently of request limits and auth.
-// The response transport owns Content-Type and any protocol-specific headers.
-func SecurityHeaders(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("X-Content-Type-Options", "nosniff")
-		w.Header().Set("Cache-Control", "no-store")
-		next.ServeHTTP(w, r)
-	})
+func SecurityHeaders() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Header("X-Content-Type-Options", "nosniff")
+		c.Header("Cache-Control", "no-store")
+		c.Next()
+	}
 }

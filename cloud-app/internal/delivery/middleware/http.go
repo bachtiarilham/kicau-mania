@@ -1,3 +1,4 @@
+// Package middleware owns transport limits, tracing, CORS and authentication extraction.
 package middleware
 
 import (
@@ -6,111 +7,107 @@ import (
 	"encoding/hex"
 	"net/http"
 	"regexp"
+	"strings"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 
 	"kicau.cloud/control/internal/apperror"
+	"kicau.cloud/control/internal/core/model"
 	"kicau.cloud/control/internal/delivery/rest/response"
 	"kicau.cloud/control/internal/infra/logger"
 )
 
 var requestIDPattern = regexp.MustCompile(`^[A-Za-z0-9_-]{1,64}$`)
 
-type statusWriter struct {
-	http.ResponseWriter
-	status int
-}
-
-func (w *statusWriter) Unwrap() http.ResponseWriter { return w.ResponseWriter }
-func (w *statusWriter) WriteHeader(status int) {
-	if w.status != 0 {
-		return
-	}
-	w.status = status
-	w.ResponseWriter.WriteHeader(status)
-}
-func (w *statusWriter) Write(body []byte) (int, error) {
-	if w.status == 0 {
-		w.WriteHeader(http.StatusOK)
-	}
-	return w.ResponseWriter.Write(body)
-}
-
-func AccessLog(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		id := r.Header.Get("X-Request-ID")
+func AccessLog() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		id := c.GetHeader("X-Request-ID")
 		if !requestIDPattern.MatchString(id) {
-			var bytes [16]byte
-			if _, err := rand.Read(bytes[:]); err != nil {
-				response.WriteError(w, err)
+			var b [16]byte
+			if _, e := rand.Read(b[:]); e != nil {
+				response.WriteError(c, e)
+				c.Abort()
 				return
 			}
-			id = hex.EncodeToString(bytes[:])
+			id = hex.EncodeToString(b[:])
 		}
-		w.Header().Set("X-Request-ID", id)
-		r = r.WithContext(logger.WithRequestID(r.Context(), id))
-		recorded := &statusWriter{ResponseWriter: w}
+		c.Header("X-Request-ID", id)
+		c.Request = c.Request.WithContext(logger.WithRequestID(c.Request.Context(), id))
 		start := time.Now()
-		next.ServeHTTP(recorded, r)
-		status := recorded.status
-		if status == 0 {
-			status = http.StatusOK
+		c.Next()
+		route := c.FullPath()
+		if route == "" {
+			route = "unmatched"
 		}
-		// Use the registered pattern only; raw paths may contain session secrets.
-		logger.FromContext(r.Context()).Info("HTTP request", zap.String("method", r.Method), zap.String("route", r.Pattern), zap.Int("status", status), zap.Duration("latency", time.Since(start)))
-	})
+		logger.FromContext(c.Request.Context()).Info("HTTP request", zap.String("method", c.Request.Method), zap.String("route", route), zap.Int("status", c.Writer.Status()), zap.Duration("latency", time.Since(start)))
+	}
 }
-
-func Recover(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func Recover() gin.HandlerFunc {
+	return func(c *gin.Context) {
 		defer func() {
 			if recover() != nil {
-				logger.FromContext(r.Context()).Error("HTTP panic recovered")
-				if recorded, ok := w.(*statusWriter); ok && recorded.status != 0 {
-					return
+				logger.FromContext(c.Request.Context()).Error("HTTP panic recovered")
+				c.Abort()
+				if !c.Writer.Written() {
+					response.WriteError(c, nil)
 				}
-				response.WriteError(w, nil)
 			}
 		}()
-		next.ServeHTTP(w, r)
-	})
-}
-
-func Limits(timeout time.Duration, next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		r.Body = http.MaxBytesReader(w, r.Body, 2*1024*1024)
-		ctx, cancel := context.WithTimeout(r.Context(), timeout)
-		defer cancel()
-		request := r.WithContext(ctx)
-		next.ServeHTTP(w, request)
-		// ServeMux writes the matched pattern on the request it receives.
-		// Propagate it to the outer access logger without logging raw paths.
-		r.Pattern = request.Pattern
-	})
-}
-
-func CORS(origins []string, next http.Handler) http.Handler {
-	allowed := map[string]bool{}
-	for _, origin := range origins {
-		allowed[origin] = true
+		c.Next()
 	}
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Add("Vary", "Origin")
-		if origin := r.Header.Get("Origin"); origin != "" {
+}
+func Limits(timeout time.Duration) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 2*1024*1024)
+		ctx, cancel := context.WithTimeout(c.Request.Context(), timeout)
+		defer cancel()
+		c.Request = c.Request.WithContext(ctx)
+		c.Next()
+	}
+}
+func CORS(origins []string) gin.HandlerFunc {
+	allowed := map[string]bool{}
+	for _, o := range origins {
+		allowed[o] = true
+	}
+	return func(c *gin.Context) {
+		c.Writer.Header().Add("Vary", "Origin")
+		origin := c.GetHeader("Origin")
+		if origin != "" {
 			if !allowed[origin] {
-				response.WriteError(w, apperror.ErrForbidden)
+				response.WriteError(c, apperror.ErrForbidden)
+				c.Abort()
 				return
 			}
-			w.Header().Set("Access-Control-Allow-Origin", origin)
-			w.Header().Set("Access-Control-Expose-Headers", "X-Request-ID")
-			if r.Method == http.MethodOptions && r.Header.Get("Access-Control-Request-Method") != "" {
-				w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Request-ID")
-				w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
-				w.WriteHeader(http.StatusNoContent)
+			c.Header("Access-Control-Allow-Origin", origin)
+			c.Header("Access-Control-Allow-Credentials", "true")
+			c.Header("Access-Control-Expose-Headers", "X-Request-ID")
+			if c.Request.Method == "OPTIONS" {
+				c.Header("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Request-ID")
+				c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+				c.Status(204)
+				c.Abort()
 				return
 			}
 		}
-		next.ServeHTTP(w, r)
-	})
+		c.Next()
+	}
+}
+
+func CanonicalParams() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		for i := range c.Params {
+			if model.UUID(c.Params[i].Value) {
+				c.Params[i].Value = strings.ToLower(c.Params[i].Value)
+			}
+		}
+		q := c.Request.URL.Query()
+		if arena := q.Get("arena_id"); model.UUID(arena) {
+			q.Set("arena_id", strings.ToLower(arena))
+			c.Request.URL.RawQuery = q.Encode()
+		}
+		c.Next()
+	}
 }

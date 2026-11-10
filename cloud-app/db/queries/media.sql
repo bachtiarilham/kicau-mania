@@ -1,8 +1,2 @@
--- Examples for one session. Repository Go can use the SQL bodies directly.
-
-PREPARE list_round_recordings AS
-SELECT * FROM cloud_read.v_round_recordings WHERE round_id = $1
-ORDER BY created_at DESC NULLS LAST, id LIMIT $2 OFFSET $3;
-
-PREPARE get_round_recordings AS
-SELECT * FROM cloud_read.v_round_recordings WHERE id = $1;
+-- name: RegistrationRecordings
+SELECT to_jsonb(m) FROM cloud_read.v_round_recordings m JOIN cloud_read.v_registration_items i ON i.id=m.registration_item_id WHERE i.registration_id=$1::uuid ORDER BY m.id;

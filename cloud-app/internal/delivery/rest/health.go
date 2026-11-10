@@ -1,9 +1,9 @@
-// Package rest exposes JSON handlers without constructing application dependencies.
 package rest
 
 import (
 	"context"
-	"net/http"
+
+	"github.com/gin-gonic/gin"
 
 	"kicau.cloud/control/internal/delivery/rest/response"
 )
@@ -11,16 +11,14 @@ import (
 type Readiness interface{ Ready(context.Context) error }
 type HealthHandler struct{ usecase Readiness }
 
-func NewHealthHandler(usecase Readiness) *HealthHandler { return &HealthHandler{usecase: usecase} }
-
-func (h *HealthHandler) Live(w http.ResponseWriter, r *http.Request) {
-	response.Success(w, "Service is alive", map[string]string{"status": "UP"})
+func NewHealthHandler(u Readiness) *HealthHandler { return &HealthHandler{u} }
+func (h *HealthHandler) Live(c *gin.Context) {
+	response.Success(c, "Service is alive", gin.H{"status": "UP"})
 }
-
-func (h *HealthHandler) Ready(w http.ResponseWriter, r *http.Request) {
-	if err := h.usecase.Ready(r.Context()); err != nil {
-		response.WriteError(w, err)
+func (h *HealthHandler) Ready(c *gin.Context) {
+	if err := h.usecase.Ready(c.Request.Context()); err != nil {
+		response.WriteError(c, err)
 		return
 	}
-	response.Success(w, "Service is ready", map[string]string{"status": "READY"})
+	response.Success(c, "Service is ready", gin.H{"status": "READY"})
 }

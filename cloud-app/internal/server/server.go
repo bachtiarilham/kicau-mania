@@ -31,7 +31,7 @@ func Run(ctx context.Context, cfg config.Config) error {
 		logger.Warn("PostgreSQL is not configured; readiness will return 503")
 	}
 	server := &http.Server{
-		Handler:           delivery.Router(delivery.Options{AllowedOrigins: cfg.AllowedOrigins, RequestTimeout: cfg.RequestTimeout}, container.Handlers),
+		Handler:           delivery.Router(delivery.Options{AllowedOrigins: cfg.AllowedOrigins, TrustedProxies: cfg.TrustedProxies, RequestTimeout: cfg.RequestTimeout}, container.Handlers),
 		ReadHeaderTimeout: 5 * time.Second, ReadTimeout: cfg.RequestTimeout,
 		WriteTimeout: cfg.RequestTimeout + time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 32768,
 	}

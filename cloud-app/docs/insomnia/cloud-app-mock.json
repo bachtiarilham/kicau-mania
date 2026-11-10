@@ -1,0 +1,2419 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2026-11-10T00:00:00.000Z",
+  "__export_source": "kicau-mania.mock-fixture",
+  "resources": [
+    {
+      "_id": "wrk_kicau_mock",
+      "_type": "workspace",
+      "parentId": null,
+      "name": "Kicau cloud-app — Mock business flow",
+      "description": "Development fixture only. Import, select Localhost, then follow db/seeds/README.md. Never run against production.",
+      "scope": "collection"
+    },
+    {
+      "_id": "env_kicau_base",
+      "_type": "environment",
+      "parentId": "wrk_kicau_mock",
+      "name": "Base Environment",
+      "data": {
+        "mock_password": "KicauMock2026!",
+        "arena_a": "6d6f636b-0002-4000-8000-000000000001",
+        "arena_b": "6d6f636b-0002-4000-8000-000000000002",
+        "event_a": "6d6f636b-0004-4000-8000-000000000001",
+        "event_b": "6d6f636b-0004-4000-8000-000000000002",
+        "category_a": "6d6f636b-0005-4000-8000-000000000001",
+        "category_b": "6d6f636b-0005-4000-8000-000000000002",
+        "round_a1": "6d6f636b-0006-4000-8000-000000000001",
+        "round_a2": "6d6f636b-0006-4000-8000-000000000002",
+        "round_b1": "6d6f636b-0006-4000-8000-000000000003",
+        "owner_p1": "6d6f636b-0008-4000-8000-000000000001",
+        "owner_p2": "6d6f636b-0008-4000-8000-000000000002",
+        "bird_1": "6d6f636b-0009-4000-8000-000000000001",
+        "bird_2": "6d6f636b-0009-4000-8000-000000000002",
+        "bird_3": "6d6f636b-0009-4000-8000-000000000003",
+        "bird_4": "6d6f636b-0009-4000-8000-000000000004",
+        "criteria_a1": "6d6f636b-0007-4000-8000-000000000001",
+        "criteria_b1": "6d6f636b-0007-4000-8000-000000000101",
+        "criteria_a2": "6d6f636b-0007-4000-8000-000000000002",
+        "criteria_b2": "6d6f636b-0007-4000-8000-000000000102",
+        "criteria_a3": "6d6f636b-0007-4000-8000-000000000003",
+        "criteria_b3": "6d6f636b-0007-4000-8000-000000000103",
+        "gantangan_a1": "6d6f636b-0003-4000-8000-000000000001",
+        "gantangan_a2": "6d6f636b-0003-4000-8000-000000000002",
+        "email_superadmin": "superadmin@mock.kicau.test",
+        "user_superadmin": "6d6f636b-0001-4000-8000-000000000001",
+        "device_superadmin": "6d6f636b-000d-4000-8000-000000000001",
+        "token_superadmin": "",
+        "email_admin_a": "admin.a@mock.kicau.test",
+        "user_admin_a": "6d6f636b-0001-4000-8000-000000000002",
+        "device_admin_a": "6d6f636b-000d-4000-8000-000000000002",
+        "token_admin_a": "",
+        "email_operator_a": "operator.a@mock.kicau.test",
+        "user_operator_a": "6d6f636b-0001-4000-8000-000000000003",
+        "device_operator_a": "6d6f636b-000d-4000-8000-000000000003",
+        "token_operator_a": "",
+        "email_operator_b": "operator.b@mock.kicau.test",
+        "user_operator_b": "6d6f636b-0001-4000-8000-000000000004",
+        "device_operator_b": "6d6f636b-000d-4000-8000-000000000004",
+        "token_operator_b": "",
+        "email_juri_1": "juri.1@mock.kicau.test",
+        "user_juri_1": "6d6f636b-0001-4000-8000-000000000005",
+        "device_juri_1": "6d6f636b-000d-4000-8000-000000000005",
+        "token_juri_1": "",
+        "email_juri_2": "juri.2@mock.kicau.test",
+        "user_juri_2": "6d6f636b-0001-4000-8000-000000000006",
+        "device_juri_2": "6d6f636b-000d-4000-8000-000000000006",
+        "token_juri_2": "",
+        "email_peserta_1": "peserta.1@mock.kicau.test",
+        "user_peserta_1": "6d6f636b-0001-4000-8000-000000000007",
+        "device_peserta_1": "6d6f636b-000d-4000-8000-000000000007",
+        "token_peserta_1": "",
+        "email_peserta_2": "peserta.2@mock.kicau.test",
+        "user_peserta_2": "6d6f636b-0001-4000-8000-000000000008",
+        "device_peserta_2": "6d6f636b-000d-4000-8000-000000000008",
+        "token_peserta_2": "",
+        "p1_id": "",
+        "p1_item_a1": "",
+        "p1_item_a2": "",
+        "p1_payment_id": "",
+        "p2_id": "",
+        "p2_item_a1": "",
+        "p2_item_a2": "",
+        "p2_payment_id": "",
+        "op_p1_j1": "6d6f636b-000c-4000-8000-000000000001",
+        "op_p2_j1": "6d6f636b-000c-4000-8000-000000000002",
+        "op_p1_j2": "6d6f636b-000c-4000-8000-000000000003",
+        "op_p2_j2": "6d6f636b-000c-4000-8000-000000000004",
+        "op_revision": "6d6f636b-000c-4000-8000-000000000005",
+        "op_stale": "6d6f636b-000c-4000-8000-000000000006",
+        "op_invalid": "6d6f636b-000c-4000-8000-000000000007",
+        "op_closed": "6d6f636b-000c-4000-8000-000000000008",
+        "assessment_version_p1_j1": 0,
+        "assessment_version_p2_j1": 0,
+        "assessment_version_p1_j2": 0,
+        "assessment_version_p2_j2": 0,
+        "revision_base_version": 1
+      },
+      "dataPropertyOrder": null
+    },
+    {
+      "_id": "env_kicau_local",
+      "_type": "environment",
+      "parentId": "env_kicau_base",
+      "name": "Localhost",
+      "data": {
+        "base_url": "http://127.0.0.1:8091",
+        "frontend_origin": "http://localhost:3000"
+      },
+      "dataPropertyOrder": null
+    },
+    {
+      "_id": "fld_health",
+      "_type": "request_group",
+      "parentId": "wrk_kicau_mock",
+      "name": "00 — Health",
+      "description": "Lihat README untuk urutan dan prasyarat.",
+      "environment": {},
+      "metaSortKey": 0
+    },
+    {
+      "_id": "fld_login",
+      "_type": "request_group",
+      "parentId": "wrk_kicau_mock",
+      "name": "01 — Login semua role",
+      "description": "Lihat README untuk urutan dan prasyarat.",
+      "environment": {},
+      "metaSortKey": 1
+    },
+    {
+      "_id": "fld_master",
+      "_type": "request_group",
+      "parentId": "wrk_kicau_mock",
+      "name": "02 — Profil dan master",
+      "description": "Lihat README untuk urutan dan prasyarat.",
+      "environment": {},
+      "metaSortKey": 2
+    },
+    {
+      "_id": "fld_roster",
+      "_type": "request_group",
+      "parentId": "wrk_kicau_mock",
+      "name": "03 — Roster juri",
+      "description": "Lihat README untuk urutan dan prasyarat.",
+      "environment": {},
+      "metaSortKey": 3
+    },
+    {
+      "_id": "fld_registration",
+      "_type": "request_group",
+      "parentId": "wrk_kicau_mock",
+      "name": "04 — Registrasi multi-ronde",
+      "description": "Lihat README untuk urutan dan prasyarat.",
+      "environment": {},
+      "metaSortKey": 4
+    },
+    {
+      "_id": "fld_payment",
+      "_type": "request_group",
+      "parentId": "wrk_kicau_mock",
+      "name": "05 — Pembayaran dan verifikasi",
+      "description": "Lihat README untuk urutan dan prasyarat.",
+      "environment": {},
+      "metaSortKey": 5
+    },
+    {
+      "_id": "fld_phase",
+      "_type": "request_group",
+      "parentId": "wrk_kicau_mock",
+      "name": "06 — Mulai dan penjurian",
+      "description": "Lihat README untuk urutan dan prasyarat.",
+      "environment": {},
+      "metaSortKey": 6
+    },
+    {
+      "_id": "fld_score",
+      "_type": "request_group",
+      "parentId": "wrk_kicau_mock",
+      "name": "07 — Submit nilai dan retry",
+      "description": "Lihat README untuk urutan dan prasyarat.",
+      "environment": {},
+      "metaSortKey": 7
+    },
+    {
+      "_id": "fld_revision",
+      "_type": "request_group",
+      "parentId": "wrk_kicau_mock",
+      "name": "08 — Revisi dan history",
+      "description": "Lihat README untuk urutan dan prasyarat.",
+      "environment": {},
+      "metaSortKey": 8
+    },
+    {
+      "_id": "fld_close",
+      "_type": "request_group",
+      "parentId": "wrk_kicau_mock",
+      "name": "09 — Rekap dan pemenang",
+      "description": "Lihat README untuk urutan dan prasyarat.",
+      "environment": {},
+      "metaSortKey": 9
+    },
+    {
+      "_id": "fld_report",
+      "_type": "request_group",
+      "parentId": "wrk_kicau_mock",
+      "name": "10 — Laporan snapshot",
+      "description": "Lihat README untuk urutan dan prasyarat.",
+      "environment": {},
+      "metaSortKey": 10
+    },
+    {
+      "_id": "fld_negative",
+      "_type": "request_group",
+      "parentId": "wrk_kicau_mock",
+      "name": "90 — Negatif (jalankan pada fase sesuai deskripsi)",
+      "description": "Lihat README untuk urutan dan prasyarat.",
+      "environment": {},
+      "metaSortKey": 11
+    },
+    {
+      "_id": "fld_session",
+      "_type": "request_group",
+      "parentId": "wrk_kicau_mock",
+      "name": "91 — Cookie refresh/logout (setelah alur utama)",
+      "description": "Lihat README untuk urutan dan prasyarat.",
+      "environment": {},
+      "metaSortKey": 12
+    },
+    {
+      "_id": "req_health",
+      "_type": "request",
+      "parentId": "fld_health",
+      "name": "01 — Liveness",
+      "description": "Expected HTTP 200. ",
+      "url": "{{ _.base_url }}/healthz",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
+    },
+    {
+      "_id": "req_ready",
+      "_type": "request",
+      "parentId": "fld_health",
+      "name": "02 — Readiness",
+      "description": "Expected HTTP 200. ",
+      "url": "{{ _.base_url }}/readyz",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
+    },
+    {
+      "_id": "req_login_superadmin",
+      "_type": "request",
+      "parentId": "fld_login",
+      "name": "01 — Login superadmin",
+      "description": "Expected HTTP 200. Cookie tidak disimpan; token role disimpan terpisah. Login ulang bila access token habis.",
+      "url": "{{ _.base_url }}/api/v1/auth/login",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"{{ _.email_superadmin }}\",\n  \"password\": \"{{ _.mock_password }}\",\n  \"device_id\": \"{{ _.device_superadmin }}\"\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nif (!body.data?.access_token || body.data.user?.id !== insomnia.environment.get('user_superadmin')) throw new Error('Wrong login identity');\ninsomnia.environment.set('token_superadmin', body.data.access_token);\n"
+    },
+    {
+      "_id": "req_login_admin_a",
+      "_type": "request",
+      "parentId": "fld_login",
+      "name": "02 — Login admin_a",
+      "description": "Expected HTTP 200. Cookie tidak disimpan; token role disimpan terpisah. Login ulang bila access token habis.",
+      "url": "{{ _.base_url }}/api/v1/auth/login",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"{{ _.email_admin_a }}\",\n  \"password\": \"{{ _.mock_password }}\",\n  \"device_id\": \"{{ _.device_admin_a }}\"\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nif (!body.data?.access_token || body.data.user?.id !== insomnia.environment.get('user_admin_a')) throw new Error('Wrong login identity');\ninsomnia.environment.set('token_admin_a', body.data.access_token);\n"
+    },
+    {
+      "_id": "req_login_operator_a",
+      "_type": "request",
+      "parentId": "fld_login",
+      "name": "03 — Login operator_a",
+      "description": "Expected HTTP 200. Cookie tidak disimpan; token role disimpan terpisah. Login ulang bila access token habis.",
+      "url": "{{ _.base_url }}/api/v1/auth/login",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"{{ _.email_operator_a }}\",\n  \"password\": \"{{ _.mock_password }}\",\n  \"device_id\": \"{{ _.device_operator_a }}\"\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 3,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nif (!body.data?.access_token || body.data.user?.id !== insomnia.environment.get('user_operator_a')) throw new Error('Wrong login identity');\ninsomnia.environment.set('token_operator_a', body.data.access_token);\n"
+    },
+    {
+      "_id": "req_login_operator_b",
+      "_type": "request",
+      "parentId": "fld_login",
+      "name": "04 — Login operator_b",
+      "description": "Expected HTTP 200. Cookie tidak disimpan; token role disimpan terpisah. Login ulang bila access token habis.",
+      "url": "{{ _.base_url }}/api/v1/auth/login",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"{{ _.email_operator_b }}\",\n  \"password\": \"{{ _.mock_password }}\",\n  \"device_id\": \"{{ _.device_operator_b }}\"\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 4,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nif (!body.data?.access_token || body.data.user?.id !== insomnia.environment.get('user_operator_b')) throw new Error('Wrong login identity');\ninsomnia.environment.set('token_operator_b', body.data.access_token);\n"
+    },
+    {
+      "_id": "req_login_juri_1",
+      "_type": "request",
+      "parentId": "fld_login",
+      "name": "05 — Login juri_1",
+      "description": "Expected HTTP 200. Cookie tidak disimpan; token role disimpan terpisah. Login ulang bila access token habis.",
+      "url": "{{ _.base_url }}/api/v1/auth/login",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"{{ _.email_juri_1 }}\",\n  \"password\": \"{{ _.mock_password }}\",\n  \"device_id\": \"{{ _.device_juri_1 }}\"\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 5,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nif (!body.data?.access_token || body.data.user?.id !== insomnia.environment.get('user_juri_1')) throw new Error('Wrong login identity');\ninsomnia.environment.set('token_juri_1', body.data.access_token);\n"
+    },
+    {
+      "_id": "req_login_juri_2",
+      "_type": "request",
+      "parentId": "fld_login",
+      "name": "06 — Login juri_2",
+      "description": "Expected HTTP 200. Cookie tidak disimpan; token role disimpan terpisah. Login ulang bila access token habis.",
+      "url": "{{ _.base_url }}/api/v1/auth/login",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"{{ _.email_juri_2 }}\",\n  \"password\": \"{{ _.mock_password }}\",\n  \"device_id\": \"{{ _.device_juri_2 }}\"\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 6,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nif (!body.data?.access_token || body.data.user?.id !== insomnia.environment.get('user_juri_2')) throw new Error('Wrong login identity');\ninsomnia.environment.set('token_juri_2', body.data.access_token);\n"
+    },
+    {
+      "_id": "req_login_peserta_1",
+      "_type": "request",
+      "parentId": "fld_login",
+      "name": "07 — Login peserta_1",
+      "description": "Expected HTTP 200. Cookie tidak disimpan; token role disimpan terpisah. Login ulang bila access token habis.",
+      "url": "{{ _.base_url }}/api/v1/auth/login",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"{{ _.email_peserta_1 }}\",\n  \"password\": \"{{ _.mock_password }}\",\n  \"device_id\": \"{{ _.device_peserta_1 }}\"\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 7,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nif (!body.data?.access_token || body.data.user?.id !== insomnia.environment.get('user_peserta_1')) throw new Error('Wrong login identity');\ninsomnia.environment.set('token_peserta_1', body.data.access_token);\n"
+    },
+    {
+      "_id": "req_login_peserta_2",
+      "_type": "request",
+      "parentId": "fld_login",
+      "name": "08 — Login peserta_2",
+      "description": "Expected HTTP 200. Cookie tidak disimpan; token role disimpan terpisah. Login ulang bila access token habis.",
+      "url": "{{ _.base_url }}/api/v1/auth/login",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"{{ _.email_peserta_2 }}\",\n  \"password\": \"{{ _.mock_password }}\",\n  \"device_id\": \"{{ _.device_peserta_2 }}\"\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 8,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nif (!body.data?.access_token || body.data.user?.id !== insomnia.environment.get('user_peserta_2')) throw new Error('Wrong login identity');\ninsomnia.environment.set('token_peserta_2', body.data.access_token);\n"
+    },
+    {
+      "_id": "req_me",
+      "_type": "request",
+      "parentId": "fld_master",
+      "name": "01 — Profil operator A",
+      "description": "Expected HTTP 200. ",
+      "url": "{{ _.base_url }}/api/v1/auth/me",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_operator_a }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
+    },
+    {
+      "_id": "req_roles",
+      "_type": "request",
+      "parentId": "fld_master",
+      "name": "02 — Role sistem",
+      "description": "Expected HTTP 200. ",
+      "url": "{{ _.base_url }}/api/v1/roles",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_superadmin }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
+    },
+    {
+      "_id": "req_arenas",
+      "_type": "request",
+      "parentId": "fld_master",
+      "name": "03 — Arena mock",
+      "description": "Expected HTTP 200. ",
+      "url": "{{ _.base_url }}/api/v1/arenas?limit=100",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_superadmin }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 3,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
+    },
+    {
+      "_id": "req_master_gantangan",
+      "_type": "request",
+      "parentId": "fld_master",
+      "name": "04 — gantangan arena A",
+      "description": "Expected HTTP 200. ",
+      "url": "{{ _.base_url }}/api/v1/arenas/{{ _.arena_a }}/gantangan?limit=100",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_admin_a }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 4,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
+    },
+    {
+      "_id": "req_master_events",
+      "_type": "request",
+      "parentId": "fld_master",
+      "name": "05 — events arena A",
+      "description": "Expected HTTP 200. ",
+      "url": "{{ _.base_url }}/api/v1/arenas/{{ _.arena_a }}/events?limit=100",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_admin_a }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 5,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
+    },
+    {
+      "_id": "req_master_categories",
+      "_type": "request",
+      "parentId": "fld_master",
+      "name": "06 — categories arena A",
+      "description": "Expected HTTP 200. ",
+      "url": "{{ _.base_url }}/api/v1/arenas/{{ _.arena_a }}/categories?limit=100",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_admin_a }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 6,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
+    },
+    {
+      "_id": "req_master_rounds",
+      "_type": "request",
+      "parentId": "fld_master",
+      "name": "07 — rounds arena A",
+      "description": "Expected HTTP 200. ",
+      "url": "{{ _.base_url }}/api/v1/arenas/{{ _.arena_a }}/rounds?limit=100",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_admin_a }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 7,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
+    },
+    {
+      "_id": "req_master_criteria",
+      "_type": "request",
+      "parentId": "fld_master",
+      "name": "08 — criteria arena A",
+      "description": "Expected HTTP 200. ",
+      "url": "{{ _.base_url }}/api/v1/arenas/{{ _.arena_a }}/criteria?limit=100",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_admin_a }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 8,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
+    },
+    {
+      "_id": "req_master_assignments",
+      "_type": "request",
+      "parentId": "fld_master",
+      "name": "09 — assignments arena A",
+      "description": "Expected HTTP 200. ",
+      "url": "{{ _.base_url }}/api/v1/arenas/{{ _.arena_a }}/assignments?limit=100",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_admin_a }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 9,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
+    },
+    {
+      "_id": "req_birds_p1",
+      "_type": "request",
+      "parentId": "fld_master",
+      "name": "10 — Burung peserta 1",
+      "description": "Expected HTTP 200. ",
+      "url": "{{ _.base_url }}/api/v1/birds?limit=100",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_peserta_1 }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 10,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
+    },
+    {
+      "_id": "req_birds_p2",
+      "_type": "request",
+      "parentId": "fld_master",
+      "name": "11 — Burung peserta 2",
+      "description": "Expected HTTP 200. ",
+      "url": "{{ _.base_url }}/api/v1/birds?limit=100",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_peserta_2 }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 11,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
+    },
+    {
+      "_id": "req_roster_j1",
+      "_type": "request",
+      "parentId": "fld_roster",
+      "name": "01 — Tugaskan juri 1",
+      "description": "Expected HTTP 201. ",
+      "url": "{{ _.base_url }}/api/v1/rounds/{{ _.round_a1 }}/judges",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_operator_a }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"user_id\": \"{{ _.user_juri_1 }}\"\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 201', () => insomnia.expect(status).to.eql(201));\nif (status !== 201) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
+    },
+    {
+      "_id": "req_roster_j2",
+      "_type": "request",
+      "parentId": "fld_roster",
+      "name": "02 — Tugaskan juri 2",
+      "description": "Expected HTTP 201. ",
+      "url": "{{ _.base_url }}/api/v1/rounds/{{ _.round_a1 }}/judges",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_operator_a }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"user_id\": \"{{ _.user_juri_2 }}\"\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 201', () => insomnia.expect(status).to.eql(201));\nif (status !== 201) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
+    },
+    {
+      "_id": "req_roster_list",
+      "_type": "request",
+      "parentId": "fld_roster",
+      "name": "03 — Lihat roster",
+      "description": "Expected HTTP 200. ",
+      "url": "{{ _.base_url }}/api/v1/rounds/{{ _.round_a1 }}/judges",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_operator_a }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 3,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
+    },
+    {
+      "_id": "req_register_p1",
+      "_type": "request",
+      "parentId": "fld_registration",
+      "name": "01 — Daftar peserta 1 ke dua ronde",
+      "description": "Expected HTTP 201. Jalankan sekali pada fixture baru; create registration bukan operasi idempoten.",
+      "url": "{{ _.base_url }}/api/v1/registrations",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_peserta_1 }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"arena_id\": \"{{ _.arena_a }}\",\n  \"registration_source\": \"ONLINE\",\n  \"items\": [\n    {\n      \"round_id\": \"{{ _.round_a1 }}\",\n      \"bird_id\": \"{{ _.bird_1 }}\"\n    },\n    {\n      \"round_id\": \"{{ _.round_a2 }}\",\n      \"bird_id\": \"{{ _.bird_1 }}\"\n    }\n  ]\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 201', () => insomnia.expect(status).to.eql(201));\nif (status !== 201) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nif (Number(body.data.total_amount) !== 125000 || body.data.items?.length !== 2) throw new Error('Expected two items totalling 125000');\ninsomnia.environment.set('p1_id', body.data.id);\nfor (const [key, variable] of [['round_a1','p1_item_a1'],['round_a2','p1_item_a2']]) {\n  const item = body.data.items.find(i => i.round_id === insomnia.environment.get(key));\n  if (!item?.id) throw new Error('Registration item missing');\n  insomnia.environment.set(variable, item.id);\n}\n"
+    },
+    {
+      "_id": "req_register_p2",
+      "_type": "request",
+      "parentId": "fld_registration",
+      "name": "02 — Daftar peserta 2 ke dua ronde",
+      "description": "Expected HTTP 201. Jalankan sekali pada fixture baru; create registration bukan operasi idempoten.",
+      "url": "{{ _.base_url }}/api/v1/registrations",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_peserta_2 }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"arena_id\": \"{{ _.arena_a }}\",\n  \"registration_source\": \"ONLINE\",\n  \"items\": [\n    {\n      \"round_id\": \"{{ _.round_a1 }}\",\n      \"bird_id\": \"{{ _.bird_3 }}\"\n    },\n    {\n      \"round_id\": \"{{ _.round_a2 }}\",\n      \"bird_id\": \"{{ _.bird_3 }}\"\n    }\n  ]\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 201', () => insomnia.expect(status).to.eql(201));\nif (status !== 201) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nif (Number(body.data.total_amount) !== 125000 || body.data.items?.length !== 2) throw new Error('Expected two items totalling 125000');\ninsomnia.environment.set('p2_id', body.data.id);\nfor (const [key, variable] of [['round_a1','p2_item_a1'],['round_a2','p2_item_a2']]) {\n  const item = body.data.items.find(i => i.round_id === insomnia.environment.get(key));\n  if (!item?.id) throw new Error('Registration item missing');\n  insomnia.environment.set(variable, item.id);\n}\n"
+    },
+    {
+      "_id": "req_pay_p1",
+      "_type": "request",
+      "parentId": "fld_payment",
+      "name": "01 — Ajukan transfer peserta 1",
+      "description": "Expected HTTP 201. ",
+      "url": "{{ _.base_url }}/api/v1/registrations/{{ _.p1_id }}/payments",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_peserta_1 }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"amount\": 125000,\n  \"method\": \"TRANSFER\",\n  \"proof_reference\": \"MOCK-TRANSFER-P1\"\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 201', () => insomnia.expect(status).to.eql(201));\nif (status !== 201) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nif (!body.data.id) throw new Error('Payment ID missing');\ninsomnia.environment.set('p1_payment_id', body.data.id);\n"
+    },
+    {
+      "_id": "req_verify_p1",
+      "_type": "request",
+      "parentId": "fld_payment",
+      "name": "02 — Verifikasi peserta 1 dan alokasikan gantangan",
+      "description": "Expected HTTP 200. ",
+      "url": "{{ _.base_url }}/api/v1/payments/{{ _.p1_payment_id }}/verify",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_operator_a }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"allocations\": [\n    {\n      \"registration_item_id\": \"{{ _.p1_item_a1 }}\",\n      \"gantangan_id\": \"{{ _.gantangan_a1 }}\"\n    },\n    {\n      \"registration_item_id\": \"{{ _.p1_item_a2 }}\",\n      \"gantangan_id\": \"{{ _.gantangan_a1 }}\"\n    }\n  ]\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
+    },
+    {
+      "_id": "req_pay_p2",
+      "_type": "request",
+      "parentId": "fld_payment",
+      "name": "03 — Ajukan transfer peserta 2",
+      "description": "Expected HTTP 201. ",
+      "url": "{{ _.base_url }}/api/v1/registrations/{{ _.p2_id }}/payments",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_peserta_2 }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"amount\": 125000,\n  \"method\": \"TRANSFER\",\n  \"proof_reference\": \"MOCK-TRANSFER-P2\"\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 3,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 201', () => insomnia.expect(status).to.eql(201));\nif (status !== 201) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nif (!body.data.id) throw new Error('Payment ID missing');\ninsomnia.environment.set('p2_payment_id', body.data.id);\n"
+    },
+    {
+      "_id": "req_verify_p2",
+      "_type": "request",
+      "parentId": "fld_payment",
+      "name": "04 — Verifikasi peserta 2 dan alokasikan gantangan",
+      "description": "Expected HTTP 200. ",
+      "url": "{{ _.base_url }}/api/v1/payments/{{ _.p2_payment_id }}/verify",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_operator_a }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"allocations\": [\n    {\n      \"registration_item_id\": \"{{ _.p2_item_a1 }}\",\n      \"gantangan_id\": \"{{ _.gantangan_a2 }}\"\n    },\n    {\n      \"registration_item_id\": \"{{ _.p2_item_a2 }}\",\n      \"gantangan_id\": \"{{ _.gantangan_a2 }}\"\n    }\n  ]\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 4,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
+    },
+    {
+      "_id": "req_start",
+      "_type": "request",
+      "parentId": "fld_phase",
+      "name": "01 — Mulai ronde A1",
+      "description": "Expected HTTP 200. ",
+      "url": "{{ _.base_url }}/api/v1/rounds/{{ _.round_a1 }}/start",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_operator_a }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
+    },
+    {
+      "_id": "req_begin",
+      "_type": "request",
+      "parentId": "fld_phase",
+      "name": "02 — Masuk penjurian",
+      "description": "Expected HTTP 200. ",
+      "url": "{{ _.base_url }}/api/v1/rounds/{{ _.round_a1 }}/begin-judging",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_operator_a }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
+    },
+    {
+      "_id": "req_judge_participants",
+      "_type": "request",
+      "parentId": "fld_phase",
+      "name": "03 — Peserta untuk juri 1",
+      "description": "Expected HTTP 200. ",
+      "url": "{{ _.base_url }}/api/v1/judging/rounds/{{ _.round_a1 }}/participants",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_juri_1 }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 3,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
+    },
+    {
+      "_id": "req_assessment_p1_j1",
+      "_type": "request",
+      "parentId": "fld_score",
+      "name": "01 — Nilai awal peserta 1, juri 1",
+      "description": "Expected HTTP 200. ",
+      "url": "{{ _.base_url }}/api/v1/judging/rounds/{{ _.round_a1 }}/participants/{{ _.p1_item_a1 }}/assessment",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_juri_1 }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\ninsomnia.environment.set('assessment_version_p1_j1', body.data.version);\n"
+    },
+    {
+      "_id": "req_submit_p1_j1",
+      "_type": "request",
+      "parentId": "fld_score",
+      "name": "02 — Submit peserta 1, juri 1",
+      "description": "Expected HTTP 201. ",
+      "url": "{{ _.base_url }}/api/v1/judging/rounds/{{ _.round_a1 }}/participants/{{ _.p1_item_a1 }}/assessment",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_juri_1 }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"operation_id\": \"{{ _.op_p1_j1 }}\",\n  \"expected_version\": 0,\n  \"values\": [\n    {\n      \"criteria_id\": \"{{ _.criteria_a1 }}\",\n      \"score_value\": 8\n    },\n    {\n      \"criteria_id\": \"{{ _.criteria_a2 }}\",\n      \"score_value\": 8\n    },\n    {\n      \"criteria_id\": \"{{ _.criteria_a3 }}\",\n      \"score_value\": 8\n    }\n  ]\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 201', () => insomnia.expect(status).to.eql(201));\nif (status !== 201) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\ninsomnia.environment.set('assessment_version_p1_j1', body.data.version);\n"
+    },
+    {
+      "_id": "req_assessment_p2_j1",
+      "_type": "request",
+      "parentId": "fld_score",
+      "name": "03 — Nilai awal peserta 2, juri 1",
+      "description": "Expected HTTP 200. ",
+      "url": "{{ _.base_url }}/api/v1/judging/rounds/{{ _.round_a1 }}/participants/{{ _.p2_item_a1 }}/assessment",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_juri_1 }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 3,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\ninsomnia.environment.set('assessment_version_p2_j1', body.data.version);\n"
+    },
+    {
+      "_id": "req_submit_p2_j1",
+      "_type": "request",
+      "parentId": "fld_score",
+      "name": "04 — Submit peserta 2, juri 1",
+      "description": "Expected HTTP 201. ",
+      "url": "{{ _.base_url }}/api/v1/judging/rounds/{{ _.round_a1 }}/participants/{{ _.p2_item_a1 }}/assessment",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_juri_1 }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"operation_id\": \"{{ _.op_p2_j1 }}\",\n  \"expected_version\": 0,\n  \"values\": [\n    {\n      \"criteria_id\": \"{{ _.criteria_a1 }}\",\n      \"score_value\": 7\n    },\n    {\n      \"criteria_id\": \"{{ _.criteria_a2 }}\",\n      \"score_value\": 7\n    },\n    {\n      \"criteria_id\": \"{{ _.criteria_a3 }}\",\n      \"score_value\": 7\n    }\n  ]\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 4,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 201', () => insomnia.expect(status).to.eql(201));\nif (status !== 201) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\ninsomnia.environment.set('assessment_version_p2_j1', body.data.version);\n"
+    },
+    {
+      "_id": "req_assessment_p1_j2",
+      "_type": "request",
+      "parentId": "fld_score",
+      "name": "05 — Nilai awal peserta 1, juri 2",
+      "description": "Expected HTTP 200. ",
+      "url": "{{ _.base_url }}/api/v1/judging/rounds/{{ _.round_a1 }}/participants/{{ _.p1_item_a1 }}/assessment",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_juri_2 }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 5,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\ninsomnia.environment.set('assessment_version_p1_j2', body.data.version);\n"
+    },
+    {
+      "_id": "req_submit_p1_j2",
+      "_type": "request",
+      "parentId": "fld_score",
+      "name": "06 — Submit peserta 1, juri 2",
+      "description": "Expected HTTP 201. ",
+      "url": "{{ _.base_url }}/api/v1/judging/rounds/{{ _.round_a1 }}/participants/{{ _.p1_item_a1 }}/assessment",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_juri_2 }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"operation_id\": \"{{ _.op_p1_j2 }}\",\n  \"expected_version\": 0,\n  \"values\": [\n    {\n      \"criteria_id\": \"{{ _.criteria_a1 }}\",\n      \"score_value\": 8\n    },\n    {\n      \"criteria_id\": \"{{ _.criteria_a2 }}\",\n      \"score_value\": 8\n    },\n    {\n      \"criteria_id\": \"{{ _.criteria_a3 }}\",\n      \"score_value\": 8\n    }\n  ]\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 6,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 201', () => insomnia.expect(status).to.eql(201));\nif (status !== 201) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\ninsomnia.environment.set('assessment_version_p1_j2', body.data.version);\n"
+    },
+    {
+      "_id": "req_assessment_p2_j2",
+      "_type": "request",
+      "parentId": "fld_score",
+      "name": "07 — Nilai awal peserta 2, juri 2",
+      "description": "Expected HTTP 200. ",
+      "url": "{{ _.base_url }}/api/v1/judging/rounds/{{ _.round_a1 }}/participants/{{ _.p2_item_a1 }}/assessment",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_juri_2 }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 7,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\ninsomnia.environment.set('assessment_version_p2_j2', body.data.version);\n"
+    },
+    {
+      "_id": "req_submit_p2_j2",
+      "_type": "request",
+      "parentId": "fld_score",
+      "name": "08 — Submit peserta 2, juri 2",
+      "description": "Expected HTTP 201. ",
+      "url": "{{ _.base_url }}/api/v1/judging/rounds/{{ _.round_a1 }}/participants/{{ _.p2_item_a1 }}/assessment",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_juri_2 }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"operation_id\": \"{{ _.op_p2_j2 }}\",\n  \"expected_version\": 0,\n  \"values\": [\n    {\n      \"criteria_id\": \"{{ _.criteria_a1 }}\",\n      \"score_value\": 7\n    },\n    {\n      \"criteria_id\": \"{{ _.criteria_a2 }}\",\n      \"score_value\": 7\n    },\n    {\n      \"criteria_id\": \"{{ _.criteria_a3 }}\",\n      \"score_value\": 7\n    }\n  ]\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 8,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 201', () => insomnia.expect(status).to.eql(201));\nif (status !== 201) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\ninsomnia.environment.set('assessment_version_p2_j2', body.data.version);\n"
+    },
+    {
+      "_id": "req_retry_initial",
+      "_type": "request",
+      "parentId": "fld_score",
+      "name": "09 — Retry submit identik peserta 1 / juri 1",
+      "description": "Expected HTTP 201. ",
+      "url": "{{ _.base_url }}/api/v1/judging/rounds/{{ _.round_a1 }}/participants/{{ _.p1_item_a1 }}/assessment",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_juri_1 }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"operation_id\": \"{{ _.op_p1_j1 }}\",\n  \"expected_version\": 0,\n  \"values\": [\n    {\n      \"criteria_id\": \"{{ _.criteria_a1 }}\",\n      \"score_value\": 8\n    },\n    {\n      \"criteria_id\": \"{{ _.criteria_a2 }}\",\n      \"score_value\": 8\n    },\n    {\n      \"criteria_id\": \"{{ _.criteria_a3 }}\",\n      \"score_value\": 8\n    }\n  ]\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 9,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 201', () => insomnia.expect(status).to.eql(201));\nif (status !== 201) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nif (body.data.version !== 1) throw new Error('Retry must not create another revision');\n"
+    },
+    {
+      "_id": "req_prepare_revision",
+      "_type": "request",
+      "parentId": "fld_revision",
+      "name": "01 — Baca versi sebelum revisi",
+      "description": "Expected HTTP 200. Jalankan sebelum revisi; jangan ulangi sebelum retry revisi identik.",
+      "url": "{{ _.base_url }}/api/v1/judging/rounds/{{ _.round_a1 }}/participants/{{ _.p1_item_a1 }}/assessment",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_juri_1 }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\ninsomnia.environment.set('revision_base_version', body.data.version);\n"
+    },
+    {
+      "_id": "req_revise",
+      "_type": "request",
+      "parentId": "fld_revision",
+      "name": "02 — Revisi nilai peserta 1 / juri 1",
+      "description": "Expected HTTP 200. ",
+      "url": "{{ _.base_url }}/api/v1/judging/rounds/{{ _.round_a1 }}/participants/{{ _.p1_item_a1 }}/assessment",
+      "method": "PUT",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_juri_1 }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"operation_id\": \"{{ _.op_revision }}\",\n  \"expected_version\": {{ _.revision_base_version }},\n  \"values\": [\n    {\n      \"criteria_id\": \"{{ _.criteria_a1 }}\",\n      \"score_value\": 9\n    },\n    {\n      \"criteria_id\": \"{{ _.criteria_a2 }}\",\n      \"score_value\": 8\n    },\n    {\n      \"criteria_id\": \"{{ _.criteria_a3 }}\",\n      \"score_value\": 8\n    }\n  ]\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\ninsomnia.environment.set('assessment_version_p1_j1', body.data.version);\n"
+    },
+    {
+      "_id": "req_retry_revision",
+      "_type": "request",
+      "parentId": "fld_revision",
+      "name": "03 — Retry revisi identik",
+      "description": "Expected HTTP 200. ",
+      "url": "{{ _.base_url }}/api/v1/judging/rounds/{{ _.round_a1 }}/participants/{{ _.p1_item_a1 }}/assessment",
+      "method": "PUT",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_juri_1 }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"operation_id\": \"{{ _.op_revision }}\",\n  \"expected_version\": {{ _.revision_base_version }},\n  \"values\": [\n    {\n      \"criteria_id\": \"{{ _.criteria_a1 }}\",\n      \"score_value\": 9\n    },\n    {\n      \"criteria_id\": \"{{ _.criteria_a2 }}\",\n      \"score_value\": 8\n    },\n    {\n      \"criteria_id\": \"{{ _.criteria_a3 }}\",\n      \"score_value\": 8\n    }\n  ]\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 3,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nif (body.data.version !== 2) throw new Error('Retry must keep version 2');\n"
+    },
+    {
+      "_id": "req_history",
+      "_type": "request",
+      "parentId": "fld_revision",
+      "name": "04 — History juri 1 untuk peserta 1",
+      "description": "Expected HTTP 200. ",
+      "url": "{{ _.base_url }}/api/v1/judging/rounds/{{ _.round_a1 }}/participants/{{ _.p1_item_a1 }}/assessment/history",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_juri_1 }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 4,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
+    },
+    {
+      "_id": "req_recap",
+      "_type": "request",
+      "parentId": "fld_close",
+      "name": "01 — Rekap langsung sebelum pengesahan",
+      "description": "Expected HTTP 200. ",
+      "url": "{{ _.base_url }}/api/v1/rounds/{{ _.round_a1 }}/recap",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_operator_a }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nconst p1 = body.data.find(r => r.registration_item_id === insomnia.environment.get('p1_item_a1'));\nif (!p1 || Number(p1.total_score) !== 49) throw new Error('Expected participant 1 total = 49');\n"
+    },
+    {
+      "_id": "req_close",
+      "_type": "request",
+      "parentId": "fld_close",
+      "name": "02 — Sahkan peserta 1 dan tutup ronde",
+      "description": "Expected HTTP 200. ",
+      "url": "{{ _.base_url }}/api/v1/rounds/{{ _.round_a1 }}/close",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_operator_a }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"winner_registration_item_id\": \"{{ _.p1_item_a1 }}\"\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nif (body.data.phase !== 'CLOSED' || body.data.winner_registration_item_id !== insomnia.environment.get('p1_item_a1')) throw new Error('Winner not committed');\n"
+    },
+    {
+      "_id": "req_round_final",
+      "_type": "request",
+      "parentId": "fld_close",
+      "name": "03 — Lihat hasil ronde CLOSED",
+      "description": "Expected HTTP 200. ",
+      "url": "{{ _.base_url }}/api/v1/arenas/{{ _.arena_a }}/rounds/{{ _.round_a1 }}",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_operator_a }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 3,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
+    },
+    {
+      "_id": "req_dashboard",
+      "_type": "request",
+      "parentId": "fld_report",
+      "name": "01 — Dashboard snapshot arena A",
+      "description": "Expected HTTP 200. Periksa snapshot_at/refreshed_at; tidak wajib langsung mencerminkan commit terbaru.",
+      "url": "{{ _.base_url }}/api/v1/arenas/{{ _.arena_a }}/reports/dashboard",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_operator_a }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
+    },
+    {
+      "_id": "req_report_scores",
+      "_type": "request",
+      "parentId": "fld_report",
+      "name": "02 — Rekap snapshot ronde A1",
+      "description": "Expected HTTP 200. Dapat tertinggal; rekap operasional memakai GET recap.",
+      "url": "{{ _.base_url }}/api/v1/arenas/{{ _.arena_a }}/reports/rounds/{{ _.round_a1 }}",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_operator_a }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
+    },
+    {
+      "_id": "req_no_auth",
+      "_type": "request",
+      "parentId": "fld_negative",
+      "name": "01 — Tanpa token → 401",
+      "description": "Expected HTTP 401. Dapat dijalankan kapan saja.",
+      "url": "{{ _.base_url }}/api/v1/auth/me",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 401', () => insomnia.expect(status).to.eql(401));\nif (status !== 401) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(false));\n"
+    },
+    {
+      "_id": "req_wrong_arena",
+      "_type": "request",
+      "parentId": "fld_negative",
+      "name": "02 — Operator B mengakses laporan arena A → 403",
+      "description": "Expected HTTP 403. Sesudah login operator B.",
+      "url": "{{ _.base_url }}/api/v1/arenas/{{ _.arena_a }}/reports/dashboard",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_operator_b }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 403', () => insomnia.expect(status).to.eql(403));\nif (status !== 403) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(false));\n"
+    },
+    {
+      "_id": "req_wrong_amount",
+      "_type": "request",
+      "parentId": "fld_negative",
+      "name": "03 — Nominal transfer salah → 400",
+      "description": "Expected HTTP 400. Setelah registrasi P1, sebelum mengajukan/verifikasi pembayaran.",
+      "url": "{{ _.base_url }}/api/v1/registrations/{{ _.p1_id }}/payments",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_peserta_1 }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"amount\": 1000,\n  \"method\": \"TRANSFER\",\n  \"proof_reference\": \"MOCK-WRONG-AMOUNT\"\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 3,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 400', () => insomnia.expect(status).to.eql(400));\nif (status !== 400) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(false));\n"
+    },
+    {
+      "_id": "req_score_out_of_range",
+      "_type": "request",
+      "parentId": "fld_negative",
+      "name": "04 — Nilai 11 → 400",
+      "description": "Expected HTTP 400. Setelah begin-judging, sebelum submit awal.",
+      "url": "{{ _.base_url }}/api/v1/judging/rounds/{{ _.round_a1 }}/participants/{{ _.p1_item_a1 }}/assessment",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_juri_1 }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"operation_id\": \"{{ _.op_invalid }}\",\n  \"expected_version\": 0,\n  \"values\": [\n    {\n      \"criteria_id\": \"{{ _.criteria_a1 }}\",\n      \"score_value\": 11\n    },\n    {\n      \"criteria_id\": \"{{ _.criteria_a2 }}\",\n      \"score_value\": 8\n    },\n    {\n      \"criteria_id\": \"{{ _.criteria_a3 }}\",\n      \"score_value\": 8\n    }\n  ]\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 4,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 400', () => insomnia.expect(status).to.eql(400));\nif (status !== 400) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(false));\n"
+    },
+    {
+      "_id": "req_incomplete",
+      "_type": "request",
+      "parentId": "fld_negative",
+      "name": "05 — Tutup sebelum nilai lengkap → 409",
+      "description": "Expected HTTP 409. Setelah begin-judging, sebelum semua juri submit.",
+      "url": "{{ _.base_url }}/api/v1/rounds/{{ _.round_a1 }}/close",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_operator_a }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"winner_registration_item_id\": \"{{ _.p1_item_a1 }}\"\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 5,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 409', () => insomnia.expect(status).to.eql(409));\nif (status !== 409) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(false));\n"
+    },
+    {
+      "_id": "req_stale",
+      "_type": "request",
+      "parentId": "fld_negative",
+      "name": "06 — Revisi memakai versi stale → 409",
+      "description": "Expected HTTP 409. Setelah revisi berhasil ke version 2, sebelum close.",
+      "url": "{{ _.base_url }}/api/v1/judging/rounds/{{ _.round_a1 }}/participants/{{ _.p1_item_a1 }}/assessment",
+      "method": "PUT",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_juri_1 }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"operation_id\": \"{{ _.op_stale }}\",\n  \"expected_version\": 1,\n  \"values\": [\n    {\n      \"criteria_id\": \"{{ _.criteria_a1 }}\",\n      \"score_value\": 10\n    },\n    {\n      \"criteria_id\": \"{{ _.criteria_a2 }}\",\n      \"score_value\": 8\n    },\n    {\n      \"criteria_id\": \"{{ _.criteria_a3 }}\",\n      \"score_value\": 8\n    }\n  ]\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 6,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 409', () => insomnia.expect(status).to.eql(409));\nif (status !== 409) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(false));\n"
+    },
+    {
+      "_id": "req_wrong_winner",
+      "_type": "request",
+      "parentId": "fld_negative",
+      "name": "07 — Pemenang bukan tertinggi → 400",
+      "description": "Expected HTTP 400. Setelah seluruh submit/revisi, sebelum close sah.",
+      "url": "{{ _.base_url }}/api/v1/rounds/{{ _.round_a1 }}/close",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_operator_a }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"winner_registration_item_id\": \"{{ _.p2_item_a1 }}\"\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 7,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 400', () => insomnia.expect(status).to.eql(400));\nif (status !== 400) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(false));\n"
+    },
+    {
+      "_id": "req_after_closed",
+      "_type": "request",
+      "parentId": "fld_negative",
+      "name": "08 — Revisi baru setelah CLOSED → 409",
+      "description": "Expected HTTP 409. Sesudah close sah; operation_id baru, bukan retry operasi lama.",
+      "url": "{{ _.base_url }}/api/v1/judging/rounds/{{ _.round_a1 }}/participants/{{ _.p1_item_a1 }}/assessment",
+      "method": "PUT",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_juri_1 }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"operation_id\": \"{{ _.op_closed }}\",\n  \"expected_version\": 2,\n  \"values\": [\n    {\n      \"criteria_id\": \"{{ _.criteria_a1 }}\",\n      \"score_value\": 10\n    },\n    {\n      \"criteria_id\": \"{{ _.criteria_a2 }}\",\n      \"score_value\": 8\n    },\n    {\n      \"criteria_id\": \"{{ _.criteria_a3 }}\",\n      \"score_value\": 8\n    }\n  ]\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 8,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 409', () => insomnia.expect(status).to.eql(409));\nif (status !== 409) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(false));\n"
+    },
+    {
+      "_id": "req_session_login",
+      "_type": "request",
+      "parentId": "fld_session",
+      "name": "01 — Login peserta 1 dan simpan cookie",
+      "description": "Expected HTTP 200. Jalankan seluruh folder ini berurutan sesudah alur bisnis; konfigurasi frontend origin lokal diperlukan.",
+      "url": "{{ _.base_url }}/api/v1/auth/login",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Origin",
+          "value": "{{ _.frontend_origin }}"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"{{ _.email_peserta_1 }}\",\n  \"password\": \"{{ _.mock_password }}\",\n  \"device_id\": \"{{ _.device_peserta_1 }}\"\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nif (!body.data?.access_token || body.data.user?.id !== insomnia.environment.get('user_peserta_1')) throw new Error('Wrong login identity');\ninsomnia.environment.set('token_peserta_1', body.data.access_token);\n"
+    },
+    {
+      "_id": "req_session_refresh",
+      "_type": "request",
+      "parentId": "fld_session",
+      "name": "02 — Refresh cookie dan rotasi token",
+      "description": "Expected HTTP 200. ",
+      "url": "{{ _.base_url }}/api/v1/auth/refresh",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Origin",
+          "value": "{{ _.frontend_origin }}"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nif (!body.data?.access_token || body.data.user?.id !== insomnia.environment.get('user_peserta_1')) throw new Error('Wrong login identity');\ninsomnia.environment.set('token_peserta_1', body.data.access_token);\n"
+    },
+    {
+      "_id": "req_session_list",
+      "_type": "request",
+      "parentId": "fld_session",
+      "name": "03 — Daftar sesi peserta 1",
+      "description": "Expected HTTP 200. ",
+      "url": "{{ _.base_url }}/api/v1/auth/sessions",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_peserta_1 }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 3,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
+    },
+    {
+      "_id": "req_session_logout",
+      "_type": "request",
+      "parentId": "fld_session",
+      "name": "04 — Logout peserta 1",
+      "description": "Expected HTTP 204. ",
+      "url": "{{ _.base_url }}/api/v1/auth/logout",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_peserta_1 }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Origin",
+          "value": "{{ _.frontend_origin }}"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 4,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 204', () => insomnia.expect(status).to.eql(204));\nif (status !== 204) throw new Error('Unexpected status; variables were not updated');\ninsomnia.test('Empty body', () => insomnia.expect(insomnia.response.text()).to.eql(''));\n"
+    },
+    {
+      "_id": "req_session_revoked",
+      "_type": "request",
+      "parentId": "fld_session",
+      "name": "05 — Token setelah logout → 401",
+      "description": "Expected HTTP 401. ",
+      "url": "{{ _.base_url }}/api/v1/auth/me",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_peserta_1 }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 5,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 401', () => insomnia.expect(status).to.eql(401));\nif (status !== 401) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(false));\n"
+    }
+  ]
+}
