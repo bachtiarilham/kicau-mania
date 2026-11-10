@@ -79,3 +79,5 @@ Build dan pemeriksaan SQL/HTTP dilakukan pada PostgreSQL sementara dengan SMTP l
 ## Deployment VPS
 
 Pipeline GitHub Actions membangun image AMD64/ARM64, memublikasikan ke GHCR privat dan deploy melalui SSH saat push ke main. Migrasi tetap manual. Ikuti [runbook deployment](deployment/devops_runbook.md) untuk setup VPS, GitHub secrets, HTTPS, bootstrap dan rollback.
+
+API VPS dev sekarang memakai `https://dev.megaallstararena.com/api/v1/`, satu domain dengan frontend. Gateway memakai Nginx Docker dan renewal Certbot Docker; credential registry disimpan di `/opt`. Frontend yang ada masih demo dan belum otomatis terhubung ke backend oleh perpindahan gateway.

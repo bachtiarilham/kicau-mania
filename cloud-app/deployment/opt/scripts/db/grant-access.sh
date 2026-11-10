@@ -12,6 +12,11 @@ case ${2:-reader} in
   *) echo 'Unknown access profile'; exit 2;;
 esac
 lock_database
+role_exists=$(pg_psql -At -v target_role="$role" <<'SQL'
+SELECT EXISTS(SELECT FROM pg_roles WHERE rolname=:'target_role' AND NOT rolcanlogin);
+SQL
+)
+[[ $role_exists == t ]] || { echo "Required group role $role is missing; complete database migrations before creating a login"; exit 1; }
 exists=$(pg_psql -At -v target_user="$user" <<'SQL'
 SELECT EXISTS(SELECT FROM pg_roles WHERE rolname=:'target_user');
 SQL
@@ -24,7 +29,7 @@ fi
 [[ ${#KICAU_DB_PASSWORD} -ge 16 ]] || { echo 'Use at least 16 characters'; exit 2; }
 export KICAU_DB_PASSWORD
 # Only the environment variable name appears in process arguments.
-docker exec -i -e KICAU_DB_PASSWORD "$DB_CONTAINER" sh -c 'exec psql -X -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" "$@"' sh -1 -v target_user="$user" -v target_role="$role" <<'SQL'
+docker exec -i -e KICAU_DB_PASSWORD "$DB_CONTAINER" sh -c 'exec psql -X -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" "$@"' sh -1 -f - -v target_user="$user" -v target_role="$role" <<'SQL'
 \getenv target_password KICAU_DB_PASSWORD
 \getenv target_database POSTGRES_DB
 SET password_encryption='scram-sha-256';

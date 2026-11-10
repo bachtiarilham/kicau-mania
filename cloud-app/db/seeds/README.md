@@ -112,3 +112,7 @@ Seed tidak mendaftarkan provider Google atau token email palsu. Register/verifik
 
 Suite tes Go tidak dijalankan. Pemeriksaan fixture harus memakai PostgreSQL sementara; seed database utama hanya melalui perintah operator yang eksplisit. Catatan hasil verifikasi implementasi ditambahkan setelah pemeriksaan selesai.
 
+
+## Environment VPS dev
+
+Koleksi juga menyediakan environment VPS dev: base_url `https://dev.megaallstararena.com`, sehingga path request tetap `/api/v1/...`. Ini tidak mengisi database VPS otomatis. Akun mock hanya tersedia bila operator secara eksplisit menerapkan seed pada database pengujian yang dituju; sebelum itu, login mock di VPS akan ditolak.

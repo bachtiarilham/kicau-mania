@@ -2,8 +2,11 @@
 set -Eeuo pipefail
 umask 077
 APP_DIR="${APP_DIR:-/opt/apps/kicau-mania}"
+# Registry credentials remain within /opt, never /root/.docker.
+DOCKER_CONFIG="${DOCKER_CONFIG:-$APP_DIR/config/docker}"
+export DOCKER_CONFIG
 APP_CONTAINER="${APP_CONTAINER:-kicau_mania_app}"
-PUBLIC_API_URL="${PUBLIC_API_URL:-https://dev-api.megaallstararena.com}"
+PUBLIC_API_URL="${PUBLIC_API_URL:-https://dev.megaallstararena.com}"
 READY_TIMEOUT=${DEPLOY_READY_TIMEOUT:-120}
 [[ $READY_TIMEOUT =~ ^[0-9]+$ ]] && (( READY_TIMEOUT >= 1 && READY_TIMEOUT <= 120 )) || exit 2
 BUNDLE=${1:?Usage: deploy.sh BUNDLE IMAGE_DIGEST COMMIT_SHA}

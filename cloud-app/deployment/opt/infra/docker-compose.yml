@@ -2,22 +2,51 @@ name: gateway
 services:
   nginx:
     image: nginx:1.28-alpine
-    container_name: global_reverse_proxy
+    container_name: ${GATEWAY_CONTAINER:-global_reverse_proxy}
     restart: unless-stopped
-    ports: ['80:80', '443:443']
+    ports: ['${GATEWAY_BIND_HOST:-0.0.0.0}:${GATEWAY_HTTP_PORT:-80}:80', '${GATEWAY_BIND_HOST:-0.0.0.0}:${GATEWAY_HTTPS_PORT:-443}:443']
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/40-reload-certificates.sh:/docker-entrypoint.d/40-reload-certificates.sh:ro
       - ./certs:/etc/letsencrypt:ro
       - ./acme:/var/www/acme:ro
+      - ./acme-work:/var/lib/letsencrypt:ro
+      - ./www:/srv/www:ro
     networks:
       web_gateway:
         ipv4_address: ${GATEWAY_NGINX_IP:-172.30.20.2}
-    logging:
+    logging: &logging
       driver: json-file
       options:
         max-size: 10m
         max-file: '3'
+  certbot-renew: &certbot
+    image: ${CERTBOT_IMAGE:-certbot/certbot:latest}
+    restart: unless-stopped
+    entrypoint: [/bin/sh]
+    command:
+      - -c
+      - |
+        trap 'exit 0' TERM INT
+        while :; do
+          certbot renew --non-interactive --webroot -w /var/www/acme --config-dir /etc/letsencrypt --work-dir /var/lib/letsencrypt --logs-dir /var/log/letsencrypt --no-random-sleep-on-renew --deploy-hook 'date -u +%s > /var/lib/letsencrypt/nginx-reload' || echo 'Certificate renewal failed; will retry in 12 hours'
+          sleep 43200 & wait $$!
+        done
+    volumes:
+      - ./certs:/etc/letsencrypt
+      - ./acme:/var/www/acme
+      - ./acme-work:/var/lib/letsencrypt
+      - ./acme-logs:/var/log/letsencrypt
+    networks: [web_gateway]
+    logging: *logging
+  certbot-tool:
+    <<: *certbot
+    restart: 'no'
+    profiles: [tools]
+    entrypoint: [certbot]
+    command: [--version]
 networks:
   web_gateway:
+    name: ${GATEWAY_NETWORK:-web_gateway}
     external: true

@@ -20,10 +20,13 @@ done < <(find "$ROOT/cloud-app/deployment/opt/scripts" -type f -name '*.sh' -pri
 mkdir -p "$work/infra/nginx/conf.d"
 cp "$ROOT/cloud-app/deployment/opt/infra/docker-compose.yml" "$work/infra/"
 cp "$ROOT/cloud-app/deployment/opt/infra/nginx/nginx.conf" "$work/infra/nginx/"
+install -m 755 "$ROOT/cloud-app/deployment/opt/infra/nginx/40-reload-certificates.sh" "$work/infra/nginx/"
 cp "$ROOT/cloud-app/deployment/opt/infra/nginx/conf.d/"*.conf "$work/infra/nginx/conf.d/"
 cp "$ROOT/db-dump/full_db.dump" "$work/database/baseline.dump"
 cp "$ROOT/cloud-app/db/migrations/"*.sql "$work/database/migrations/"
 cp "$ROOT/cloud-app/deployment/devops_runbook.md" "$work/README.md"
+cp "$ROOT/cloud-app/deployment/reset-empty-vps.bash" "$work/reset-empty-vps.bash"
+cp "$ROOT/cloud-app/deployment/setup-gateway.bash" "$work/setup-gateway.bash"
 printf '%s\n' "$commit" > "$work/COMMIT"
 tar -czf "$output" -C "$work" .
 sha256sum "$output"

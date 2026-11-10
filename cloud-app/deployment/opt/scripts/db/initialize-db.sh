@@ -13,7 +13,7 @@ shopt -s nullglob
 files=("$bundle"/database/migrations/*.up.sql)
 (( ${#files[@]} > 0 )) || { echo 'Migrations missing'; exit 1; }
 for file in "${files[@]}"; do
-  pg_psql -1 < "$file"
+  pg_psql -1 -f - < "$file"
   printf '%s %s\n' "$(date -u +%FT%TZ)" "$(sha256sum "$file")" >> "$APP_DIR/state/migrations.log"
 done
 echo 'Database initialized. Create the application login and superadmin separately.'

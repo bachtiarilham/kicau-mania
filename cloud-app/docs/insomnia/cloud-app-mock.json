@@ -2414,6 +2414,17 @@
       "settingFollowRedirects": "off",
       "preRequestScript": "",
       "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 401', () => insomnia.expect(status).to.eql(401));\nif (status !== 401) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(false));\n"
+    },
+    {
+      "_id": "env_kicau_vps",
+      "_type": "environment",
+      "parentId": "env_kicau_base",
+      "name": "VPS dev (requires explicit seed)",
+      "data": {
+        "base_url": "https://dev.megaallstararena.com",
+        "frontend_origin": "https://dev.megaallstararena.com"
+      },
+      "dataPropertyOrder": null
     }
   ]
 }
