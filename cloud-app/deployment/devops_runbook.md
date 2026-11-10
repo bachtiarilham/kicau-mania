@@ -238,3 +238,18 @@ Sebelum operasional, buktikan deployment dari main pada VPS, HTTPS/DNS/CORS/cook
 - Acceptance container lolos: migrasi 001–007, role terbatas, password dengan kutip, bootstrap superadmin, readiness melalui proxy, deployment berurutan, image/config gagal dan rollback, persistensi PostgreSQL serta backup/restore staging.
 - Audit build context tidak menemukan .env aktual, app.env, database.env, private key atau sertifikat VPS.
 - Belum dilakukan push/publikasi GHCR, SSH ke VPS, perubahan DNS/TLS nyata, atau deployment GitHub Actions sesungguhnya.
+
+### SSH gagal: error in libcrypto
+
+Pesan `Load key ... error in libcrypto` terjadi ketika runner tidak bisa membaca private key; ini belum membuktikan bahwa VPS menolak public key. Periksa secret VPS_SSH_KEY pada Environment development: isinya harus seluruh file private key (tanpa .pub), termasuk BEGIN/END dan newline asli, tanpa tanda kutip/backtick pembungkus. Jangan memakai path file, fingerprint, atau teks literal \n.
+
+Workflow menormalkan CRLF Windows dan memeriksa key dengan ssh-keygen sebelum koneksi. Key berpassphrase ditolak karena belum ada dukungan SSH agent/passphrase. Buat key deployment tersendiri tanpa passphrase, pertahankan key pribadi lama, dan tambahkan public key pasangan deployment ke authorized_keys user VPS yang sesuai.
+
+Contoh di PowerShell Windows, dengan passphrase kosong saat diminta:
+
+```powershell
+ssh-keygen -t ed25519 -C "github-actions-kicau" -f "$env:USERPROFILE\.ssh\kicau_deploy"
+Get-Content -Raw "$env:USERPROFILE\.ssh\kicau_deploy" | Set-Clipboard
+```
+
+Tempel clipboard ke VPS_SSH_KEY. File kicau_deploy.pub dipasang di VPS, bukan pada secret tersebut. Jangan menimpa file key jika nama itu sudah dipakai. Setelah perubahan workflow dipush, jalankan workflow commit terbaru; rerun run lama tetap menggunakan workflow lama. Mengganti secret saja dapat diuji dengan rerun failed job.

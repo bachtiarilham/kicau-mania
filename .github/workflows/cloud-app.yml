@@ -110,15 +110,28 @@ jobs:
         shell: bash
         run: |
           set -Eeuo pipefail
-          [[ $VPS_HOST =~ ^[a-zA-Z0-9.-]+$ && $VPS_USER =~ ^[a-z_][a-z0-9_-]*$ ]]
+          for required_secret in VPS_HOST VPS_USER VPS_SSH_KEY VPS_KNOWN_HOSTS; do
+            [[ -n ${!required_secret:-} ]] || { echo "::error::Missing $required_secret in GitHub Environment development"; exit 1; }
+          done
+          [[ $VPS_HOST =~ ^[a-zA-Z0-9.-]+$ ]] || { echo '::error::VPS_HOST must contain only a hostname or IPv4 address'; exit 1; }
+          [[ $VPS_USER =~ ^[a-z_][a-z0-9_-]*$ ]] || { echo '::error::VPS_USER must contain only the Linux SSH username'; exit 1; }
           VPS_PORT=${VPS_PORT:-22}
-          [[ $VPS_PORT =~ ^[0-9]{1,5}$ && $IMAGE_DIGEST =~ ^sha256:[0-9a-f]{64}$ ]]
-          [[ -n $VPS_SSH_KEY && -n $VPS_KNOWN_HOSTS ]]
+          [[ $VPS_PORT =~ ^[0-9]{1,5}$ ]] && (( 10#$VPS_PORT >= 1 && 10#$VPS_PORT <= 65535 )) || { echo '::error::VPS_PORT must be 1..65535'; exit 1; }
+          [[ $IMAGE_DIGEST =~ ^sha256:[0-9a-f]{64}$ ]] || { echo '::error::Image job did not return a valid digest'; exit 1; }
           keys=$(mktemp -d)
           trap 'rm -rf -- "$keys"' EXIT
           umask 077
-          printf '%s\n' "$VPS_SSH_KEY" > "$keys/key"
-          printf '%s\n' "$VPS_KNOWN_HOSTS" > "$keys/known_hosts"
+          # Clipboard copies from Windows may preserve CRLF. Keep real newlines and strip CR only.
+          printf '%s\n' "$VPS_SSH_KEY" | sed 's/\r$//' > "$keys/key"
+          printf '%s\n' "$VPS_KNOWN_HOSTS" | sed 's/\r$//' > "$keys/known_hosts"
+          if ! grep -Eq '^-----BEGIN (OPENSSH |RSA |EC )?PRIVATE KEY-----$' "$keys/key"; then
+            echo '::error::VPS_SSH_KEY must be the complete private key, including BEGIN/END lines; not a .pub key, path, fingerprint, or literal \n text'
+            exit 1
+          fi
+          if ! ssh-keygen -y -P '' -f "$keys/key" >/dev/null 2>&1; then
+            echo '::error::VPS_SSH_KEY is malformed or requires a passphrase. This workflow requires a complete, unencrypted deployment key. Key contents are not logged.'
+            exit 1
+          fi
           opts=(-i "$keys/key" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=$keys/known_hosts" -o ConnectTimeout=10)
           bundle="$RUNNER_TEMP/cloud-release.tgz"
           bash cloud-app/deployment/package.sh "$GITHUB_SHA" "$bundle"
