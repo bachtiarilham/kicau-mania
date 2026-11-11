@@ -12,3 +12,8 @@ type Process interface {
 type FinalizationError string
 
 func (e FinalizationError) Error() string { return string(e) }
+
+// PipelineError carries a stable, credential-free diagnostic to the session.
+type PipelineError struct{ Code, Message string }
+
+func (e *PipelineError) Error() string { return e.Message }

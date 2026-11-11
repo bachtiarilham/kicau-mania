@@ -56,7 +56,10 @@ func (u *UseCase) capture(r *run, ctx context.Context, id string) {
 		}
 		source, _ := u.catalog.HubRTSP(id)
 		var first sync.Once
-		err = u.pipeline.Run(ctx, source, part, func(pcm []byte) {
+		ready := func() {
+			if ctx.Err() != nil {
+				return
+			}
 			first.Do(func() {
 				u.mu.Lock()
 				defer u.mu.Unlock()
@@ -71,12 +74,13 @@ func (u *UseCase) capture(r *run, ctx context.Context, id string) {
 					if r.session.ChannelsState[i].ID == id {
 						r.session.ChannelsState[i].State = "RUNNING"
 						r.session.ChannelsState[i].Error = ""
+						r.session.ChannelsState[i].ErrorCode = ""
 					}
 				}
 				u.updateLocked(r)
 			})
-			u.audio.Ingest(id, pcm)
-		})
+		}
+		err = u.pipeline.RunMedia(ctx, source, part, ready, func(pcm []byte) { u.audio.Ingest(id, pcm) })
 		u.mu.Lock()
 		rec = r.records[id]
 		last := &rec.Segments[len(rec.Segments)-1]
@@ -92,6 +96,12 @@ func (u *UseCase) capture(r *run, ctx context.Context, id string) {
 				if r.session.ChannelsState[i].ID == id {
 					r.session.ChannelsState[i].State = "RETRYING"
 					r.session.ChannelsState[i].Error = "media pipeline interrupted"
+					r.session.ChannelsState[i].ErrorCode = "SOURCE_INTERRUPTED"
+					var reason *media.PipelineError
+					if errors.As(err, &reason) {
+						r.session.ChannelsState[i].Error = reason.Message
+						r.session.ChannelsState[i].ErrorCode = reason.Code
+					}
 				}
 			}
 		}
@@ -277,6 +287,7 @@ func (u *UseCase) finish(r *run) {
 					if current.ID == rec.ID && current.State == "FAILED" {
 						r.session.ChannelsState[i].State = "FAILED"
 						r.session.ChannelsState[i].Error = current.Error
+						r.session.ChannelsState[i].ErrorCode = "RECORDING_FINALIZATION_FAILED"
 					}
 				}
 			}

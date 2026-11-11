@@ -27,6 +27,15 @@ func New(uc ChannelUseCase) *Handler {
 	return &Handler{uc}
 }
 
+// channels godoc
+// @Summary Daftar channel dan alamat WHEP/audio
+// @Description Mode LAN: subnet pembaca tanpa token. Mode cloud: OperatorToken. Katalog tidak otomatis memulai stream; channel harus masuk sesi aktif untuk playback.
+// @Tags Channels
+// @Security OperatorToken
+// @Produce json
+// @Success 200 {object} response.Response{data=[]ChannelResponse}
+// @Failure 401,403 {object} response.Response
+// @Router /api/v1/channels [get]
 func (h *Handler) channels(c *gin.Context) {
 	records := h.uc.Channels()
 	out := make([]ChannelResponse, 0, len(records))

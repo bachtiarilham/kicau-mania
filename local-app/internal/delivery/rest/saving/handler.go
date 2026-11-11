@@ -3,6 +3,7 @@ package delivery
 import (
 	"context"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -21,6 +22,18 @@ func New(uc RecordingUseCase) *Handler {
 	return &Handler{uc: uc}
 }
 
+// recordings godoc
+// @Summary Daftar rekaman dengan cursor
+// @Description round_id tetap nama field kompatibilitas untuk identitas sesi. Hanya metadata publik, tidak mengembalikan path file lokal atau kredensial S3.
+// @Tags Recordings
+// @Produce json
+// @Security OperatorToken
+// @Security LocalControl
+// @Param cursor query string false "Cursor opaque dari next_cursor sebelumnya"
+// @Param limit query int false "Ukuran halaman" default(25) minimum(1) maximum(100)
+// @Success 200 {object} response.Response{data=RecordingPage}
+// @Failure 400,401,403,503 {object} response.Response
+// @Router /api/v1/recordings [get]
 func (h *Handler) recordings(c *gin.Context) {
 	limit, e := strconv.Atoi(c.DefaultQuery("limit", "25"))
 	if e != nil {
@@ -61,4 +74,27 @@ func views(records []model.Recording) []gin.H {
 		out = append(out, view)
 	}
 	return out
+}
+
+// RecordingView documents the public fields produced by views, without local paths.
+type RecordingView struct {
+	ID           string      `json:"id"`
+	RoundID      string      `json:"round_id"`
+	ChannelID    string      `json:"channel_id"`
+	State        string      `json:"state"`
+	ObjectKey    string      `json:"object_key"`
+	Attempts     int         `json:"attempts"`
+	NextAttempt  time.Time   `json:"next_attempt"`
+	StartedAt    time.Time   `json:"started_at"`
+	EndedAt      time.Time   `json:"ended_at"`
+	SegmentCount int         `json:"segment_count,omitempty"`
+	Gaps         []model.Gap `json:"gaps,omitempty"`
+	Error        string      `json:"error,omitempty"`
+}
+
+// RecordingPage documents the existing cursor envelope.
+type RecordingPage struct {
+	Items      []RecordingView `json:"items"`
+	NextCursor string          `json:"next_cursor,omitempty"`
+	HasMore    bool            `json:"has_more"`
 }

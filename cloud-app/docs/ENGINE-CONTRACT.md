@@ -2,7 +2,7 @@
 
 **Status: kontrak transport; semua route di dokumen ini belum didaftarkan.** Repository persisten, autentikasi pengguna/mesin, dan aturan akses arena harus tersedia sebelum route diaktifkan. Jangan memakai storage memory atau respons sukses tiruan sebagai pengganti persistence.
 
-Kontrak ini mengikuti [gateway local-app](../../local-app/ENGINE-CLOUD-CONTRACT.md). Skema tabel dan query ditunda sampai ERD disetujui. Login pengguna cloud terpisah dari kredensial engine; token mesin tidak boleh diberikan kepada browser.
+Kontrak ini mengikuti [gateway local-app](../../local-app/docs/cloud-contract.md). Skema tabel dan query ditunda sampai ERD disetujui. Login pengguna cloud terpisah dari kredensial engine; token mesin tidak boleh diberikan kepada browser.
 
 ## Endpoint yang akan disediakan
 

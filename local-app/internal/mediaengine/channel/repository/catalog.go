@@ -15,8 +15,9 @@ import (
 )
 
 type Input struct {
-	ID     string
-	Source string
+	ID         string
+	Source     string
+	Normalized bool
 }
 type Catalog struct {
 	inputs []Input

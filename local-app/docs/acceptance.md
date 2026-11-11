@@ -38,7 +38,7 @@ Tidak ada pengujian browser WHEP nyata, jaringan LAN/HTTPS arena, target restrea
 | POST WHEP berbarengan Stop | POST yang telah di-admit didrain lalu ditutup; admission baru ditolak. |
 | DELETE upstream gagal/timeout | MediaMTX ditutup sebagai fallback; player lama berhenti, supervisor memulihkan server. |
 | Subscription audio/metrik berbarengan Stop | Koneksi lama tertutup dan tidak terbawa ke generasi sesi baru. |
-| Cloud terputus | Recording terus berjalan; playback baru ditolak; pelaporan diulang ketika cloud pulih. |
+| Cloud terputus | Mode cloud: recording terus berjalan, playback baru ditolak, pelaporan diulang. Mode LAN: playback tidak bergantung cloud dan tetap dibatasi CIDR/sesi. |
 | Restart saat STARTING/RUNNING/STOPPING/FINALIZING | INTERRUPTED, tanpa auto-start; sumber diperiksa, hasil READY atau FAILED dengan alasan. |
 | Codec berubah antarpercobaan | Finalisasi FAILED, sumber segmen tetap ada; tidak melakukan transcoding atau membuang bagian secara diam-diam. |
 | Segmen rusak/hasil final tidak valid | Tidak READY dan tidak diupload; alasan dapat dibaca pada status/daftar rekaman. |
@@ -48,3 +48,11 @@ Tidak ada pengujian browser WHEP nyata, jaringan LAN/HTTPS arena, target restrea
 | Crash sebelum laporan/ack command | Journal merekonsiliasi; start lama tidak diputar ulang tanpa keputusan operator. |
 
 Gunakan beberapa channel dan perangkat player nyata sebelum menyatakan integrasi siap operasional. Simpan hasil, log tanpa kredensial, status sesi, dan hasil ffprobe sebagai bukti penerimaan.
+
+## Pemeriksaan backend setup — 11 November 2026
+
+Build/vet dan pemeriksaan import arsitektur dilakukan tanpa menjalankan suite tes Go. Alur terisolasi memakai simulator layanan ONVIF Media1, MediaMTX v1.15.3 dan tiga sumber FFmpeg sintetis: H.264/AAC, H.264 video-only, dan H.265 video-only.
+
+Yang sudah diperiksa: bootstrap tanpa konfigurasi, penolakan setup dari peer remote/nonce salah, profil tanpa kebocoran credential, konfigurasi DPAPI dan redaksi response, apply, penolakan apply saat sesi aktif, live H.264/Opus, video-only tanpa audio palsu, konversi H.265, finalisasi READY, restart tanpa auto-recording, serta probe startup. WHEP diuji sampai SDP answer, CORS origin frontend loopback, Location gateway dan DELETE; ini belum membuktikan ICE/DTLS serta playback browser nyata.
+
+Route UI `/setup` dan `/dashboard` tidak disediakan. Frontend tetap terpisah. ONVIF Media2, model NVR asli, S3 nyata, kondisi disk penuh/crash saat apply, jaringan/firewall dan 24 live pada mini PC tujuan tetap memerlukan penerimaan tersendiri.

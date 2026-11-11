@@ -41,15 +41,20 @@ func (p *process) Stop() {
 }
 
 func Start(ctx context.Context, binary string, args []string, stdout io.Writer) (media.Process, error) {
-	return start(ctx, binary, args, stdout, false)
+	return start(ctx, binary, args, stdout, nil, false)
+}
+
+// StartWithDiagnostics sends stderr to a bounded parser, never a logger.
+func StartWithDiagnostics(ctx context.Context, binary string, args []string, stdout, stderr io.Writer) (media.Process, error) {
+	return start(ctx, binary, args, stdout, stderr, false)
 }
 
 // StartMediaServer requests a graceful MediaMTX shutdown on supported platforms.
 func StartMediaServer(ctx context.Context, binary string, args []string, stdout io.Writer) (media.Process, error) {
-	return start(ctx, binary, args, stdout, true)
+	return start(ctx, binary, args, stdout, nil, true)
 }
 
-func start(ctx context.Context, binary string, args []string, stdout io.Writer, mediaServer bool) (media.Process, error) {
+func start(ctx context.Context, binary string, args []string, stdout, stderr io.Writer, mediaServer bool) (media.Process, error) {
 	cmd := exec.CommandContext(ctx, binary, args...)
 	if mediaServer {
 		cmd.Cancel = func() error { return stopMediaServer(cmd.Process) }
@@ -58,6 +63,9 @@ func start(ctx context.Context, binary string, args []string, stdout io.Writer, 
 	// Never echo command arguments or stderr: sources and destinations contain credentials.
 	cmd.Stdout = stdout
 	cmd.Stderr = io.Discard
+	if stderr != nil {
+		cmd.Stderr = stderr
+	}
 	if mediaServer && stdout != nil {
 		cmd.Stderr = stdout
 	}

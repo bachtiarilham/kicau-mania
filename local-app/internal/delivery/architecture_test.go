@@ -29,8 +29,8 @@ func domainOf(pkg string) string {
 	if len(parts) < 3 || parts[0] != "internal" {
 		return ""
 	}
-	if parts[1] == "cloud" {
-		return "cloud"
+	if parts[1] == "cloud" || parts[1]=="setup" {
+		return parts[1]
 	}
 	switch parts[1] + "/" + parts[2] {
 	case "mediaengine/session", "mediaengine/channel", "mediaengine/audio", "mediaengine/saving", "mediaengine/streaming":

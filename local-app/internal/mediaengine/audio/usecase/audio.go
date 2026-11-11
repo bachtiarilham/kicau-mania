@@ -7,8 +7,6 @@ import (
 	"time"
 
 	"kicau.local/edge/internal/apperror"
-
-	channelModel "kicau.local/edge/internal/mediaengine/channel/model"
 )
 
 type Options struct {
@@ -17,7 +15,6 @@ type Options struct {
 }
 
 type ChannelRepository interface {
-	Channels() []channelModel.Channel
 	HubRTSP(string) (string, error)
 }
 

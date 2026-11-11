@@ -23,11 +23,12 @@ type fixtureMedia struct {
 	finalError error
 }
 
-func (f *fixtureMedia) Run(ctx context.Context, _, file string, consume func([]byte)) error {
+func (f *fixtureMedia) RunMedia(ctx context.Context, _, file string, ready func(), consume func([]byte)) error {
 	f.calls.Add(1)
 	if err := os.WriteFile(file, []byte("segment"), 0600); err != nil {
 		return err
 	}
+	ready()
 	consume(make([]byte, 6400))
 	<-ctx.Done()
 	return ctx.Err()

@@ -2,7 +2,7 @@
 
 6 November 2026 · Catatan internal
 
-Versi ringkas untuk dibagikan tersedia terpisah. [Laporan progres ringkas](PROGRESS-REPORT.md)
+Versi ringkas untuk dibagikan tersedia terpisah. [Laporan progres ringkas](progress-report.md)
 
 | Area | Posisi saat ini |
 | --- | --- |
@@ -18,7 +18,7 @@ Versi ringkas untuk dibagikan tersedia terpisah. [Laporan progres ringkas](PROGR
 - Rekaman memakai file lokal dan manifest persisten. Finalisasi menangani file partial, dan upload S3 berjalan di background dengan retry serta object key stabil. Sesi rekaman memiliki lifecycle tersendiri dari ronde penilaian.
 - Script persiapan webcam/mikrofon Windows dan sumber sintetis tersedia. Lokasi konfigurasi MediaMTX hasil render berada di direktori runtime.
 
-[Panduan local-app](local-app/README.md)
+[Panduan local-app](../../local-app/README.md)
 
 ## Penilaian offline dan pemulihan
 
@@ -28,7 +28,7 @@ Versi ringkas untuk dibagikan tersedia terpisah. [Laporan progres ringkas](PROGR
 - Nilai yang sudah commit tersedia setelah restart. Ronde aktif menjadi `INTERRUPTED` untuk ditinjau operator. Backup snapshot SQLite tersedia secara manual, berkala, dan setelah penutupan ronde bila lokasi backup dikonfigurasi.
 - Gangguan media atau cloud tidak memblokir penyimpanan nilai. Status media, antrean cloud, dan backup dapat diperiksa secara terpisah.
 
-[Panduan offline-first](local-app/OFFLINE-FIRST.md) · [Alur end-to-end](local-app/ALUR-END-TO-END.md)
+Panduan offline-first (`local-app/OFFLINE-FIRST.md`; dokumen historis sudah dihapus) · [Alur end-to-end](../../local-app/docs/end-to-end.md)
 
 ## Sinkronisasi dan layanan cloud
 
@@ -36,7 +36,7 @@ Versi ringkas untuk dibagikan tersedia terpisah. [Laporan progres ringkas](PROGR
 - Cloud exchange menyediakan unggah paket, unduh paket per engine, penyimpanan journal perubahan, serta antrean dan laporan hasil perintah media.
 - Perintah remote dibatasi ke start/stop rekaman dan restream. Arena menyimpan hasil perintah sebelum mengirimkannya kembali dan menangani perintah kedaluwarsa serta retry. Otoritas nilai resmi berada di arena.
 
-[Kontrak API cloud exchange](cloud-app/README.md)
+[Kontrak API cloud exchange](../../cloud-app/README.md)
 
 ## Database PostgreSQL
 
@@ -45,7 +45,7 @@ Versi ringkas untuk dibagikan tersedia terpisah. [Laporan progres ringkas](PROGR
 - Query berparameter dibagi ke enam file sesuai domain. Contoh CRUD memakai tabel sumber untuk mutasi dan view untuk membaca hasil. Rekap di-refresh secara manual setelah batch skor commit.
 - Materialized view menghitung jumlah skor masuk, valid, dan invalid, jumlah juri dengan skor valid, serta rata-rata skor valid. Keluaran ini menyediakan dasar untuk rekap administratif sebelum integrasi hasil resmi arena.
 
-[Panduan migrasi dan query PostgreSQL](cloud-app/db/README.md)
+[Panduan migrasi dan query PostgreSQL](../../cloud-app/db/README.md)
 
 ## Infrastruktur dan pemeliharaan kode
 
@@ -54,7 +54,7 @@ Versi ringkas untuk dibagikan tersedia terpisah. [Laporan progres ringkas](PROGR
 - Struktur `local-app` dibagi menjadi `core`, `mediaengine`, `edgetocloud`, dan `infra`. UseCase arena dipisah per alur, termasuk event, auth, scoring, ronde, query, dan backup.
 - Logging mengikuti pola `park-server-v3` dengan Zap, log file JSON, request ID, serta redaksi field sensitif. Peta kode menjelaskan jalur baca developer dan tanggung jawab file.
 
-[Peta kode](local-app/PETA-KODE.md) · [Konfigurasi LAN dan backup](local-app/OFFLINE-FIRST.md)
+[Peta kode](../../local-app/docs/code-map.md) · Konfigurasi LAN dan backup (`local-app/OFFLINE-FIRST.md`; dokumen historis sudah dihapus)
 
 ## Verifikasi yang sudah dilakukan
 

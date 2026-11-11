@@ -1,4 +1,4 @@
-basis template membuat aplikasi ini adalah SERVER_BOILERPLATE_TEMPLATE.md
+basis template membuat aplikasi ini adalah [server-boilerplate.md](../reference/server-boilerplate.md)
 namun, tentunya ada penyesuaian diantaranya : 
 
 domain yang diperlukan : 

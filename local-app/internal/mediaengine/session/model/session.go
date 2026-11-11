@@ -19,6 +19,7 @@ type Gap struct {
 }
 
 type Channel struct {
+	ErrorCode      string `json:"error_code,omitempty"`
 	RecordingState string `json:"recording_state,omitempty"`
 	SegmentCount   int    `json:"segment_count"`
 	Gaps           []Gap  `json:"gaps,omitempty"`
@@ -29,6 +30,7 @@ type Channel struct {
 	Error          string `json:"error,omitempty"`
 }
 type Session struct {
+	StopReason string `json:"stop_reason,omitempty"`
 	StartRequest
 	State         string    `json:"state"`
 	StartedAt     time.Time `json:"started_at"`

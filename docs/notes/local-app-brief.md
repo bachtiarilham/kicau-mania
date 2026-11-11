@@ -12,7 +12,7 @@ local server di arena lomba memegang 3 peran vital:
   3. Local Segmenter / DVR Buffer (Penyelamat Jaringan):
     Koneksi internet di lapangan lomba burung sering kali tidak stabil. Local server merekam video lomba ke SSD lokal terlebih dahulu (misalnya format MP4 per ronde). Setelah ronde selesai, worker di local server akan meng-upload file rekaman yang sudah jadi ke storage secara asinkron (background job).
   
-untuk template server app nya, gunakan SERVER_BOILERPLATE_TEMPLATE.md
+untuk template server app nya, gunakan [server-boilerplate.md](../reference/server-boilerplate.md)
 
 protocol yang digunakan untuk video : webRTC, sedangkan audio : websocket. 
 

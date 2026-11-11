@@ -69,7 +69,11 @@ func (p *Handler) Serve(c *gin.Context) {
 			return
 		}
 		ticket, ok := strings.CutPrefix(c.GetHeader("Authorization"), "Bearer ")
-		if !ok {
+		requiresTicket := true
+		if policy, known := p.engine.(interface{ RequiresTicket() bool }); known {
+			requiresTicket = policy.RequiresTicket()
+		}
+		if !ok && (requiresTicket || c.GetHeader("Authorization") != "") {
 			c.AbortWithStatus(401)
 			return
 		}
@@ -120,6 +124,9 @@ func (p *Handler) Serve(c *gin.Context) {
 			r.URL.RawQuery = ""
 			r.Header.Del("Authorization")
 			r.Header.Del("Cookie")
+			// The gateway already validates Origin. Internal MediaMTX must not
+			// apply a second, single-origin policy to our multiple allowed frontends.
+			r.Header.Del("Origin")
 			r.Header["X-Forwarded-For"] = nil
 			r.Header.Del("X-Real-IP")
 			r.Header.Del("Forwarded")

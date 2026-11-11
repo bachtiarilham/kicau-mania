@@ -3,6 +3,7 @@ package websocket
 import (
 	"context"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
 
@@ -22,6 +23,9 @@ func newWebsocketStream(origins []string) *websocketStream {
 	return &websocketStream{conns: map[*gorillaws.Conn]struct{}{}, upgrade: gorillaws.Upgrader{Subprotocols: []string{"edge-v1"}, CheckOrigin: func(r *http.Request) bool {
 		o := r.Header.Get("Origin")
 		if o == "" {
+			return true
+		}
+		if origin, err := url.Parse(o); err == nil && origin.User == nil && origin.Path == "" && origin.RawQuery == "" && origin.Fragment == "" && (origin.Scheme == "http" || origin.Scheme == "https") && origin.Host == r.Host {
 			return true
 		}
 		for _, v := range origins {

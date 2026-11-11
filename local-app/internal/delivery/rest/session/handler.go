@@ -21,6 +21,19 @@ func RegisterRoutes(g *gin.RouterGroup, h *Handler) {
 	g.POST("/media/sessions/:id/stop", h.stop)
 	g.GET("/media/sessions/:id", h.get)
 }
+
+// start godoc
+// @Summary Mulai seluruh media sesi
+// @Description OperatorToken atau mode LAN dari localhost dengan LocalControl. Satu sesi nonterminal per engine. Start mengaktifkan live, recording, PCM/metrik dan restream pilihan. Stop diterima asinkron; poll sampai STOPPED/INTERRUPTED/FAILED, termasuk tahap FINALIZING. Upload tetap berjalan setelah Stop. HTTP 202 bukan bukti semua channel sudah RUNNING atau STOPPED.
+// @Tags Media sessions
+// @Accept json
+// @Produce json
+// @Security OperatorToken
+// @Security LocalControl
+// @Param request body model.StartRequest true "ID sesi, channel dan target restream terkonfigurasi"
+// @Success 202 {object} response.Response{data=model.Session}
+// @Failure 400,401,403,404,409,503 {object} response.Response
+// @Router /api/v1/media/sessions [post]
 func (h *Handler) start(c *gin.Context) {
 	var req model.StartRequest
 	if c.ShouldBindJSON(&req) != nil {
@@ -34,6 +47,19 @@ func (h *Handler) start(c *gin.Context) {
 	}
 	response.Accepted(c, "Media session accepted", s)
 }
+
+// stop godoc
+// @Summary Stop media dan mulai finalisasi rekaman
+// @Description OperatorToken atau mode LAN dari localhost dengan LocalControl. Satu sesi nonterminal per engine. Start mengaktifkan live, recording, PCM/metrik dan restream pilihan. Stop diterima asinkron; poll sampai STOPPED/INTERRUPTED/FAILED, termasuk tahap FINALIZING. Upload tetap berjalan setelah Stop. HTTP 202 bukan bukti semua channel sudah RUNNING atau STOPPED.
+// @Tags Media sessions
+// @Accept json
+// @Produce json
+// @Security OperatorToken
+// @Security LocalControl
+// @Param id path string true "ID sesi"
+// @Success 202 {object} response.Response{data=model.Session}
+// @Failure 400,401,403,404,409,503 {object} response.Response
+// @Router /api/v1/media/sessions/{id}/stop [post]
 func (h *Handler) stop(c *gin.Context) {
 	s, err := h.uc.StopSession(c.Request.Context(), c.Param("id"))
 	if err != nil {
@@ -42,6 +68,19 @@ func (h *Handler) stop(c *gin.Context) {
 	}
 	response.Accepted(c, "Media session stop accepted", s)
 }
+
+// get godoc
+// @Summary Baca status sesi dan masing-masing channel
+// @Description OperatorToken atau mode LAN dari localhost dengan LocalControl. Satu sesi nonterminal per engine. Start mengaktifkan live, recording, PCM/metrik dan restream pilihan. Stop diterima asinkron; poll sampai STOPPED/INTERRUPTED/FAILED, termasuk tahap FINALIZING. Upload tetap berjalan setelah Stop. HTTP 202 bukan bukti semua channel sudah RUNNING atau STOPPED.
+// @Tags Media sessions
+// @Accept json
+// @Produce json
+// @Security OperatorToken
+// @Security LocalControl
+// @Param id path string true "ID sesi"
+// @Success 200 {object} response.Response{data=model.Session}
+// @Failure 400,401,403,404,409,503 {object} response.Response
+// @Router /api/v1/media/sessions/{id} [get]
 func (h *Handler) get(c *gin.Context) {
 	s, err := h.uc.Get(c.Request.Context(), c.Param("id"))
 	if err != nil {

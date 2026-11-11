@@ -59,8 +59,8 @@ func (f Finalizer) signature(ctx context.Context, path string) (string, error) {
 		delete(s, "nb_read_packets")
 		streams[k] = s
 	}
-	if streams["video"] == nil || streams["audio"] == nil {
-		return "", media.FinalizationError("recording requires video and audio")
+	if streams["video"] == nil {
+		return "", media.FinalizationError("recording requires video")
 	}
 	b, _ := json.Marshal(streams)
 	return string(b), nil
@@ -101,7 +101,7 @@ func (f Finalizer) Finalize(ctx context.Context, parts []string, output string) 
 				name := tmp.Name()
 				tmp.Close()
 				os.Remove(name)
-				_ = f.remux(ctx, "-i", part, "-map", "0:v:0", "-map", "0:a:0", "-c", "copy", "-movflags", "+frag_keyframe+empty_moov+default_base_moof", "-f", "mp4", "-n", name)
+				_ = f.remux(ctx, "-i", part, "-map", "0:v:0", "-map", "0:a:0?", "-c", "copy", "-movflags", "+frag_keyframe+empty_moov+default_base_moof", "-f", "mp4", "-n", name)
 				if _, err := f.signature(ctx, name); err != nil {
 					os.Remove(name)
 					return media.FinalizationError("recording segment cannot be recovered")
@@ -154,7 +154,7 @@ func (f Finalizer) Finalize(ctx context.Context, parts []string, output string) 
 	tmp.Close()
 	os.Remove(name)
 	defer os.Remove(name)
-	if err := f.remux(ctx, "-f", "concat", "-safe", "0", "-i", list.Name(), "-map", "0:v:0", "-map", "0:a:0", "-c", "copy", "-movflags", "+frag_keyframe+empty_moov+default_base_moof", "-f", "mp4", "-n", name); err != nil {
+	if err := f.remux(ctx, "-f", "concat", "-safe", "0", "-i", list.Name(), "-map", "0:v:0", "-map", "0:a:0?", "-c", "copy", "-movflags", "+frag_keyframe+empty_moov+default_base_moof", "-f", "mp4", "-n", name); err != nil {
 		return err
 	}
 	if _, err := f.signature(ctx, name); err != nil {

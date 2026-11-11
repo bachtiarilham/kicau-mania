@@ -4,14 +4,14 @@ Local-app adalah engine media. Cloud menangani login, registrasi, penilaian, dan
 
 ## Mulai membaca dari sini
 
-1. [Model sesi](internal/mediaengine/session/model/session.go): payload, status, dan hasil yang disimpan.
-2. [Handler sesi](internal/delivery/rest/session/handler.go): parsing JSON dan response 202.
-3. [UseCase sesi](internal/mediaengine/session/usecase/session.go): validasi, reservasi, admission playback, dan koordinasi.
-4. [Recording sesi](internal/mediaengine/session/usecase/recording.go): percobaan per channel, retry, penghentian, finalisasi, dan restart.
-5. [Journal sesi](internal/mediaengine/session/repository/journal.go): penyimpanan JSON atomik.
-6. [Worker sesi](internal/mediaengine/session/worker/worker.go): goroutine dan penantian pekerjaan background.
+1. [Model sesi](../internal/mediaengine/session/model/session.go): payload, status, dan hasil yang disimpan.
+2. [Handler sesi](../internal/delivery/rest/session/handler.go): parsing JSON dan response 202.
+3. [UseCase sesi](../internal/mediaengine/session/usecase/session.go): validasi, reservasi, admission playback, dan koordinasi.
+4. [Recording sesi](../internal/mediaengine/session/usecase/recording.go): percobaan per channel, retry, penghentian, finalisasi, dan restart.
+5. [Journal sesi](../internal/mediaengine/session/repository/journal.go): penyimpanan JSON atomik.
+6. [Worker sesi](../internal/mediaengine/session/worker/worker.go): goroutine dan penantian pekerjaan background.
 
-Handler memanggil interface UseCase. UseCase sesi memanggil audio/restream melalui interface serta memakai model rekaman; tidak mengimpor handler, HTTP, repository konkret, atau adapter. Container di [app](internal/app/container.go) memasang implementasinya. Repository tidak memanggil repository lain.
+Handler memanggil interface UseCase. UseCase sesi memanggil audio/restream melalui interface serta memakai model rekaman; tidak mengimpor handler, HTTP, repository konkret, atau adapter. Container di [app](../internal/app/container.go) memasang implementasinya. Repository tidak memanggil repository lain.
 
 ## Peta tanggung jawab
 
@@ -127,4 +127,4 @@ Worker saving tetap memilih manifest READY dan menyimpan status UPLOADED atau ja
 
 ## Batas verifikasi
 
-Lihat [skenario penerimaan](SESSION-ACCEPTANCE.md). Build dan percobaan sumber sintetis tidak membuktikan playback browser LAN, HTTPS, target restream nyata, atau S3 produksi sudah siap. Penerimaan operasional memerlukan perangkat dan jaringan arena.
+Lihat [skenario penerimaan](acceptance.md). Build dan percobaan sumber sintetis tidak membuktikan playback browser LAN, HTTPS, target restream nyata, atau S3 produksi sudah siap. Penerimaan operasional memerlukan perangkat dan jaringan arena.

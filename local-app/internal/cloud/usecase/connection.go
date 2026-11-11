@@ -32,6 +32,7 @@ type Channels interface {
 	HubRTSP(string) (string, error)
 }
 type EngineOptions struct {
+	LAN                                bool
 	ArenaID, EngineID, PlaybackBaseURL string
 	HeartbeatTimeout                   time.Duration
 	CommandsConfigured                 bool

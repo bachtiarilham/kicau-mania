@@ -75,7 +75,7 @@ func (f *fakeMedia) start(ctx context.Context, kind, source string) media.Proces
 func (f *fakeMedia) Restream(ctx context.Context, source, _ string) (media.Process, error) {
 	return f.start(ctx, "streaming", source), nil
 }
-func (f *fakeMedia) Run(ctx context.Context, source, file string, write func([]byte)) error {
+func (f *fakeMedia) RunMedia(ctx context.Context, source, file string, ready func(), write func([]byte)) error {
 	if err := os.WriteFile(file, []byte("media fixture"), 0600); err != nil {
 		return err
 	}
@@ -87,6 +87,7 @@ func (f *fakeMedia) Run(ctx context.Context, source, file string, write func([]b
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-timer.C:
+			ready()
 			write(make([]byte, 6400))
 		}
 	}

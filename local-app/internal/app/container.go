@@ -4,6 +4,7 @@ package app
 import (
 	"context"
 	"net"
+	"net/url"
 	"path/filepath"
 
 	"kicau.local/edge/config"
@@ -26,6 +27,7 @@ import (
 	audioWorker "kicau.local/edge/internal/mediaengine/audio/worker"
 	channelRepo "kicau.local/edge/internal/mediaengine/channel/repository"
 	channelUC "kicau.local/edge/internal/mediaengine/channel/usecase"
+	"kicau.local/edge/internal/mediaengine/media"
 	"kicau.local/edge/internal/mediaengine/media/ffmpeg"
 	"kicau.local/edge/internal/mediaengine/media/mediamtx"
 	savingRepo "kicau.local/edge/internal/mediaengine/saving/repository"
@@ -56,13 +58,13 @@ type Container struct {
 func NewMedia(c config.Config) (*channelRepo.Catalog, *mediamtx.Server, error) {
 	inputs := make([]channelRepo.Input, 0, len(c.Channels))
 	for _, ch := range c.Channels {
-		inputs = append(inputs, channelRepo.Input{ID: ch.ID, Source: ch.Source})
+		inputs = append(inputs, channelRepo.Input{ID: ch.ID, Source: ch.Source, Normalized: ch.LiveMode != ""})
 	}
 	catalog, e := channelRepo.New(inputs, c.RTSPBase)
 	if e != nil {
 		return nil, nil, e
 	}
-	mediaServer := mediamtx.New(mediamtx.Options{Binary: c.MediaMTX, ConfigFile: c.MediaConfig, RTSPListen: c.RTSPListen, WebRTCListen: c.WebRTCListen, WebRTCLocalUDP: c.WebRTCLocalUDP, WebRTCBase: c.WebRTCBase, ICEHosts: c.ICEHosts, Origins: c.Origins, ReadCIDRs: c.ReadCIDRs, Sources: mediaSources(catalog)})
+	mediaServer := mediamtx.New(mediamtx.Options{PublishToken: c.Token, Binary: c.MediaMTX, ConfigFile: c.MediaConfig, RTSPListen: c.RTSPListen, WebRTCListen: c.WebRTCListen, WebRTCLocalUDP: c.WebRTCLocalUDP, WebRTCBase: c.WebRTCBase, ICEHosts: c.ICEHosts, Origins: c.Origins, ReadCIDRs: c.ReadCIDRs, Sources: mediaSources(catalog)})
 	return catalog, mediaServer, nil
 }
 func NewContainer(ctx context.Context, c config.Config) (*Container, error) {
@@ -97,14 +99,32 @@ func NewContainer(ctx context.Context, c config.Config) (*Container, error) {
 	if err != nil {
 		return nil, err
 	}
-	sessions := sessionUC.New(sessionUC.Options{DataDir: c.DataDir, MaxDuration: c.MaxRound, MinFreeBytes: c.MinFreeBytes, Targets: c.Destinations}, sessionJournal, repo, sources, ffmpeg.Pipeline{Binary: c.FFmpeg}, ffmpeg.Finalizer{Binary: c.FFmpeg, Probe: c.FFprobe}, audio, streaming, filesystem.Disk{}, sessionWorker.New(), mediaServer)
+	profiles := map[string]media.StreamProfile{}
+	for _, ch := range c.Channels {
+		source, _ := sources.HubRTSP(ch.ID)
+		p := media.StreamProfile{HasAudio: ch.HasAudio == nil || *ch.HasAudio, Transcode: ch.LiveMode == "transcode"}
+		if ch.LiveMode != "" {
+			p.InputURL = ch.Source
+			u, _ := url.Parse(c.RTSPBase)
+			u.User = url.UserPassword("pipeline", c.Token)
+			u.Path = "/" + ch.ID
+			p.PublishURL = u.String()
+		}
+		profiles[source] = p
+	}
+	sessions := sessionUC.New(sessionUC.Options{DataDir: c.DataDir, MaxDuration: c.MaxRound, MinFreeBytes: c.MinFreeBytes, Targets: c.Destinations}, sessionJournal, repo, sources, ffmpeg.Pipeline{Binary: c.FFmpeg, Profiles: profiles}, ffmpeg.Finalizer{Binary: c.FFmpeg, Probe: c.FFprobe}, audio, streaming, filesystem.Disk{}, sessionWorker.New(), mediaServer)
 	engine := cloudUC.NewEngine(cloudUC.EngineOptions{
 		ArenaID: c.ArenaID, EngineID: c.EngineID, PlaybackBaseURL: c.WebRTCBase,
 		HeartbeatTimeout: c.HeartbeatTimeout, CommandsConfigured: c.CloudCommandsURL != "",
+		LAN: c.AccessMode == "lan",
 	}, sources, mediaServer, saving, streaming, journal,
 		cloudEndpoint(c.CloudHeartbeatURL, c.CloudToken), cloudEndpoint(c.CloudMediaUpdatesURL, c.CloudToken), cloudEndpoint(c.CloudPlaybackAuthorizeURL, c.CloudToken))
 	host, port, _ := net.SplitHostPort(c.WebRTCListen)
-	playback, err := whepDelivery.New(engine, "http://"+net.JoinHostPort(host, port), sessions)
+	var policy whepDelivery.PlaybackUseCase = engine
+	if c.AccessMode == "lan" {
+		policy = channelUC.NewLocalPlayback(sources)
+	}
+	playback, err := whepDelivery.New(policy, "http://"+net.JoinHostPort(host, port), sessions)
 	if err != nil {
 		return nil, err
 	}
@@ -133,6 +153,10 @@ func mediaSources(catalog *channelRepo.Catalog) []mediamtx.Source {
 	inputs := catalog.Inputs()
 	sources := make([]mediamtx.Source, 0, len(inputs))
 	for _, in := range inputs {
+		if in.Normalized {
+			sources = append(sources, mediamtx.Source{ID: in.ID})
+			continue
+		}
 		sources = append(sources, mediamtx.Source{ID: in.ID, URL: in.Source})
 	}
 	return sources

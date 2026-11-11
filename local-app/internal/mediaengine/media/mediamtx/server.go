@@ -19,6 +19,7 @@ type Source struct {
 }
 
 type Options struct {
+	PublishToken                                             string
 	Sources                                                  []Source
 	Binary, ConfigFile, RTSPListen, WebRTCListen, WebRTCBase string
 	WebRTCLocalUDP                                           string
@@ -63,6 +64,10 @@ func (s *Server) MediaStatus() media.Status {
 func (s *Server) Render() error {
 	paths := map[string]any{}
 	for _, in := range s.opts.Sources {
+		if in.URL == "" {
+			paths[in.ID] = map[string]any{"source": "publisher", "overridePublisher": false}
+			continue
+		}
 		paths[in.ID] = map[string]any{
 			"source":                   in.URL,
 			"rtspTransport":            "tcp",
@@ -77,6 +82,9 @@ func (s *Server) Render() error {
 			"permissions": []any{
 				map[string]any{"action": "read", "path": ""},
 			}},
+	}
+	if s.opts.PublishToken != "" {
+		authUsers = append(authUsers, map[string]any{"user": "pipeline", "pass": s.opts.PublishToken, "ips": []string{"127.0.0.1/32", "::1/128"}, "permissions": []any{map[string]any{"action": "publish", "path": ""}}})
 	}
 	cfg := map[string]any{
 		"logLevel":                "warn",

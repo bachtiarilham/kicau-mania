@@ -1,5 +1,7 @@
 # Cloud-app: backend bisnis online
 
+Hubungan kedua aplikasi dijelaskan pada [panduan integrasi proyek](../docs/integration.md); indeks lintas aplikasi ada di [dokumentasi proyek](../docs/README.md).
+
 Backend Go memakai **Gin**, pgx dan PostgreSQL. Tersedia autentikasi email/password serta Google, CRUD persiapan arena, registrasi/pembayaran, penilaian/revisi juri, dan pengesahan pemenang. Operasi penuh memerlukan migrasi database dan konfigurasi layanan terkait.
 
 Mulai dari [alur bisnis dan peta kode](docs/ALUR-BISNIS.md), [kontrak API](docs/API.md), lalu [panduan SQL/migrasi](db/README.md). Hasil pemeriksaan dan batas integrasi dicatat pada [verifikasi backend](docs/VERIFIKASI-BACKEND.md).

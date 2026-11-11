@@ -90,6 +90,9 @@ func WriteError(c *gin.Context, err error) {
 		var public *apperror.Message
 		if errors.As(err, &public) {
 			message = public.Text
+			if public.Code != "" {
+				details = map[string]string{"code": public.Code, "request_id": c.Writer.Header().Get("X-Request-ID")}
+			}
 		}
 	}
 	JSON(c, status, false, message, nil, details)

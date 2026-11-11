@@ -1,11 +1,10 @@
-// Recording queries provide pagination and lookup by session.
+// Recording queries provide cursor pagination over recording manifests.
 package usecase
 
 import (
 	"context"
 
 	"kicau.local/edge/internal/apperror"
-	"kicau.local/edge/internal/core/identifier"
 	"kicau.local/edge/internal/mediaengine/saving/model"
 )
 
@@ -32,22 +31,4 @@ func (u *UseCase) Recordings(ctx context.Context, cursor string, limit int) ([]m
 		out = append(out, r)
 	}
 	return out, next, nil
-}
-
-// Session resolves media recording metadata, independently of judging rounds.
-func (u *UseCase) Session(ctx context.Context, id string) ([]model.Recording, error) {
-	if !identifier.Valid(id) {
-		return nil, apperror.ErrInvalid
-	}
-	all, err := u.repo.List(ctx)
-	if err != nil {
-		return nil, err
-	}
-	out := []model.Recording{}
-	for _, r := range all {
-		if r.RoundID == id {
-			out = append(out, r)
-		}
-	}
-	return out, nil
 }

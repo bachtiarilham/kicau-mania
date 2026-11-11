@@ -1,6 +1,8 @@
 package config
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -17,6 +19,8 @@ import (
 )
 
 type Config struct {
+	AccessMode        string
+	LocalControlToken string
 	// Aplikasi
 	Listen                    string
 	Token                     string
@@ -74,8 +78,10 @@ type Config struct {
 }
 
 type Channel struct {
-	ID     string `json:"id"`
-	Source string `json:"source"`
+	ID       string `json:"id"`
+	Source   string `json:"source"`
+	LiveMode string `json:"live_mode,omitempty"`
+	HasAudio *bool  `json:"has_audio,omitempty"`
 }
 
 func Load(path string) (Config, error) {
@@ -128,6 +134,7 @@ func Load(path string) (Config, error) {
 		return Config{}, err
 	}
 	cfg := Config{
+		AccessMode: getEnv("ENGINE_ACCESS_MODE", "cloud"),
 		// Aplikasi
 		Listen:                    getEnv("HTTP_ADDR", "127.0.0.1:8090"),
 		Token:                     getEnv("API_TOKEN", ""),
@@ -183,6 +190,13 @@ func Load(path string) (Config, error) {
 		S3AccessKey: getEnv("S3_ACCESS_KEY", ""),
 		S3SecretKey: getEnv("S3_SECRET_KEY", ""),
 	}
+	if cfg.AccessMode == "lan" && cfg.Token == "" {
+		var secret [32]byte
+		if _, err := rand.Read(secret[:]); err != nil {
+			return Config{}, err
+		}
+		cfg.Token = hex.EncodeToString(secret[:])
+	}
 	if cfg.LocalPublicURL != "" {
 		cfg.WebRTCBase = cfg.LocalPublicURL
 		cfg.Origins = append([]string{cfg.LocalPublicURL}, cfg.Origins...)
@@ -197,6 +211,9 @@ func Load(path string) (Config, error) {
 }
 
 func validate(c Config) error {
+	if c.AccessMode != "" && c.AccessMode != "lan" && c.AccessMode != "cloud" {
+		return fmt.Errorf("ENGINE_ACCESS_MODE must be lan or cloud")
+	}
 	if c.HeartbeatInterval < time.Second || c.HeartbeatTimeout <= c.HeartbeatInterval || c.HeartbeatTimeout > 5*time.Minute {
 		return fmt.Errorf("heartbeat timeout must exceed interval and be at most 5m")
 	}
@@ -261,11 +278,14 @@ func validate(c Config) error {
 	if len(c.Token) < 32 || strings.HasPrefix(c.Token, "REPLACE_") {
 		return fmt.Errorf("API_TOKEN requires at least 32 characters")
 	}
-	if len(c.Channels) < 1 || len(c.Channels) > 24 {
+	if (len(c.Channels) < 1 && c.AccessMode != "lan") || len(c.Channels) > 24 {
 		return fmt.Errorf("configure 1..24 channels")
 	}
 	seen := map[string]bool{}
 	for _, ch := range c.Channels {
+		if ch.LiveMode != "" && ch.LiveMode != "copy" && ch.LiveMode != "transcode" {
+			return fmt.Errorf("invalid live mode for channel %s", ch.ID)
+		}
 		if !ValidID(ch.ID) || seen[ch.ID] {
 			return fmt.Errorf("invalid or duplicate channel ID")
 		}

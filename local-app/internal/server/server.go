@@ -25,6 +25,9 @@ import (
 )
 
 func Run(c config.Config) error {
+	if c.AccessMode == "lan" {
+		return runLAN(c)
+	}
 	if e := os.MkdirAll(c.DataDir, 0700); e != nil {
 		return e
 	}

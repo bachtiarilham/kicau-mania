@@ -33,7 +33,8 @@ type Recordings interface {
 }
 type Catalog interface{ HubRTSP(string) (string, error) }
 type Pipeline interface {
-	Run(context.Context, string, string, func([]byte)) error
+	// RunMedia reports video readiness independently of optional PCM frames.
+	RunMedia(context.Context, string, string, func(), func([]byte)) error
 }
 type Finalizer interface {
 	Finalize(context.Context, []string, string) error
@@ -145,8 +146,11 @@ func (u *UseCase) validate(req model.StartRequest) error {
 		targets[r.Target] = true
 	}
 	free, err := u.disk.Free(u.opts.DataDir)
-	if err != nil || free < u.opts.MinFreeBytes {
-		return apperror.ErrUnavailable
+	if err != nil {
+		return apperror.Diagnostic(apperror.ErrUnavailable, "DISK_UNAVAILABLE", "Kapasitas disk tidak dapat diperiksa")
+	}
+	if free < u.opts.MinFreeBytes {
+		return apperror.Diagnostic(apperror.ErrUnavailable, "DISK_LOW", "Ruang disk di bawah batas minimum sesi")
 	}
 	return nil
 }
@@ -263,6 +267,30 @@ func (u *UseCase) Get(ctx context.Context, id string) (model.Session, error) {
 	return u.journal.Get(ctx, id)
 }
 
+// Current supports a dashboard refresh without starting or resuming a session.
+func (u *UseCase) Current(ctx context.Context) (*model.Session, error) {
+	u.mu.Lock()
+	if u.active != nil {
+		s := clone(u.active.session)
+		u.mu.Unlock()
+		return &s, nil
+	}
+	u.mu.Unlock()
+	all, e := u.journal.List(ctx)
+	if e != nil {
+		return nil, e
+	}
+	var latest *model.Session
+	for _, s := range all {
+		if latest == nil || s.StartedAt.After(latest.StartedAt) {
+			v := clone(s)
+			latest = &v
+		}
+	}
+	return latest, nil
+}
+func (u *UseCase) Busy() bool { u.mu.Lock(); defer u.mu.Unlock(); return u.active != nil }
+
 // AcquirePlayback admits a POST before Stop may wait, preventing late session creation.
 func (u *UseCase) AcquirePlayback(channel string) (func(), error) {
 	u.mu.Lock()
@@ -316,6 +344,9 @@ func (u *UseCase) StopSession(ctx context.Context, id string) (model.Session, er
 		return clone(r.session), nil
 	}
 	r.session.State = "STOPPING"
+	if r.session.StopReason == "" {
+		r.session.StopReason = "OPERATOR"
+	}
 	r.session.StoppedAt = time.Now().UTC()
 	r.cancel()
 	u.audio.Deactivate()
@@ -382,6 +413,17 @@ func (u *UseCase) guard(r *run) {
 	for r.ctx.Err() == nil {
 		free, err := u.disk.Free(u.opts.DataDir)
 		if err != nil || free < u.opts.MinFreeBytes || time.Since(r.session.StartedAt) >= u.opts.MaxDuration {
+			u.mu.Lock()
+			if r.ctx.Err() == nil {
+				reason := "MAX_DURATION"
+				if err != nil {
+					reason = "DISK_UNAVAILABLE"
+				} else if free < u.opts.MinFreeBytes {
+					reason = "DISK_LOW"
+				}
+				r.session.StopReason = reason
+			}
+			u.mu.Unlock()
 			_, _ = u.StopSession(context.Background(), r.session.ID)
 			return
 		}

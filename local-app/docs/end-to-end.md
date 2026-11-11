@@ -1,6 +1,6 @@
 # Alur end-to-end engine media
 
-Panduan rinci: [Memahami mediaengine](MEMAHAMI-MEDIAENGINE.md). Local-app hanya mengelola media. Login, registrasi, nilai dan status perlombaan tetap menjadi tanggung jawab cloud.
+Panduan rinci: [Memahami mediaengine](media-engine.md). Local-app hanya mengelola media. Login, registrasi, nilai dan status perlombaan tetap menjadi tanggung jawab cloud.
 
 ## Startup
 
@@ -10,7 +10,7 @@ Tidak ada capture audio atau recording otomatis. MediaMTX menggunakan sumber on-
 
 ## Mulai media
 
-Operator memanggil POST `/api/v1/media/sessions` dengan id, channels, dan restreams opsional. Jalur baca: [model](internal/mediaengine/session/model/session.go) → [handler](internal/delivery/rest/session/handler.go) → [UseCase](internal/mediaengine/session/usecase/session.go) → [journal](internal/mediaengine/session/repository/journal.go).
+Operator memanggil POST `/api/v1/media/sessions` dengan id, channels, dan restreams opsional. Jalur baca: [model](../internal/mediaengine/session/model/session.go) → [handler](../internal/delivery/rest/session/handler.go) → [UseCase](../internal/mediaengine/session/usecase/session.go) → [journal](../internal/mediaengine/session/repository/journal.go).
 
 UseCase memvalidasi pilihan dan disk, menolak sesi aktif lain, menyimpan journal, lalu mereservasi manifest per channel. Setelah diterima dengan 202, worker sesi menjalankan pipeline per channel dan guard. Satu FFmpeg menghasilkan segmen fMP4 A/V dan PCM; analyzer/broadcaster menerima PCM. Restream yang dipilih memakai adapter tersendiri.
 
@@ -55,4 +55,20 @@ Jenis command: `media.session.start` dengan payload Mulai; `media.session.stop` 
 
 ## Penerimaan
 
-[Skenario penerimaan media](SESSION-ACCEPTANCE.md) mencakup start/stop, channel gagal, PCM lambat, restream, race playback, restart, finalisasi, disk dan upload. Suite tes tidak dijalankan otomatis.
+[Skenario penerimaan media](acceptance.md) mencakup start/stop, channel gagal, PCM lambat, restream, race playback, restart, finalisasi, disk dan upload. Suite tes tidak dijalankan otomatis.
+
+## Ketahanan, response HTTP dan logging
+
+Header umum dipasang sekali melalui middleware bersama: `X-Content-Type-Options: nosniff`, `Cache-Control: no-store`, serta request ID. Middleware CORS global memeriksa origin dan menangani preflight sebelum autentikasi, termasuk pada error/route yang tidak ditemukan. Header `Vary: Origin` dipasang tanpa menimpa nilai Vary lain. Auth hanya memeriksa kredensial; handler tidak memasang ulang header umum. WHEP tetap memiliki Location/ETag dan WebSocket tetap memiliki header upgrade. Gateway membuang header umum duplikat dari upstream MediaMTX.
+
+Response REST mengikuti format park-server-v3: `{"success":true,"message":"...","data":{...}}` atau `{"success":false,"message":"...","errors":...}`. Field data/errors dihilangkan jika nil. Error internal memakai pesan aman dan dapat menyertakan `errors.request_id`; request ID selalu tersedia di header jika berhasil dibuat. Pagination rekaman sekarang berada di `data.items`, `data.next_cursor` (jika ada), dan `data.has_more`; frontend perlu menyesuaikan pembacaan daftar. ID cursor tetap string opaque.
+
+Health dan status engine juga memakai envelope ini. Response 204 tetap tanpa body. SDP/header WHEP dan frame WebSocket mengikuti protokol masing-masing. Payload request mesin ke cloud tetap langsung, tetapi response cloud kini wajib memakai envelope success/message/data/errors; client cloud membuka data sebelum menyerahkannya ke UseCase. Format response mesin lama tanpa envelope tidak didukung. Lihat [kontrak cloud](cloud-contract.md) untuk contoh dan batas penerimaan client.
+
+Rekaman aktif tidak dihentikan hanya karena cloud terputus. Playback baru memerlukan cloud. Engine tidak memutuskan penghentian atau kelanjutan lomba. Journal menyimpan command sebelum eksekusi dan hasil sebelum acknowledgment. Restart merekonsiliasi pekerjaan melalui manifest; start dengan hasil tidak pasti tidak dijalankan ulang secara buta.
+
+Metadata dikirim ulang sampai cloud mengakui ID update. Cloud wajib deduplikasi dan menerapkan versi terbaru. SQLite lama tidak dibaca atau dihapus otomatis; pengarsipannya tindakan operasional terpisah.
+
+Logging mengikuti park-server-v3: Zap, request ID, console development, JSON production dan `${LOG_DIR}/app.log`. Kelola retensi log pada deployment.
+
+Pemeriksaan dasar: `go build ./...`. Suite tes tidak dijalankan otomatis sesuai permintaan. Browser LAN/HTTPS, kamera, rekaman, dan S3 perlu diverifikasi pada lingkungan sebenarnya.

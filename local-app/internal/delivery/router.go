@@ -11,11 +11,13 @@ import (
 	"kicau.local/edge/internal/apperror"
 	"kicau.local/edge/internal/delivery/middleware"
 	"kicau.local/edge/internal/delivery/rest"
+	"kicau.local/edge/internal/delivery/rest/apidocs"
 	channelDelivery "kicau.local/edge/internal/delivery/rest/channel"
 	engineDelivery "kicau.local/edge/internal/delivery/rest/engine"
 	"kicau.local/edge/internal/delivery/rest/response"
 	savingDelivery "kicau.local/edge/internal/delivery/rest/saving"
 	sessionDelivery "kicau.local/edge/internal/delivery/rest/session"
+	setupDelivery "kicau.local/edge/internal/delivery/rest/setup"
 	streamingDelivery "kicau.local/edge/internal/delivery/rest/streaming"
 	"kicau.local/edge/internal/delivery/websocket"
 	"kicau.local/edge/internal/delivery/whep"
@@ -23,6 +25,7 @@ import (
 )
 
 type Handlers struct {
+	Setup     *setupDelivery.Handler
 	Engine    *engineDelivery.Handler
 	WHEP      *whep.Handler
 	Channels  *channelDelivery.Handler
@@ -32,6 +35,14 @@ type Handlers struct {
 	Sessions  *sessionDelivery.Handler
 }
 
+// Router godoc
+// @Summary Identitas layanan atau redirect frontend
+// @Description Jika FRONTEND_ORIGIN disetel, response berupa redirect 307 ke frontend; jika kosong, JSON identitas layanan.
+// @Tags Health
+// @Produce json
+// @Success 200 {object} response.Response{data=object{service=string}}
+// @Success 307 "Redirect ke FRONTEND_ORIGIN"
+// @Router / [get]
 func Router(c config.Config, handlers Handlers) *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
@@ -47,6 +58,7 @@ func Router(c config.Config, handlers Handlers) *gin.Engine {
 		}
 	}))
 	r.Use(middleware.RequestLimits(), middleware.CORS(c.Origins))
+	apidocs.Routes(r)
 	r.GET("/healthz", rest.Health)
 	r.GET("/", func(ctx *gin.Context) {
 		if c.FrontendOrigin != "" {
@@ -55,22 +67,46 @@ func Router(c config.Config, handlers Handlers) *gin.Engine {
 		}
 		response.Success(ctx, "Media engine", gin.H{"service": "local-app media engine"})
 	})
+	if c.AccessMode == "lan" {
+		if handlers.Setup != nil {
+			handlers.Setup.Routes(r.Group("/api/v1/setup", middleware.LocalControl(c.LocalControlToken, c.Origins)))
+			r.GET("/api/v1/local/status", middleware.LANViewer(c.ReadCIDRs), handlers.Setup.Status)
+			r.GET("/api/v1/local/guidance/:code", middleware.LANViewer(c.ReadCIDRs), handlers.Setup.Guidance)
+		}
+	}
 	if handlers.Engine != nil {
 		r.GET("/readyz", handlers.Engine.Ready)
+	} else {
+		r.GET("/readyz", func(ctx *gin.Context) { response.JSON(ctx, 503, false, "Engine setup required", nil, nil) })
 	}
 	if handlers.WHEP != nil {
 		playback := r.Group("/api/v1/playback")
+		if c.AccessMode == "lan" {
+			playback.Use(middleware.LANViewer(c.ReadCIDRs))
+		}
 		whep.RegisterRoutes(playback, handlers.WHEP)
 	}
-	g := r.Group("/api/v1", middleware.Auth(c.Token))
+	g := r.Group("/api/v1", middleware.Operator(c.Token, c.LocalControlToken, c.AccessMode == "lan", c.Origins))
 	r.OPTIONS("/api/v1/*path", func(c *gin.Context) { c.Status(http.StatusNoContent) })
 	if handlers.Engine != nil {
 		g.GET("/engine/status", handlers.Engine.Status)
 	}
-	channelDelivery.RegisterRoutes(g, handlers.Channels)
-	websocket.RegisterRoutes(g, handlers.WebSocket)
-	streamingDelivery.RegisterRoutes(g, handlers.Streaming)
-	savingDelivery.RegisterRoutes(g, handlers.Saving)
+	read := g
+	if c.AccessMode == "lan" {
+		read = r.Group("/api/v1", middleware.LANViewer(c.ReadCIDRs))
+	}
+	if handlers.Channels != nil {
+		channelDelivery.RegisterRoutes(read, handlers.Channels)
+	}
+	if handlers.WebSocket != nil {
+		websocket.RegisterRoutes(read, handlers.WebSocket)
+	}
+	if handlers.Streaming != nil {
+		streamingDelivery.RegisterRoutes(g, handlers.Streaming)
+	}
+	if handlers.Saving != nil {
+		savingDelivery.RegisterRoutes(g, handlers.Saving)
+	}
 	if handlers.Sessions != nil {
 		sessionDelivery.RegisterRoutes(g, handlers.Sessions)
 	}
