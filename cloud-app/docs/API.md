@@ -4,18 +4,51 @@ Seluruh route bisnis berada pada `/api/v1`. `GET/HEAD /healthz` dan `/readyz` be
 
 ## Swagger interaktif
 
-Jalankan cloud-app, lalu buka `/api/docs` pada origin API yang sama, misalnya `http://127.0.0.1:8091/api/docs`. Sesudah commit ini dideploy, alamat VPS adalah `https://dev.megaallstararena.com/api/docs`. Kontrak OpenAPI 3.0.3 tersedia pada `/api/docs/openapi.json` dan [openapi.json](openapi.json). Dokumentasi mencakup route REST aktif; endpoint pendamping engine-cloud yang belum aktif tidak ditampilkan.
+Jalankan cloud-app, lalu buka `/api/docs` pada origin API yang sama, misalnya `http://127.0.0.1:8091/api/docs`. Halaman mengarah ke `/api/docs/index.html`. Sesudah commit ini dideploy, alamat VPS adalah `https://dev.megaallstararena.com/api/docs`. Kontrak Swagger 2.0 tersedia pada `/api/docs/doc.json` dan [hasil generator](generated/swagger.json). Dokumentasi mencakup route REST aktif; endpoint pendamping engine-cloud yang belum aktif tidak ditampilkan.
 
 1. Buka **Auth → POST /api/v1/auth/login → Try it out**; isi email, password dan UUID device_id. Akun mock mengikuti [panduan seed](../db/seeds/README.md).
 2. Klik **Execute** dan salin `data.access_token` dari response 200.
-3. Klik **Authorize**, tempel token tanpa awalan `Bearer`, lalu **Authorize**. Request berikutnya memakai akun tersebut; ganti token saat berpindah role.
+3. Klik **Authorize**, isi `Bearer <access_token>` lengkap dengan awalan `Bearer` dan satu spasi, lalu **Authorize**. Swagger 2.0 mendeskripsikan Authorization sebagai header apiKey. Request berikutnya memakai akun tersebut; ganti token saat berpindah role.
 4. Buka endpoint yang diperlukan, isi parameter/payload, lalu Execute. Response 204 memang tidak berisi JSON. Try it out melakukan operasi nyata pada database yang sedang terhubung.
 
 Bearer tidak disimpan ke localStorage dan hilang ketika halaman dimuat ulang. Cookie HttpOnly login/refresh ditangani browser, dipakai bersama antar-role pada origin yang sama. Jalankan login akun terkait sebelum mencoba refresh; jangan menyalin refresh token ke Authorize. Google membutuhkan Google ID token asli; dokumentasi ini tidak menyediakan Google login widget atau token tiruan.
 
 Untuk Swagger pada localhost, gunakan origin yang konsisten. Misalnya `FRONTEND_PUBLIC_URL=http://127.0.0.1:8091` dan `ALLOWED_ORIGINS=http://127.0.0.1:8091,http://localhost:3000`, lalu restart proses development. Origin halaman Swagger harus diizinkan agar POST/refresh dari browser lolos CORS; konfigurasi produksi tetap memakai HTTPS. Header Origin ditentukan browser, bukan diisi manual pada Swagger.
 
-Swagger UI **5.34.1** beserta lisensinya disimpan di [swagger](swagger/) dan di-embed ke binary; tidak memerlukan CDN, validator eksternal atau dependency Go baru. JSON OpenAPI dikirim sebagai dokumen kontrak mentah, bukan envelope bisnis. Handler transport berada pada `internal/delivery/rest/apidocs`; ia tidak mengakses UseCase/database. Update kontrak ketika route, DTO atau aturan endpoint berubah; response view yang dinamis memakai schema `Record` pada bagian yang belum memiliki DTO khusus.
+Swagger UI disediakan oleh `gin-swagger` dan `swaggo/files`; tidak perlu CDN atau container tambahan. JSON kontrak dikirim mentah, bukan envelope bisnis. Handler dokumentasi pada `internal/delivery/rest/apidocs` tidak mengakses UseCase/database.
+
+### Memperbarui dokumentasi dari kode
+
+**Yang diedit:** komentar `@Summary`, `@Param`, `@Success`, `@Failure`, `@Security` dan `@Router` dekat route pada `internal/delivery/rest/`, serta tipe request yang dirujuk. Metadata API dan perintah generator berada pada [generate.go](../generate.go). Untuk request yang sudah memiliki model Go, anotasi memakai tipe tersebut. CRUD generik tetap menerima map; tipe pada `crud/requests.go` mendeskripsikan field create/patch per resource tanpa mengganti validasi UseCase. Response read model yang dinamis tetap memakai `model.Record`.
+
+Dari direktori **cloud-app**, jalankan:
+
+```powershell
+go generate .
+go build ./...
+```
+
+Tidak perlu menginstal executable `swag` global: perintah memakai `go run` dengan versi Swaggo **v1.16.6** yang dipin. Penggunaan pertama membutuhkan internet untuk mengunduh tool, lalu cache Go dapat digunakan lagi. `--parseFuncBody` membaca anotasi di dalam fungsi sehingga handler anonim dan registrasi CRUD generik tetap bisa dipakai.
+
+**Jangan edit** `docs/generated/docs.go` atau `docs/generated/swagger.json`; keduanya hasil otomatis dan ditimpa generator. Commit hasilnya bersama perubahan sumber. CI menjalankan generator lalu menolak perubahan yang hasil dokumentasinya belum diperbarui. Build Docker memakai hasil yang sudah diperiksa CI.
+
+Contoh anotasi dekat registrasi login:
+
+```go
+// @Summary Login email/password
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body input.Login true "JSON body"
+// @Success 200 {object} response.Response{data=input.Tokens}
+// @Failure 401 {object} response.Response
+// @Router /api/v1/auth/login [post]
+g.POST("/login", func(c *gin.Context) {
+    // Parsing request dan pemanggilan UseCase yang sudah ada.
+})
+```
+
+Untuk endpoint privat, tambahkan `// @Security BearerAuth`. Ini mendokumentasikan kebutuhan token; autentikasi tetap dijalankan middleware, bukan Swaggo. Generator tidak otomatis memahami aturan bisnis atau semua ekspansi route dinamis: route baru tetap memerlukan anotasi dan verifikasi kecocokan. Alur aplikasi, JSON, endpoint bisnis dan aturan database tidak diubah oleh perpindahan dokumentasi ini.
 
 Kecuali route auth publik, kirim `Authorization: Bearer <access_token>`. Request berisi JSON memakai `Content-Type: application/json`; body hanya boleh memuat satu nilai JSON. ID adalah UUID; nilai UUID pada parameter dan field ID dinormalisasi ke bentuk huruf kecil tanpa mengubah password/token. Nomor telepon memakai E.164. Password 12–256 byte. Kredensial dan token tidak dicatat pada log.
 

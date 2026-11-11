@@ -49,6 +49,23 @@ func (h *Handler) tokens(c *gin.Context, t input.Tokens) {
 	response.Success(c, "Signed in", t)
 }
 func (h *Handler) Public(g *gin.RouterGroup) {
+	// @Summary Daftar email/password
+	// @Tags Auth
+	// @Description Email verifikasi/reset memerlukan SMTP. Login password tidak membutuhkan Google. Device ID sama mengganti slot sesi; maksimum tiga perangkat aktif.
+	// @Accept json
+	// @Param request body input.Register true "JSON body"
+	// @Produce json
+	// @Success 202 {object} response.Response
+	// @Failure 400 {object} response.Response
+	// @Failure 401 {object} response.Response
+	// @Failure 403 {object} response.Response
+	// @Failure 404 {object} response.Response
+	// @Failure 409 {object} response.Response
+	// @Failure 429 {object} response.Response
+	// @Failure 500 {object} response.Response
+	// @Failure 503 {object} response.Response
+	// @Failure 504 {object} response.Response
+	// @Router /api/v1/auth/register [post]
 	g.POST("/register", func(c *gin.Context) {
 		var in input.Register
 		if !request.Bind(c, &in) {
@@ -61,6 +78,23 @@ func (h *Handler) Public(g *gin.RouterGroup) {
 		}
 		response.Accepted(c, "Registration accepted; verify your email", nil)
 	})
+	// @Summary Login email/password
+	// @Tags Auth
+	// @Description Email verifikasi/reset memerlukan SMTP. Login password tidak membutuhkan Google. Device ID sama mengganti slot sesi; maksimum tiga perangkat aktif.
+	// @Accept json
+	// @Param request body input.Login true "JSON body"
+	// @Produce json
+	// @Success 200 {object} response.Response{data=input.Tokens}
+	// @Failure 400 {object} response.Response
+	// @Failure 401 {object} response.Response
+	// @Failure 403 {object} response.Response
+	// @Failure 404 {object} response.Response
+	// @Failure 409 {object} response.Response
+	// @Failure 429 {object} response.Response
+	// @Failure 500 {object} response.Response
+	// @Failure 503 {object} response.Response
+	// @Failure 504 {object} response.Response
+	// @Router /api/v1/auth/login [post]
 	g.POST("/login", func(c *gin.Context) {
 		var in input.Login
 		if !request.Bind(c, &in) {
@@ -74,6 +108,23 @@ func (h *Handler) Public(g *gin.RouterGroup) {
 		}
 		h.tokens(c, out)
 	})
+	// @Summary Login Google ID token
+	// @Tags Auth
+	// @Description Google client ID harus dikonfigurasi. phone wajib untuk akun baru. Tidak mengaitkan akun berdasarkan email secara otomatis.
+	// @Accept json
+	// @Param request body input.GoogleLogin true "JSON body"
+	// @Produce json
+	// @Success 200 {object} response.Response{data=input.Tokens}
+	// @Failure 400 {object} response.Response
+	// @Failure 401 {object} response.Response
+	// @Failure 403 {object} response.Response
+	// @Failure 404 {object} response.Response
+	// @Failure 409 {object} response.Response
+	// @Failure 429 {object} response.Response
+	// @Failure 500 {object} response.Response
+	// @Failure 503 {object} response.Response
+	// @Failure 504 {object} response.Response
+	// @Router /api/v1/auth/google [post]
 	g.POST("/google", func(c *gin.Context) {
 		var in input.GoogleLogin
 		if !request.Bind(c, &in) {
@@ -87,12 +138,45 @@ func (h *Handler) Public(g *gin.RouterGroup) {
 		}
 		h.tokens(c, out)
 	})
+	// @Summary Kirim ulang verifikasi
+	// @Tags Auth
+	// @Description Email verifikasi/reset memerlukan SMTP. Login password tidak membutuhkan Google. Device ID sama mengganti slot sesi; maksimum tiga perangkat aktif.
+	// @Accept json
+	// @Param request body EmailRequest true "JSON body"
+	// @Produce json
+	// @Success 202 {object} response.Response
+	// @Failure 400 {object} response.Response
+	// @Failure 401 {object} response.Response
+	// @Failure 403 {object} response.Response
+	// @Failure 404 {object} response.Response
+	// @Failure 409 {object} response.Response
+	// @Failure 429 {object} response.Response
+	// @Failure 500 {object} response.Response
+	// @Failure 503 {object} response.Response
+	// @Failure 504 {object} response.Response
+	// @Router /api/v1/auth/verify-email/request [post]
+
+	// @Summary Minta reset password
+	// @Tags Auth
+	// @Description Email verifikasi/reset memerlukan SMTP. Login password tidak membutuhkan Google. Device ID sama mengganti slot sesi; maksimum tiga perangkat aktif.
+	// @Accept json
+	// @Param request body EmailRequest true "JSON body"
+	// @Produce json
+	// @Success 202 {object} response.Response
+	// @Failure 400 {object} response.Response
+	// @Failure 401 {object} response.Response
+	// @Failure 403 {object} response.Response
+	// @Failure 404 {object} response.Response
+	// @Failure 409 {object} response.Response
+	// @Failure 429 {object} response.Response
+	// @Failure 500 {object} response.Response
+	// @Failure 503 {object} response.Response
+	// @Failure 504 {object} response.Response
+	// @Router /api/v1/auth/forgot-password [post]
 	for path, purpose := range map[string]string{"/verify-email/request": "VERIFY_EMAIL", "/forgot-password": "RESET_PASSWORD"} {
 		purpose := purpose
 		g.POST(path, func(c *gin.Context) {
-			var in struct {
-				Email string `json:"email"`
-			}
+			var in EmailRequest
 			if !request.Bind(c, &in) {
 				return
 			}
@@ -103,13 +187,45 @@ func (h *Handler) Public(g *gin.RouterGroup) {
 			response.Accepted(c, "If eligible, account instructions will be sent", nil)
 		})
 	}
+	// @Summary Konsumsi token verifikasi
+	// @Tags Auth
+	// @Description Email verifikasi/reset memerlukan SMTP. Login password tidak membutuhkan Google. Device ID sama mengganti slot sesi; maksimum tiga perangkat aktif.
+	// @Accept json
+	// @Param request body VerifyEmail true "JSON body"
+	// @Produce json
+	// @Success 200 {object} response.Response
+	// @Failure 400 {object} response.Response
+	// @Failure 401 {object} response.Response
+	// @Failure 403 {object} response.Response
+	// @Failure 404 {object} response.Response
+	// @Failure 409 {object} response.Response
+	// @Failure 429 {object} response.Response
+	// @Failure 500 {object} response.Response
+	// @Failure 503 {object} response.Response
+	// @Failure 504 {object} response.Response
+	// @Router /api/v1/auth/verify-email [post]
+
+	// @Summary Reset password
+	// @Tags Auth
+	// @Description Email verifikasi/reset memerlukan SMTP. Login password tidak membutuhkan Google. Device ID sama mengganti slot sesi; maksimum tiga perangkat aktif.
+	// @Accept json
+	// @Param request body ResetPassword true "JSON body"
+	// @Produce json
+	// @Success 200 {object} response.Response
+	// @Failure 400 {object} response.Response
+	// @Failure 401 {object} response.Response
+	// @Failure 403 {object} response.Response
+	// @Failure 404 {object} response.Response
+	// @Failure 409 {object} response.Response
+	// @Failure 429 {object} response.Response
+	// @Failure 500 {object} response.Response
+	// @Failure 503 {object} response.Response
+	// @Failure 504 {object} response.Response
+	// @Router /api/v1/auth/reset-password [post]
 	for path, purpose := range map[string]string{"/verify-email": "VERIFY_EMAIL", "/reset-password": "RESET_PASSWORD"} {
 		purpose := purpose
 		g.POST(path, func(c *gin.Context) {
-			var in struct {
-				Token    string `json:"token"`
-				Password string `json:"password"`
-			}
+			var in ResetPassword
 			if !request.Bind(c, &in) {
 				return
 			}
@@ -120,6 +236,23 @@ func (h *Handler) Public(g *gin.RouterGroup) {
 			response.Success(c, "Account updated", nil)
 		})
 	}
+	// @Summary Rotasi refresh cookie
+	// @Tags Auth
+	// @Description Body {}. Browser mengirim cookie HttpOnly dan Origin yang masuk ALLOWED_ORIGINS. Login dan refresh dari origin Swagger yang sama. Cookie jar dipakai bersama antaraktor; jalankan login akun terkait dahulu.
+	// @Accept json
+	// @Param request body Empty true "JSON body"
+	// @Produce json
+	// @Success 200 {object} response.Response{data=input.Tokens}
+	// @Failure 400 {object} response.Response
+	// @Failure 401 {object} response.Response
+	// @Failure 403 {object} response.Response
+	// @Failure 404 {object} response.Response
+	// @Failure 409 {object} response.Response
+	// @Failure 429 {object} response.Response
+	// @Failure 500 {object} response.Response
+	// @Failure 503 {object} response.Response
+	// @Failure 504 {object} response.Response
+	// @Router /api/v1/auth/refresh [post]
 	g.POST("/refresh", func(c *gin.Context) {
 		allowed := false
 		for _, o := range h.opts.Origins {
@@ -131,7 +264,7 @@ func (h *Handler) Public(g *gin.RouterGroup) {
 			response.WriteError(c, apperror.ErrForbidden)
 			return
 		}
-		var in struct{}
+		var in Empty
 		if !request.Bind(c, &in) {
 			return
 		}
@@ -150,6 +283,22 @@ func (h *Handler) Public(g *gin.RouterGroup) {
 	})
 }
 func (h *Handler) Private(g *gin.RouterGroup) {
+	// @Summary Profil sendiri
+	// @Tags Auth
+	// @Description Hak akses dan validasi bisnis diperiksa oleh UseCase.
+	// @Security BearerAuth
+	// @Produce json
+	// @Success 200 {object} response.Response{data=model.Record}
+	// @Failure 400 {object} response.Response
+	// @Failure 401 {object} response.Response
+	// @Failure 403 {object} response.Response
+	// @Failure 404 {object} response.Response
+	// @Failure 409 {object} response.Response
+	// @Failure 429 {object} response.Response
+	// @Failure 500 {object} response.Response
+	// @Failure 503 {object} response.Response
+	// @Failure 504 {object} response.Response
+	// @Router /api/v1/auth/me [get]
 	g.GET("/me", func(c *gin.Context) {
 		row, e := h.uc.Profile(c.Request.Context(), request.Actor(c))
 		if e != nil {
@@ -158,6 +307,22 @@ func (h *Handler) Private(g *gin.RouterGroup) {
 		}
 		response.Success(c, "Profile retrieved", row)
 	})
+	// @Summary Logout
+	// @Tags Auth
+	// @Description Hak akses dan validasi bisnis diperiksa oleh UseCase.
+	// @Security BearerAuth
+	// @Produce json
+	// @Success 204 "No response body"
+	// @Failure 400 {object} response.Response
+	// @Failure 401 {object} response.Response
+	// @Failure 403 {object} response.Response
+	// @Failure 404 {object} response.Response
+	// @Failure 409 {object} response.Response
+	// @Failure 429 {object} response.Response
+	// @Failure 500 {object} response.Response
+	// @Failure 503 {object} response.Response
+	// @Failure 504 {object} response.Response
+	// @Router /api/v1/auth/logout [post]
 	g.POST("/logout", func(c *gin.Context) {
 		raw, _ := middleware.Bearer(c)
 		if e := h.uc.Logout(c.Request.Context(), request.Actor(c), raw); e != nil {
@@ -167,6 +332,22 @@ func (h *Handler) Private(g *gin.RouterGroup) {
 		h.cookie(c, "", -1)
 		response.NoContent(c)
 	})
+	// @Summary Sesi sendiri
+	// @Tags Auth
+	// @Description Hak akses dan validasi bisnis diperiksa oleh UseCase.
+	// @Security BearerAuth
+	// @Produce json
+	// @Success 200 {object} response.Response{data=[]model.Record}
+	// @Failure 400 {object} response.Response
+	// @Failure 401 {object} response.Response
+	// @Failure 403 {object} response.Response
+	// @Failure 404 {object} response.Response
+	// @Failure 409 {object} response.Response
+	// @Failure 429 {object} response.Response
+	// @Failure 500 {object} response.Response
+	// @Failure 503 {object} response.Response
+	// @Failure 504 {object} response.Response
+	// @Router /api/v1/auth/sessions [get]
 	g.GET("/sessions", func(c *gin.Context) {
 		rows, e := h.uc.Sessions(c.Request.Context(), request.Actor(c))
 		if e != nil {
@@ -175,6 +356,23 @@ func (h *Handler) Private(g *gin.RouterGroup) {
 		}
 		response.Success(c, "Sessions retrieved", rows)
 	})
+	// @Summary Cabut sesi sendiri
+	// @Tags Auth
+	// @Description Hak akses dan validasi bisnis diperiksa oleh UseCase.
+	// @Security BearerAuth
+	// @Produce json
+	// @Param id path string true "UUID sesuai arena dan hak aktor." Format(uuid)
+	// @Success 204 "No response body"
+	// @Failure 400 {object} response.Response
+	// @Failure 401 {object} response.Response
+	// @Failure 403 {object} response.Response
+	// @Failure 404 {object} response.Response
+	// @Failure 409 {object} response.Response
+	// @Failure 429 {object} response.Response
+	// @Failure 500 {object} response.Response
+	// @Failure 503 {object} response.Response
+	// @Failure 504 {object} response.Response
+	// @Router /api/v1/auth/sessions/{id} [delete]
 	g.DELETE("/sessions/:id", func(c *gin.Context) {
 		if e := h.uc.Revoke(c.Request.Context(), request.Actor(c), c.Param("id")); e != nil {
 			response.WriteError(c, e)
@@ -182,25 +380,56 @@ func (h *Handler) Private(g *gin.RouterGroup) {
 		}
 		response.NoContent(c)
 	})
+	// @Summary Ubah password; cabut seluruh sesi
+	// @Tags Auth
+	// @Description Hak akses dan validasi bisnis diperiksa oleh UseCase.
+	// @Security BearerAuth
+	// @Accept json
+	// @Param request body ChangePassword true "JSON body"
+	// @Produce json
+	// @Success 204 "No response body"
+	// @Failure 400 {object} response.Response
+	// @Failure 401 {object} response.Response
+	// @Failure 403 {object} response.Response
+	// @Failure 404 {object} response.Response
+	// @Failure 409 {object} response.Response
+	// @Failure 429 {object} response.Response
+	// @Failure 500 {object} response.Response
+	// @Failure 503 {object} response.Response
+	// @Failure 504 {object} response.Response
+	// @Router /api/v1/auth/change-password [post]
 	g.POST("/change-password", func(c *gin.Context) {
-		var in struct {
-			Old  string `json:"old_password"`
-			Next string `json:"password"`
-		}
+		var in ChangePassword
 		if !request.Bind(c, &in) {
 			return
 		}
-		if e := h.uc.ChangePassword(c.Request.Context(), request.Actor(c), in.Old, in.Next); e != nil {
+		if e := h.uc.ChangePassword(c.Request.Context(), request.Actor(c), in.OldPassword, in.Password); e != nil {
 			response.WriteError(c, e)
 			return
 		}
 		h.cookie(c, "", -1)
 		response.NoContent(c)
 	})
+	// @Summary Kaitkan provider Google
+	// @Tags Auth
+	// @Description Hak akses dan validasi bisnis diperiksa oleh UseCase.
+	// @Security BearerAuth
+	// @Accept json
+	// @Param request body GoogleLink true "JSON body"
+	// @Produce json
+	// @Success 204 "No response body"
+	// @Failure 400 {object} response.Response
+	// @Failure 401 {object} response.Response
+	// @Failure 403 {object} response.Response
+	// @Failure 404 {object} response.Response
+	// @Failure 409 {object} response.Response
+	// @Failure 429 {object} response.Response
+	// @Failure 500 {object} response.Response
+	// @Failure 503 {object} response.Response
+	// @Failure 504 {object} response.Response
+	// @Router /api/v1/auth/google/link [post]
 	g.POST("/google/link", func(c *gin.Context) {
-		var in struct {
-			Credential string `json:"credential"`
-		}
+		var in GoogleLink
 		if !request.Bind(c, &in) {
 			return
 		}

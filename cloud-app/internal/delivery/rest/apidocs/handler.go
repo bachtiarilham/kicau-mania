@@ -1,30 +1,29 @@
-// Package apidocs serves the OpenAPI contract and Swagger UI without business dependencies.
+// Package apidocs serves the generated Swagger contract and UI without business dependencies.
 package apidocs
 
 import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 
-	"kicau.cloud/control/docs"
+	_ "kicau.cloud/control/docs/generated" // Register the Swaggo-generated specification.
 )
 
 // Routes keeps documentation under /api so the existing gateway forwards it to Go.
 func Routes(r *gin.Engine) {
-	for route, asset := range map[string]struct{ path, contentType string }{
-		"/api/docs":                      {"swagger/index.html", "text/html; charset=utf-8"},
-		"/api/docs/":                     {"swagger/index.html", "text/html; charset=utf-8"},
-		"/api/docs/openapi.json":         {"openapi.json", "application/json; charset=utf-8"},
-		"/api/docs/swagger-ui-bundle.js": {"swagger/swagger-ui-bundle.js", "text/javascript; charset=utf-8"},
-		"/api/docs/swagger-ui.css":       {"swagger/swagger-ui.css", "text/css; charset=utf-8"},
-		"/api/docs/initializer.js":       {"swagger/initializer.js", "text/javascript; charset=utf-8"},
-	} {
-		data, err := docs.Files.ReadFile(asset.path)
-		if err != nil {
-			panic("missing embedded documentation: " + asset.path)
+	r.GET("/api/docs", func(c *gin.Context) { c.Redirect(http.StatusFound, "/api/docs/index.html") })
+	ui := ginSwagger.WrapHandler(swaggerFiles.Handler,
+		ginSwagger.URL("/api/docs/doc.json"),
+		ginSwagger.PersistAuthorization(false),
+		ginSwagger.DocExpansion("none"),
+	)
+	r.GET("/api/docs/*any", func(c *gin.Context) {
+		if c.Param("any") == "/" {
+			c.Redirect(http.StatusFound, "/api/docs/index.html")
+			return
 		}
-		handler := func(c *gin.Context) { c.Data(http.StatusOK, asset.contentType, data) }
-		r.GET(route, handler)
-		r.HEAD(route, handler)
-	}
+		ui(c)
+	})
 }

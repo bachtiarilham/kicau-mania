@@ -22,6 +22,11 @@ jobs:
         with:
           go-version-file: cloud-app/go.mod
           cache-dependency-path: cloud-app/go.sum
+      - name: Generate Swagger and check committed output
+        working-directory: cloud-app
+        run: |
+          go generate .
+          git diff --exit-code -- docs/generated
       - name: Build and vet (no automatic Go test suite)
         working-directory: cloud-app
         run: |

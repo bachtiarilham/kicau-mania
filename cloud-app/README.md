@@ -84,4 +84,4 @@ API VPS dev sekarang memakai `https://dev.megaallstararena.com/api/v1/`, satu do
 
 Mulai belajar pengelolaan VPS dari [Belajar Deployment](deployment/BELAJAR-DEPLOYMENT.md): konsep, alur deploy kode, migrasi ketika data sudah ada, backup/restore, rollback dan diagnosis gangguan.
 
-Swagger UI tersedia pada `/api/docs` setelah aplikasi dijalankan/deploy. [Panduan API](docs/API.md#swagger-interaktif) menjelaskan login, Authorize Bearer dan refresh cookie. [Kontrak OpenAPI](docs/openapi.json) mencakup REST aktif; UI dan kontrak ikut binary Docker tanpa layanan tambahan.
+Swagger UI tersedia pada `/api/docs` setelah aplikasi dijalankan/deploy. [Panduan API](docs/API.md#swagger-interaktif) menjelaskan login, Authorize `Bearer <token>` dan refresh cookie. Edit anotasi/DTO dekat handler lalu jalankan `go generate .` dari cloud-app. [Swagger JSON](docs/generated/swagger.json) adalah hasil otomatis, bukan file yang diedit manual. UI dan kontrak ikut binary Docker tanpa layanan tambahan.

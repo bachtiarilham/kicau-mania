@@ -4,3 +4,6 @@ Dockerfile text eol=lf
 *.yaml text eol=lf
 
 *.bash text eol=lf
+
+# Swagger artifacts are reproducible output, not hand-maintained source.
+cloud-app/docs/generated/* text eol=lf linguist-generated=true
