@@ -1,6 +1,6 @@
 # Deployment cloud-app: Nginx Docker dan GitHub Actions
 
-Dokumen operasional tunggal untuk stack saat ini. Template berada di [opt](opt/). Local-app tidak dideploy oleh pipeline cloud-app.
+Dokumen operasional untuk stack saat ini. Untuk belajar dari awal, baca [Belajar Deployment](BELAJAR-DEPLOYMENT.md). Template berada di [opt](opt/). Local-app tidak dideploy oleh pipeline cloud-app.
 
 ## Alamat layanan dan alur
 
@@ -112,7 +112,7 @@ docker logs --tail 50 kicau_mania_app
 docker logs --tail 50 global_reverse_proxy
 ```
 
-API mengembalikan envelope JSON; tanpa token, resource terlindungi menghasilkan 401. HTTPS valid dan /readyz sukses membuktikan transport serta skema tersedia, bukan login frontend atau integrasi Google/SMTP. Database VPS belum diberi akun default. Buat superadmin secara eksplisit dengan `bash /opt/scripts/app/bootstrap-admin.sh`; password dibaca tersembunyi. Koleksi Insomnia mempunyai environment VPS dev dengan base_url https://dev.megaallstararena.com. Akun fixture baru tersedia bila seed diterapkan secara eksplisit, bukan melalui deploy.
+API mengembalikan envelope JSON; tanpa token, resource terlindungi menghasilkan 401. HTTPS valid dan /readyz sukses membuktikan transport serta skema tersedia, bukan login frontend atau integrasi Google/SMTP. Tidak ada akun produksi bawaan. Pada 10 November 2026, delapan akun mock telah dimasukkan manual ke VPS dev untuk pengujian. Buat superadmin nyata secara eksplisit dengan `bash /opt/scripts/app/bootstrap-admin.sh`; password dibaca tersembunyi. Koleksi Insomnia mempunyai environment VPS dev dengan base_url https://dev.megaallstararena.com. Akun fixture baru tersedia bila seed diterapkan secara eksplisit, bukan melalui deploy.
 
 ## Database dan reset pengembangan
 

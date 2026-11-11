@@ -2,6 +2,21 @@
 
 Seluruh route bisnis berada pada `/api/v1`. `GET/HEAD /healthz` dan `/readyz` berada di root. Envelope dan pagination mengikuti [README](../README.md).
 
+## Swagger interaktif
+
+Jalankan cloud-app, lalu buka `/api/docs` pada origin API yang sama, misalnya `http://127.0.0.1:8091/api/docs`. Sesudah commit ini dideploy, alamat VPS adalah `https://dev.megaallstararena.com/api/docs`. Kontrak OpenAPI 3.0.3 tersedia pada `/api/docs/openapi.json` dan [openapi.json](openapi.json). Dokumentasi mencakup route REST aktif; endpoint pendamping engine-cloud yang belum aktif tidak ditampilkan.
+
+1. Buka **Auth → POST /api/v1/auth/login → Try it out**; isi email, password dan UUID device_id. Akun mock mengikuti [panduan seed](../db/seeds/README.md).
+2. Klik **Execute** dan salin `data.access_token` dari response 200.
+3. Klik **Authorize**, tempel token tanpa awalan `Bearer`, lalu **Authorize**. Request berikutnya memakai akun tersebut; ganti token saat berpindah role.
+4. Buka endpoint yang diperlukan, isi parameter/payload, lalu Execute. Response 204 memang tidak berisi JSON. Try it out melakukan operasi nyata pada database yang sedang terhubung.
+
+Bearer tidak disimpan ke localStorage dan hilang ketika halaman dimuat ulang. Cookie HttpOnly login/refresh ditangani browser, dipakai bersama antar-role pada origin yang sama. Jalankan login akun terkait sebelum mencoba refresh; jangan menyalin refresh token ke Authorize. Google membutuhkan Google ID token asli; dokumentasi ini tidak menyediakan Google login widget atau token tiruan.
+
+Untuk Swagger pada localhost, gunakan origin yang konsisten. Misalnya `FRONTEND_PUBLIC_URL=http://127.0.0.1:8091` dan `ALLOWED_ORIGINS=http://127.0.0.1:8091,http://localhost:3000`, lalu restart proses development. Origin halaman Swagger harus diizinkan agar POST/refresh dari browser lolos CORS; konfigurasi produksi tetap memakai HTTPS. Header Origin ditentukan browser, bukan diisi manual pada Swagger.
+
+Swagger UI **5.34.1** beserta lisensinya disimpan di [swagger](swagger/) dan di-embed ke binary; tidak memerlukan CDN, validator eksternal atau dependency Go baru. JSON OpenAPI dikirim sebagai dokumen kontrak mentah, bukan envelope bisnis. Handler transport berada pada `internal/delivery/rest/apidocs`; ia tidak mengakses UseCase/database. Update kontrak ketika route, DTO atau aturan endpoint berubah; response view yang dinamis memakai schema `Record` pada bagian yang belum memiliki DTO khusus.
+
 Kecuali route auth publik, kirim `Authorization: Bearer <access_token>`. Request berisi JSON memakai `Content-Type: application/json`; body hanya boleh memuat satu nilai JSON. ID adalah UUID; nilai UUID pada parameter dan field ID dinormalisasi ke bentuk huruf kecil tanpa mengubah password/token. Nomor telepon memakai E.164. Password 12–256 byte. Kredensial dan token tidak dicatat pada log.
 
 ## Akun dan sesi

@@ -79,7 +79,11 @@ Di Insomnia pilih Import → From File → [cloud-app-mock.json](../../docs/inso
 
 Jalankan folder **00 sampai 10** dari atas ke bawah. Setiap request mempunyai status yang diharapkan dan assertion. Script mengambil token, ID registration/item/payment serta versi dari envelope `data`; tidak perlu menyalin ID response secara manual. Berhenti jika request gagal karena request sesudahnya dapat membutuhkan variabel hasilnya.
 
+Script membaca kode HTTP melalui `insomnia.response.code`; `insomnia.response.status` berisi teks status seperti `OK`, bukan angka `200`. Jika memakai koleksi lama dengan error `Unexpected status; variables were not updated` meskipun response 200, ubah baris `const status = insomnia.response.status;` menjadi `const status = insomnia.response.code;` pada Scripts → After-response, atau import ulang koleksi terbaru sebagai koleksi terpisah. Impor ulang file tidak otomatis memperbarui script pada koleksi lama. Bila kode HTTP memang berbeda, lihat status dan body response sebelum melanjutkan. `base_url` hanya origin, tanpa `/api/v1`.
+
 Login delapan role menyimpan token berbeda, misalnya `token_operator_a` dan `token_juri_1`. Cookie pada login bisnis tidak disimpan/dikirim agar tidak bertukar antaraktor. Access token berlaku 15 menit; jika 401 karena kedaluwarsa, login ulang role itu lalu lanjutkan. Device ID tetap sehingga login ulang memakai slot yang sama.
+
+Pembacaan variabel pada script memakai `insomnia.variables.get()` agar menemukan nilai dari environment terpilih maupun Base Environment. `insomnia.environment.get()` hanya membaca scope environment terpilih; ID fixture di Base Environment dapat tidak ditemukan. Penulisan token/ID tetap melalui `insomnia.environment.set()` agar hasil localhost dan VPS tidak tercampur. Untuk koleksi lama, import file terbaru sebagai koleksi terpisah dan pilih environment yang sesuai; login ulang setiap role untuk mengisi token baru.
 
 Request create registration dijalankan sekali pada fixture baru. Retry submit memakai operation ID dan payload awal yang identik, termasuk expected_version=0. Revisi membaca versi lewat request 'Baca versi sebelum revisi' lalu menyimpannya sebagai revision_base_version; response revisi tidak menimpa nilai dasar itu. Retry revisi tetap memakai payload yang sama. Untuk revisi baru berikutnya, buat operation ID baru dan ambil versi terbaru.
 

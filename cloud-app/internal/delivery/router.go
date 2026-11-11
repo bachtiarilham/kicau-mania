@@ -11,6 +11,7 @@ import (
 	"kicau.cloud/control/internal/apperror"
 	"kicau.cloud/control/internal/delivery/middleware"
 	"kicau.cloud/control/internal/delivery/rest"
+	"kicau.cloud/control/internal/delivery/rest/apidocs"
 	asset "kicau.cloud/control/internal/delivery/rest/asset"
 	auth "kicau.cloud/control/internal/delivery/rest/auth"
 	competition "kicau.cloud/control/internal/delivery/rest/competition"
@@ -47,6 +48,7 @@ func Router(opts Options, h Handlers) *gin.Engine {
 	r.HEAD("/healthz", h.Health.Live)
 	r.GET("/readyz", h.Health.Ready)
 	r.HEAD("/readyz", h.Health.Ready)
+	apidocs.Routes(r)
 	h.Auth.Public(r.Group("/api/v1/auth"))
 	g := r.Group("/api/v1", middleware.RequireUser(h.Verifier))
 	h.Auth.Private(g.Group("/auth"))

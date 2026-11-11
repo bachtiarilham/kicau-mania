@@ -251,7 +251,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error(`Expected HTTP 200; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
     },
     {
       "_id": "req_ready",
@@ -278,7 +278,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error(`Expected HTTP 200; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
     },
     {
       "_id": "req_login_superadmin",
@@ -312,7 +312,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nif (!body.data?.access_token || body.data.user?.id !== insomnia.environment.get('user_superadmin')) throw new Error('Wrong login identity');\ninsomnia.environment.set('token_superadmin', body.data.access_token);\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error(`Expected HTTP 200; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nconst expectedUser = insomnia.variables.get('user_superadmin');\nif (!expectedUser) throw new Error('Missing fixture variable: user_superadmin. Check the imported Base Environment.');\nif (!body.data?.access_token) throw new Error('Login response is missing data.access_token');\nif (body.data.user?.id !== expectedUser) throw new Error(`Wrong login identity: expected ${expectedUser}; received ${body.data.user?.id ?? 'missing data.user.id'}`);\ninsomnia.environment.set('token_superadmin', body.data.access_token);\n"
     },
     {
       "_id": "req_login_admin_a",
@@ -346,7 +346,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nif (!body.data?.access_token || body.data.user?.id !== insomnia.environment.get('user_admin_a')) throw new Error('Wrong login identity');\ninsomnia.environment.set('token_admin_a', body.data.access_token);\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error(`Expected HTTP 200; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nconst expectedUser = insomnia.variables.get('user_admin_a');\nif (!expectedUser) throw new Error('Missing fixture variable: user_admin_a. Check the imported Base Environment.');\nif (!body.data?.access_token) throw new Error('Login response is missing data.access_token');\nif (body.data.user?.id !== expectedUser) throw new Error(`Wrong login identity: expected ${expectedUser}; received ${body.data.user?.id ?? 'missing data.user.id'}`);\ninsomnia.environment.set('token_admin_a', body.data.access_token);\n"
     },
     {
       "_id": "req_login_operator_a",
@@ -380,7 +380,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nif (!body.data?.access_token || body.data.user?.id !== insomnia.environment.get('user_operator_a')) throw new Error('Wrong login identity');\ninsomnia.environment.set('token_operator_a', body.data.access_token);\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error(`Expected HTTP 200; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nconst expectedUser = insomnia.variables.get('user_operator_a');\nif (!expectedUser) throw new Error('Missing fixture variable: user_operator_a. Check the imported Base Environment.');\nif (!body.data?.access_token) throw new Error('Login response is missing data.access_token');\nif (body.data.user?.id !== expectedUser) throw new Error(`Wrong login identity: expected ${expectedUser}; received ${body.data.user?.id ?? 'missing data.user.id'}`);\ninsomnia.environment.set('token_operator_a', body.data.access_token);\n"
     },
     {
       "_id": "req_login_operator_b",
@@ -414,7 +414,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nif (!body.data?.access_token || body.data.user?.id !== insomnia.environment.get('user_operator_b')) throw new Error('Wrong login identity');\ninsomnia.environment.set('token_operator_b', body.data.access_token);\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error(`Expected HTTP 200; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nconst expectedUser = insomnia.variables.get('user_operator_b');\nif (!expectedUser) throw new Error('Missing fixture variable: user_operator_b. Check the imported Base Environment.');\nif (!body.data?.access_token) throw new Error('Login response is missing data.access_token');\nif (body.data.user?.id !== expectedUser) throw new Error(`Wrong login identity: expected ${expectedUser}; received ${body.data.user?.id ?? 'missing data.user.id'}`);\ninsomnia.environment.set('token_operator_b', body.data.access_token);\n"
     },
     {
       "_id": "req_login_juri_1",
@@ -448,7 +448,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nif (!body.data?.access_token || body.data.user?.id !== insomnia.environment.get('user_juri_1')) throw new Error('Wrong login identity');\ninsomnia.environment.set('token_juri_1', body.data.access_token);\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error(`Expected HTTP 200; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nconst expectedUser = insomnia.variables.get('user_juri_1');\nif (!expectedUser) throw new Error('Missing fixture variable: user_juri_1. Check the imported Base Environment.');\nif (!body.data?.access_token) throw new Error('Login response is missing data.access_token');\nif (body.data.user?.id !== expectedUser) throw new Error(`Wrong login identity: expected ${expectedUser}; received ${body.data.user?.id ?? 'missing data.user.id'}`);\ninsomnia.environment.set('token_juri_1', body.data.access_token);\n"
     },
     {
       "_id": "req_login_juri_2",
@@ -482,7 +482,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nif (!body.data?.access_token || body.data.user?.id !== insomnia.environment.get('user_juri_2')) throw new Error('Wrong login identity');\ninsomnia.environment.set('token_juri_2', body.data.access_token);\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error(`Expected HTTP 200; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nconst expectedUser = insomnia.variables.get('user_juri_2');\nif (!expectedUser) throw new Error('Missing fixture variable: user_juri_2. Check the imported Base Environment.');\nif (!body.data?.access_token) throw new Error('Login response is missing data.access_token');\nif (body.data.user?.id !== expectedUser) throw new Error(`Wrong login identity: expected ${expectedUser}; received ${body.data.user?.id ?? 'missing data.user.id'}`);\ninsomnia.environment.set('token_juri_2', body.data.access_token);\n"
     },
     {
       "_id": "req_login_peserta_1",
@@ -516,7 +516,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nif (!body.data?.access_token || body.data.user?.id !== insomnia.environment.get('user_peserta_1')) throw new Error('Wrong login identity');\ninsomnia.environment.set('token_peserta_1', body.data.access_token);\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error(`Expected HTTP 200; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nconst expectedUser = insomnia.variables.get('user_peserta_1');\nif (!expectedUser) throw new Error('Missing fixture variable: user_peserta_1. Check the imported Base Environment.');\nif (!body.data?.access_token) throw new Error('Login response is missing data.access_token');\nif (body.data.user?.id !== expectedUser) throw new Error(`Wrong login identity: expected ${expectedUser}; received ${body.data.user?.id ?? 'missing data.user.id'}`);\ninsomnia.environment.set('token_peserta_1', body.data.access_token);\n"
     },
     {
       "_id": "req_login_peserta_2",
@@ -550,7 +550,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nif (!body.data?.access_token || body.data.user?.id !== insomnia.environment.get('user_peserta_2')) throw new Error('Wrong login identity');\ninsomnia.environment.set('token_peserta_2', body.data.access_token);\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error(`Expected HTTP 200; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nconst expectedUser = insomnia.variables.get('user_peserta_2');\nif (!expectedUser) throw new Error('Missing fixture variable: user_peserta_2. Check the imported Base Environment.');\nif (!body.data?.access_token) throw new Error('Login response is missing data.access_token');\nif (body.data.user?.id !== expectedUser) throw new Error(`Wrong login identity: expected ${expectedUser}; received ${body.data.user?.id ?? 'missing data.user.id'}`);\ninsomnia.environment.set('token_peserta_2', body.data.access_token);\n"
     },
     {
       "_id": "req_me",
@@ -581,7 +581,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error(`Expected HTTP 200; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
     },
     {
       "_id": "req_roles",
@@ -612,7 +612,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error(`Expected HTTP 200; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
     },
     {
       "_id": "req_arenas",
@@ -643,7 +643,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error(`Expected HTTP 200; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
     },
     {
       "_id": "req_master_gantangan",
@@ -674,7 +674,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error(`Expected HTTP 200; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
     },
     {
       "_id": "req_master_events",
@@ -705,7 +705,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error(`Expected HTTP 200; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
     },
     {
       "_id": "req_master_categories",
@@ -736,7 +736,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error(`Expected HTTP 200; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
     },
     {
       "_id": "req_master_rounds",
@@ -767,7 +767,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error(`Expected HTTP 200; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
     },
     {
       "_id": "req_master_criteria",
@@ -798,7 +798,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error(`Expected HTTP 200; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
     },
     {
       "_id": "req_master_assignments",
@@ -829,7 +829,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error(`Expected HTTP 200; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
     },
     {
       "_id": "req_birds_p1",
@@ -860,7 +860,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error(`Expected HTTP 200; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
     },
     {
       "_id": "req_birds_p2",
@@ -891,7 +891,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error(`Expected HTTP 200; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
     },
     {
       "_id": "req_roster_j1",
@@ -929,7 +929,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 201', () => insomnia.expect(status).to.eql(201));\nif (status !== 201) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 201', () => insomnia.expect(status).to.eql(201));\nif (status !== 201) throw new Error(`Expected HTTP 201; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
     },
     {
       "_id": "req_roster_j2",
@@ -967,7 +967,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 201', () => insomnia.expect(status).to.eql(201));\nif (status !== 201) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 201', () => insomnia.expect(status).to.eql(201));\nif (status !== 201) throw new Error(`Expected HTTP 201; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
     },
     {
       "_id": "req_roster_list",
@@ -998,7 +998,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error(`Expected HTTP 200; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
     },
     {
       "_id": "req_register_p1",
@@ -1036,7 +1036,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 201', () => insomnia.expect(status).to.eql(201));\nif (status !== 201) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nif (Number(body.data.total_amount) !== 125000 || body.data.items?.length !== 2) throw new Error('Expected two items totalling 125000');\ninsomnia.environment.set('p1_id', body.data.id);\nfor (const [key, variable] of [['round_a1','p1_item_a1'],['round_a2','p1_item_a2']]) {\n  const item = body.data.items.find(i => i.round_id === insomnia.environment.get(key));\n  if (!item?.id) throw new Error('Registration item missing');\n  insomnia.environment.set(variable, item.id);\n}\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 201', () => insomnia.expect(status).to.eql(201));\nif (status !== 201) throw new Error(`Expected HTTP 201; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nif (Number(body.data.total_amount) !== 125000 || body.data.items?.length !== 2) throw new Error('Expected two items totalling 125000');\ninsomnia.environment.set('p1_id', body.data.id);\nfor (const [key, variable] of [['round_a1','p1_item_a1'],['round_a2','p1_item_a2']]) {\n  const item = body.data.items.find(i => i.round_id === insomnia.variables.get(key));\n  if (!item?.id) throw new Error('Registration item missing');\n  insomnia.environment.set(variable, item.id);\n}\n"
     },
     {
       "_id": "req_register_p2",
@@ -1074,7 +1074,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 201', () => insomnia.expect(status).to.eql(201));\nif (status !== 201) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nif (Number(body.data.total_amount) !== 125000 || body.data.items?.length !== 2) throw new Error('Expected two items totalling 125000');\ninsomnia.environment.set('p2_id', body.data.id);\nfor (const [key, variable] of [['round_a1','p2_item_a1'],['round_a2','p2_item_a2']]) {\n  const item = body.data.items.find(i => i.round_id === insomnia.environment.get(key));\n  if (!item?.id) throw new Error('Registration item missing');\n  insomnia.environment.set(variable, item.id);\n}\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 201', () => insomnia.expect(status).to.eql(201));\nif (status !== 201) throw new Error(`Expected HTTP 201; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nif (Number(body.data.total_amount) !== 125000 || body.data.items?.length !== 2) throw new Error('Expected two items totalling 125000');\ninsomnia.environment.set('p2_id', body.data.id);\nfor (const [key, variable] of [['round_a1','p2_item_a1'],['round_a2','p2_item_a2']]) {\n  const item = body.data.items.find(i => i.round_id === insomnia.variables.get(key));\n  if (!item?.id) throw new Error('Registration item missing');\n  insomnia.environment.set(variable, item.id);\n}\n"
     },
     {
       "_id": "req_pay_p1",
@@ -1112,7 +1112,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 201', () => insomnia.expect(status).to.eql(201));\nif (status !== 201) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nif (!body.data.id) throw new Error('Payment ID missing');\ninsomnia.environment.set('p1_payment_id', body.data.id);\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 201', () => insomnia.expect(status).to.eql(201));\nif (status !== 201) throw new Error(`Expected HTTP 201; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nif (!body.data.id) throw new Error('Payment ID missing');\ninsomnia.environment.set('p1_payment_id', body.data.id);\n"
     },
     {
       "_id": "req_verify_p1",
@@ -1150,7 +1150,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error(`Expected HTTP 200; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
     },
     {
       "_id": "req_pay_p2",
@@ -1188,7 +1188,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 201', () => insomnia.expect(status).to.eql(201));\nif (status !== 201) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nif (!body.data.id) throw new Error('Payment ID missing');\ninsomnia.environment.set('p2_payment_id', body.data.id);\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 201', () => insomnia.expect(status).to.eql(201));\nif (status !== 201) throw new Error(`Expected HTTP 201; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nif (!body.data.id) throw new Error('Payment ID missing');\ninsomnia.environment.set('p2_payment_id', body.data.id);\n"
     },
     {
       "_id": "req_verify_p2",
@@ -1226,7 +1226,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error(`Expected HTTP 200; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
     },
     {
       "_id": "req_start",
@@ -1264,7 +1264,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error(`Expected HTTP 200; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
     },
     {
       "_id": "req_begin",
@@ -1302,7 +1302,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error(`Expected HTTP 200; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
     },
     {
       "_id": "req_judge_participants",
@@ -1333,7 +1333,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error(`Expected HTTP 200; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
     },
     {
       "_id": "req_assessment_p1_j1",
@@ -1364,7 +1364,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\ninsomnia.environment.set('assessment_version_p1_j1', body.data.version);\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error(`Expected HTTP 200; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\ninsomnia.environment.set('assessment_version_p1_j1', body.data.version);\n"
     },
     {
       "_id": "req_submit_p1_j1",
@@ -1402,7 +1402,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 201', () => insomnia.expect(status).to.eql(201));\nif (status !== 201) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\ninsomnia.environment.set('assessment_version_p1_j1', body.data.version);\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 201', () => insomnia.expect(status).to.eql(201));\nif (status !== 201) throw new Error(`Expected HTTP 201; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\ninsomnia.environment.set('assessment_version_p1_j1', body.data.version);\n"
     },
     {
       "_id": "req_assessment_p2_j1",
@@ -1433,7 +1433,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\ninsomnia.environment.set('assessment_version_p2_j1', body.data.version);\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error(`Expected HTTP 200; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\ninsomnia.environment.set('assessment_version_p2_j1', body.data.version);\n"
     },
     {
       "_id": "req_submit_p2_j1",
@@ -1471,7 +1471,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 201', () => insomnia.expect(status).to.eql(201));\nif (status !== 201) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\ninsomnia.environment.set('assessment_version_p2_j1', body.data.version);\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 201', () => insomnia.expect(status).to.eql(201));\nif (status !== 201) throw new Error(`Expected HTTP 201; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\ninsomnia.environment.set('assessment_version_p2_j1', body.data.version);\n"
     },
     {
       "_id": "req_assessment_p1_j2",
@@ -1502,7 +1502,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\ninsomnia.environment.set('assessment_version_p1_j2', body.data.version);\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error(`Expected HTTP 200; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\ninsomnia.environment.set('assessment_version_p1_j2', body.data.version);\n"
     },
     {
       "_id": "req_submit_p1_j2",
@@ -1540,7 +1540,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 201', () => insomnia.expect(status).to.eql(201));\nif (status !== 201) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\ninsomnia.environment.set('assessment_version_p1_j2', body.data.version);\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 201', () => insomnia.expect(status).to.eql(201));\nif (status !== 201) throw new Error(`Expected HTTP 201; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\ninsomnia.environment.set('assessment_version_p1_j2', body.data.version);\n"
     },
     {
       "_id": "req_assessment_p2_j2",
@@ -1571,7 +1571,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\ninsomnia.environment.set('assessment_version_p2_j2', body.data.version);\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error(`Expected HTTP 200; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\ninsomnia.environment.set('assessment_version_p2_j2', body.data.version);\n"
     },
     {
       "_id": "req_submit_p2_j2",
@@ -1609,7 +1609,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 201', () => insomnia.expect(status).to.eql(201));\nif (status !== 201) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\ninsomnia.environment.set('assessment_version_p2_j2', body.data.version);\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 201', () => insomnia.expect(status).to.eql(201));\nif (status !== 201) throw new Error(`Expected HTTP 201; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\ninsomnia.environment.set('assessment_version_p2_j2', body.data.version);\n"
     },
     {
       "_id": "req_retry_initial",
@@ -1647,7 +1647,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 201', () => insomnia.expect(status).to.eql(201));\nif (status !== 201) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nif (body.data.version !== 1) throw new Error('Retry must not create another revision');\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 201', () => insomnia.expect(status).to.eql(201));\nif (status !== 201) throw new Error(`Expected HTTP 201; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nif (body.data.version !== 1) throw new Error('Retry must not create another revision');\n"
     },
     {
       "_id": "req_prepare_revision",
@@ -1678,7 +1678,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\ninsomnia.environment.set('revision_base_version', body.data.version);\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error(`Expected HTTP 200; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\ninsomnia.environment.set('revision_base_version', body.data.version);\n"
     },
     {
       "_id": "req_revise",
@@ -1716,7 +1716,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\ninsomnia.environment.set('assessment_version_p1_j1', body.data.version);\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error(`Expected HTTP 200; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\ninsomnia.environment.set('assessment_version_p1_j1', body.data.version);\n"
     },
     {
       "_id": "req_retry_revision",
@@ -1754,7 +1754,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nif (body.data.version !== 2) throw new Error('Retry must keep version 2');\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error(`Expected HTTP 200; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nif (body.data.version !== 2) throw new Error('Retry must keep version 2');\n"
     },
     {
       "_id": "req_history",
@@ -1785,7 +1785,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error(`Expected HTTP 200; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
     },
     {
       "_id": "req_recap",
@@ -1816,7 +1816,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nconst p1 = body.data.find(r => r.registration_item_id === insomnia.environment.get('p1_item_a1'));\nif (!p1 || Number(p1.total_score) !== 49) throw new Error('Expected participant 1 total = 49');\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error(`Expected HTTP 200; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nconst p1 = body.data.find(r => r.registration_item_id === insomnia.variables.get('p1_item_a1'));\nif (!p1 || Number(p1.total_score) !== 49) throw new Error('Expected participant 1 total = 49');\n"
     },
     {
       "_id": "req_close",
@@ -1854,7 +1854,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nif (body.data.phase !== 'CLOSED' || body.data.winner_registration_item_id !== insomnia.environment.get('p1_item_a1')) throw new Error('Winner not committed');\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error(`Expected HTTP 200; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nif (body.data.phase !== 'CLOSED' || body.data.winner_registration_item_id !== insomnia.variables.get('p1_item_a1')) throw new Error('Winner not committed');\n"
     },
     {
       "_id": "req_round_final",
@@ -1885,7 +1885,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error(`Expected HTTP 200; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
     },
     {
       "_id": "req_dashboard",
@@ -1916,7 +1916,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error(`Expected HTTP 200; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
     },
     {
       "_id": "req_report_scores",
@@ -1947,7 +1947,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error(`Expected HTTP 200; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
     },
     {
       "_id": "req_no_auth",
@@ -1974,7 +1974,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 401', () => insomnia.expect(status).to.eql(401));\nif (status !== 401) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(false));\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 401', () => insomnia.expect(status).to.eql(401));\nif (status !== 401) throw new Error(`Expected HTTP 401; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(false));\n"
     },
     {
       "_id": "req_wrong_arena",
@@ -2005,7 +2005,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 403', () => insomnia.expect(status).to.eql(403));\nif (status !== 403) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(false));\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 403', () => insomnia.expect(status).to.eql(403));\nif (status !== 403) throw new Error(`Expected HTTP 403; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(false));\n"
     },
     {
       "_id": "req_wrong_amount",
@@ -2043,7 +2043,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 400', () => insomnia.expect(status).to.eql(400));\nif (status !== 400) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(false));\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 400', () => insomnia.expect(status).to.eql(400));\nif (status !== 400) throw new Error(`Expected HTTP 400; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(false));\n"
     },
     {
       "_id": "req_score_out_of_range",
@@ -2081,7 +2081,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 400', () => insomnia.expect(status).to.eql(400));\nif (status !== 400) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(false));\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 400', () => insomnia.expect(status).to.eql(400));\nif (status !== 400) throw new Error(`Expected HTTP 400; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(false));\n"
     },
     {
       "_id": "req_incomplete",
@@ -2119,7 +2119,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 409', () => insomnia.expect(status).to.eql(409));\nif (status !== 409) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(false));\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 409', () => insomnia.expect(status).to.eql(409));\nif (status !== 409) throw new Error(`Expected HTTP 409; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(false));\n"
     },
     {
       "_id": "req_stale",
@@ -2157,7 +2157,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 409', () => insomnia.expect(status).to.eql(409));\nif (status !== 409) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(false));\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 409', () => insomnia.expect(status).to.eql(409));\nif (status !== 409) throw new Error(`Expected HTTP 409; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(false));\n"
     },
     {
       "_id": "req_wrong_winner",
@@ -2195,7 +2195,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 400', () => insomnia.expect(status).to.eql(400));\nif (status !== 400) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(false));\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 400', () => insomnia.expect(status).to.eql(400));\nif (status !== 400) throw new Error(`Expected HTTP 400; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(false));\n"
     },
     {
       "_id": "req_after_closed",
@@ -2233,7 +2233,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 409', () => insomnia.expect(status).to.eql(409));\nif (status !== 409) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(false));\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 409', () => insomnia.expect(status).to.eql(409));\nif (status !== 409) throw new Error(`Expected HTTP 409; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(false));\n"
     },
     {
       "_id": "req_session_login",
@@ -2271,7 +2271,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nif (!body.data?.access_token || body.data.user?.id !== insomnia.environment.get('user_peserta_1')) throw new Error('Wrong login identity');\ninsomnia.environment.set('token_peserta_1', body.data.access_token);\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error(`Expected HTTP 200; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nconst expectedUser = insomnia.variables.get('user_peserta_1');\nif (!expectedUser) throw new Error('Missing fixture variable: user_peserta_1. Check the imported Base Environment.');\nif (!body.data?.access_token) throw new Error('Login response is missing data.access_token');\nif (body.data.user?.id !== expectedUser) throw new Error(`Wrong login identity: expected ${expectedUser}; received ${body.data.user?.id ?? 'missing data.user.id'}`);\ninsomnia.environment.set('token_peserta_1', body.data.access_token);\n"
     },
     {
       "_id": "req_session_refresh",
@@ -2309,7 +2309,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nif (!body.data?.access_token || body.data.user?.id !== insomnia.environment.get('user_peserta_1')) throw new Error('Wrong login identity');\ninsomnia.environment.set('token_peserta_1', body.data.access_token);\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error(`Expected HTTP 200; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\nconst expectedUser = insomnia.variables.get('user_peserta_1');\nif (!expectedUser) throw new Error('Missing fixture variable: user_peserta_1. Check the imported Base Environment.');\nif (!body.data?.access_token) throw new Error('Login response is missing data.access_token');\nif (body.data.user?.id !== expectedUser) throw new Error(`Wrong login identity: expected ${expectedUser}; received ${body.data.user?.id ?? 'missing data.user.id'}`);\ninsomnia.environment.set('token_peserta_1', body.data.access_token);\n"
     },
     {
       "_id": "req_session_list",
@@ -2340,7 +2340,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 200', () => insomnia.expect(status).to.eql(200));\nif (status !== 200) throw new Error(`Expected HTTP 200; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\nif (body.success !== true) throw new Error('Cloud returned an unsuccessful envelope');\n"
     },
     {
       "_id": "req_session_logout",
@@ -2382,7 +2382,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 204', () => insomnia.expect(status).to.eql(204));\nif (status !== 204) throw new Error('Unexpected status; variables were not updated');\ninsomnia.test('Empty body', () => insomnia.expect(insomnia.response.text()).to.eql(''));\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 204', () => insomnia.expect(status).to.eql(204));\nif (status !== 204) throw new Error(`Expected HTTP 204; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\ninsomnia.test('Empty body', () => insomnia.expect(insomnia.response.text()).to.eql(''));\n"
     },
     {
       "_id": "req_session_revoked",
@@ -2413,7 +2413,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "off",
       "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.status;\ninsomnia.test('HTTP 401', () => insomnia.expect(status).to.eql(401));\nif (status !== 401) throw new Error('Unexpected status; variables were not updated');\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(false));\n"
+      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 401', () => insomnia.expect(status).to.eql(401));\nif (status !== 401) throw new Error(`Expected HTTP 401; received HTTP ${status} (${insomnia.response.status}). Variables were not updated; inspect response body.`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(false));\n"
     },
     {
       "_id": "env_kicau_vps",

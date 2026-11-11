@@ -25,6 +25,8 @@ cp "$ROOT/cloud-app/deployment/opt/infra/nginx/conf.d/"*.conf "$work/infra/nginx
 cp "$ROOT/db-dump/full_db.dump" "$work/database/baseline.dump"
 cp "$ROOT/cloud-app/db/migrations/"*.sql "$work/database/migrations/"
 cp "$ROOT/cloud-app/deployment/devops_runbook.md" "$work/README.md"
+cp "$ROOT/cloud-app/deployment/devops_runbook.md" "$work/devops_runbook.md"
+cp "$ROOT/cloud-app/deployment/BELAJAR-DEPLOYMENT.md" "$work/BELAJAR-DEPLOYMENT.md"
 cp "$ROOT/cloud-app/deployment/reset-empty-vps.bash" "$work/reset-empty-vps.bash"
 cp "$ROOT/cloud-app/deployment/setup-gateway.bash" "$work/setup-gateway.bash"
 printf '%s\n' "$commit" > "$work/COMMIT"
