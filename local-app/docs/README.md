@@ -13,6 +13,8 @@ Untuk instalasi dan cara menjalankan, mulai dari [README aplikasi](../README.md)
 | Panduan | Digunakan untuk |
 | --- | --- |
 | [Setup API](setup-api.md) | Menghubungkan NVR/kamera, discovery ONVIF, probe, konfigurasi terenkripsi, mode LAN, integrasi frontend, serta domain/HTTPS. |
+| [Panduan streaming lokal](local-streaming-guide.md) | Langkah demi langkah menyalakan `local-app` mode LAN hingga live playback WHEP berjalan di browser. |
+| [Pengujian Insomnia](insomnia/README.md) | Koleksi dan panduan pengujian REST API, setup LAN, sesi media, WebSocket, serta WHEP dengan Insomnia. |
 | [Kontrak cloud](cloud-contract.md) | Command, heartbeat, metadata rekaman/upload, envelope HTTP dan otorisasi tiket playback. |
 | [Penerimaan media](acceptance.md) | Skenario Start/Stop, kegagalan channel, restart, disk, upload, dan batas verifikasi sebelum operasional. |
 
