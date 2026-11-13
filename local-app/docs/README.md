@@ -13,6 +13,8 @@ Untuk instalasi dan cara menjalankan, mulai dari [README aplikasi](../README.md)
 | Panduan | Digunakan untuk |
 | --- | --- |
 | [Setup API](setup-api.md) | Menghubungkan NVR/kamera, discovery ONVIF, probe, konfigurasi terenkripsi, mode LAN, integrasi frontend, serta domain/HTTPS. |
+| [Panduan dataflow & hardware](hardware-and-dataflow-guide.md) | Penjelasan alur komunikasi data fisik (RTSP, WebRTC, WebSocket) dan panduan pengujian kamera/NVR di lapangan secara awam. |
+| [Peta proses bisnis & kode](business-process-code-map.md) | Navigasi seluruh alur bisnis `local-app` ke berkas kode Go tempat proses tersebut diolah (Clean Architecture). |
 | [Panduan streaming lokal](local-streaming-guide.md) | Langkah demi langkah menyalakan `local-app` mode LAN hingga live playback WHEP berjalan di browser. |
 | [Pengujian Insomnia](insomnia/README.md) | Koleksi dan panduan pengujian REST API, setup LAN, sesi media, WebSocket, serta WHEP dengan Insomnia. |
 | [Kontrak cloud](cloud-contract.md) | Command, heartbeat, metadata rekaman/upload, envelope HTTP dan otorisasi tiket playback. |

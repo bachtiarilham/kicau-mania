@@ -1,0 +1,6 @@
+table personal history : user pernah di arena apa aja 
+table bird position mau ada colom x baris karena juri menilai per kolom
+table bird spesies
+
+ada owner 
+ada eo (event organizer) 
