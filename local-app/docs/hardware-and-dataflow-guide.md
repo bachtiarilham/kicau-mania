@@ -1,6 +1,6 @@
-# Panduan Alur Komunikasi Data & Testing Device Nyata (Awam / Non-REST)
+# Panduan Alur Komunikasi Data & Testing Device Nyata (Hardware, NVR ONVIF, & Media)
 
-Dokumen ini menjelaskan bagaimana data audio dan video mengalir secara fisik di arena lomba burung, protokol yang dipakai di luar REST API, serta panduan praktis melakukan pengujian langsung dengan kamera/NVR fisik di lapangan.
+Dokumen ini menjelaskan bagaimana data audio dan video mengalir secara fisik di arena lomba burung, protokol yang dipakai di luar REST API, serta panduan praktis melakukan pengujian langsung dengan kamera/NVR fisik di lapangan (berdasarkan hasil verifikasi nyata di hardware).
 
 ---
 
@@ -12,22 +12,23 @@ Di arena fisik terdapat 4 komponen utama yang saling terhubung dalam satu jaring
 [ Kamera CCTV / NVR ] (Di tiang / atas gantangan)
        │ (Kabel LAN UTP)
        ▼
- [ Switch / Router Wi-Fi Arena ]
+ [ Switch / Router Wi-Fi Arena ] (Subnet misal: 192.168.1.0/24)
        ▲                              ▲
        │ (Kabel LAN UTP)              │ (Sinyal Wi-Fi Arena)
        ▼                              │
 [ Komputer Mini PC Engine ]           ▼
    (Menjalankan local-app) ─────► [ HP / Tablet / Laptop Juri ]
+   IP misal: 192.168.1.106        IP misal: 192.168.1.150
 ```
 
-1. **Kamera CCTV / NVR**: Mengambil gambar burung dan suara di gantangan.
-2. **Switch / Router Wi-Fi**: Menghubungkan CCTV, Mini PC, dan gadget juri ke subnet IP yang sama (misal `192.168.1.x`).
-3. **Komputer Mini PC Engine**: Tempat program backend `local-app` berjalan di Windows/Linux.
-4. **Perangkat Juri / Operator**: Membuka browser (Chrome/Edge) untuk melihat video live gantangan dan grafik suara.
+1. **Kamera CCTV / NVR**: Mengambil gambar burung dan suara di gantangan (misal IP `192.168.1.2`).
+2. **Switch / Router Wi-Fi**: Menghubungkan NVR, Mini PC, dan gadget juri ke subnet IP yang sama (misal `192.168.1.x`).
+3. **Komputer Mini PC Engine**: Tempat program backend `local-app` berjalan di Windows.
+4. **Perangkat Juri / Operator**: Membuka browser (Chrome/Edge) untuk melihat video live gantangan tanpa delay dan grafik desibel suara burung.
 
 ---
 
-## 2. Tiga Program di Dalam Mini PC
+## 2. Tiga Program di Dalam Mini PC & Struktur Folder `bin`
 
 Di dalam Mini PC, ada 3 aktor internal yang bekerja secara simultan:
 
@@ -37,11 +38,12 @@ Di dalam Mini PC, ada 3 aktor internal yang bekerja secara simultan:
 │                                                             │
 │  [ local-app (Go Backend) ] ── (Mandor / Orchestrator)      │
 │         │                                                   │
-│         ├── Memerintah ──► [ FFmpeg ] (Kuli Olah Media)     │
+│         ├── Memerintah ──► [ FFmpeg & ffprobe ]             │
 │         │                     │                             │
+│         │                     ├── Cek stream nyata (Probe)  │
+│         │                     ├── Transcode / Copy video    │
 │         │                     ├── Simpan .mp4 ke Disk       │
-│         │                     ├── Hitung desibel (dBFS)     │
-│         │                     └── Oper video ke MediaMTX    │
+│         │                     └── Hitung desibel (dBFS)     │
 │         │                                                   │
 │         └── Mengawasi  ──► [ MediaMTX ] (Server WebRTC)     │
 │                                 │                           │
@@ -49,12 +51,19 @@ Di dalam Mini PC, ada 3 aktor internal yang bekerja secara simultan:
 └─────────────────────────────────────────────────────────────┘
 ```
 
-1. **`local-app` (Program Go Utama)**:
-   Bertindak sebagai mandor. Mengatur konfigurasi, menerima perintah start/stop sesi, dan memastikan FFmpeg serta MediaMTX berjalan normal.
-2. **`FFmpeg` (Pekerja Kasar Media)**:
-   Program background yang menarik stream video dari CCTV, mengonversinya jika perlu, menulis potongan file rekaman MP4 ke harddisk, serta menghitung amplitudo suara burung per 200 ms.
-3. **`MediaMTX` (Server Streaming / Pemancar)**:
-   Program server media internal v1.15.3 yang menerima umpan video dari FFmpeg lalu mendistribusikannya ke ratusan browser penonton/juri melalui WebRTC tanpa delay.
+### Struktur Binary yang Wajib Ada
+Sistem portable `local-app` mencari binary pada path relatif `./bin/` (sesuai `.env.portable.example`). File executable berikut **wajib berada di dalam folder `local-app\bin\`**:
+```
+local-app/
+├── bin/
+│   ├── ffmpeg.exe      (Pengolah media, segmentasi MP4, dan transcode)
+│   ├── ffprobe.exe     (Pemeriksa paket stream nyata kamera/NVR)
+│   └── mediamtx.exe    (Server streaming WebRTC internal v1.15.3)
+├── cmd/
+├── internal/
+└── .env.portable.example
+```
+> **Catatan Penting:** Karena `.env.portable.example` menggunakan path eksplisit `./bin/ffprobe.exe`, mengubah `$env:PATH` di terminal tidak akan dibaca oleh Go (`exec.LookPath` mencari langsung ke path relatif `./bin/`). Pastikan file binary fisik benar-benar diletakkan di dalam folder `local-app\bin\`.
 
 ---
 
@@ -63,15 +72,15 @@ Di dalam Mini PC, ada 3 aktor internal yang bekerja secara simultan:
 Selain REST API (yang dipakai untuk klik tombol dan bertukar JSON), ada **3 pipa data kontinu**:
 
 ```
-[Kamera CCTV] 
+[NVR / Kamera CCTV] 
       │
       │ Pipa 1: RTSP (TCP/UDP Port 554)
       ▼
  [FFmpeg di Mini PC]
       ├──► Harddisk: Simpan potongan segmen .mp4 (data/recordings/)
       │
-      ├──► Pipa 2: WebSocket (ws:// - Port 8090)
-      │            └─► Kirim data desibel suara burung ke HP Juri
+      ├──► Pipa 2: WebSocket (ws:// - Port 8090, subprotocol: edge-v1)
+      │            └─► Kirim data desibel suara burung ke HP Juri per 200 ms
       │
       └──► MediaMTX (Internal Loopback)
                  │
@@ -80,133 +89,182 @@ Selain REST API (yang dipakai untuk klik tombol dan bertukar JSON), ada **3 pipa
           [Layar Browser HP Juri] (Ultra-low latency < 300 ms)
 ```
 
-### Pipa 1: Dari CCTV ke Mini PC (RTSP)
-* **Protokol**: RTSP (*Real-Time Streaming Protocol*), default port `554`.
-* **Karakter**: CCTV bertindak sebagai pemancar pasif. Dia terus-menerus menyemburkan paket data video H.264/H.265. `local-app` melalui FFmpeg bertindak sebagai penerima yang "menyedot" semburan tersebut saat sesi lomba dimulai.
+### Pipa 1: Dari NVR ke Mini PC (RTSP Port 554)
+NVR bertindak sebagai pemancar pasif. Dia terus-menerus menyemburkan paket data video dan audio lewat RTSP port `554`. `local-app` melalui FFmpeg bertindak sebagai penerima yang menyedot semburan tersebut saat sesi ronde aktif.
 
 ### Pipa 2: Dari Mini PC ke Layar HP Juri (WebRTC via WHEP)
-* **Kenapa bukan HLS / RTMP / YouTube?**
-  Karena streaming konvensional memiliki delay 3 sampai 10 detik. Dalam lomba kicau, juri wajib melihat burung loncat atau berkicau secara instan (delay di bawah 300 milidetik).
-* **Bagaimana WHEP bekerja?**
-  1. Browser HP Juri mengirimkan surat kesiapan teknis ("SDP Offer") ke `local-app`.
-  2. `local-app` membalas dengan parameter server MediaMTX ("SDP Answer").
-  3. Terjadi negosiasi koneksi langsung (*ICE Candidate*).
-  4. Video langsung mengalir lewat protokol **UDP** (port `8189`). Jika ada 1 frame hilang di jaringan Wi-Fi, sistem tidak menunggu paket itu ulang, melainkan langsung menampilkan frame berikutnya agar video tidak pernah macet (*bufferless*).
+Streaming konvensional (HLS/RTMP/YouTube) memiliki delay 3–10 detik, tidak cocok untuk penilaian real-time lomba burung. 
+* WHEP (*WebRTC HTTP Egress Protocol*) melakukan jabat tangan SDP offer/answer melalui HTTP REST port `8090`.
+* Media video kemudian dialirkan langsung melalui **UDP port 8189** dengan latensi di bawah 300 milidetik (*bufferless*).
 
 ### Pipa 3: Grafik Suara Burung ke HP Juri (WebSocket)
-* **Protokol**: WebSocket (`ws://` / `wss://`) pada port `8090`.
-* **Karakter**: Berbeda dengan REST yang harus ditanya berulang-ulang (*polling*), WebSocket adalah sambungan pipa dua arah yang terus terbuka.
-* **Isi Data**: Setiap 200 milidetik, backend mendorong frame JSON kecil berisi kekuatan suara:
-  ```json
-  {"channel_id":"gantangan01","peak_dbfs":-14.2,"rms_dbfs":-22.1,"active_ms":180}
-  ```
-  Browser juri menangkap data ini untuk menggerakkan grafik getaran suara secara real-time.
+Koneksi pipa dua arah terbuka di `ws://<ip-engine>:8090/api/v1/metrics` dengan subprotocol `edge-v1`. Setiap 200 milidetik, backend mendorong frame JSON:
+```json
+{"channel_id":"gantangan01","at":"2026-11-14T00:20:10Z","peak_dbfs":-14.2,"rms_dbfs":-22.1,"active_ms":180,"window_ms":200}
+```
 
 ---
 
-## 4. Panduan Eksekusi Testing dengan Perangkat Fisik (CCTV Asli)
+## 4. Panduan Eksekusi Testing NVR Fisik (Langkah demi Langkah)
 
-Gunakan checklist ini saat membawa Mini PC dan mengujinya dengan NVR/kamera IP di lokasi.
+Berikut panduan riil yang terbukti berhasil saat menguji NVR/Kamera di lapangan (contoh kasus: NVR IP `192.168.1.2`, PC Engine `192.168.1.106`).
 
-### Langkah 1 — Fisik & Pengkabelan
-1. Hubungkan kabel LAN dari **Kamera/NVR** ke **Switch/Router Arena**.
-2. Hubungkan kabel LAN dari **Mini PC** ke **Switch/Router Arena** yang sama.
-3. Sambungkan laptop/HP penguji ke Wi-Fi yang dipancarkan oleh Router Arena tersebut.
-4. Pastikan IP subnet seragam. Contoh:
-   - IP Router: `192.168.1.1`
-   - IP Kamera: `192.168.1.64`
-   - IP Mini PC: `192.168.1.100`
-   - IP HP Juri: `192.168.1.150`
-
-### Langkah 2 — Uji Selang CCTV Mandiri (Sebelum Menjalankan Aplikasi)
-Sebelum menjalankan backend, buktikan terlebih dahulu bahwa selang RTSP dari kamera bisa disedot oleh Mini PC. Buka terminal Mini PC:
-
+### Langkah 1 — Jalankan Backend `local-app`
+Buka terminal PowerShell di folder `local-app`:
 ```powershell
-ffprobe -i "rtsp://admin:password_cctv@192.168.1.64:554/Streaming/Channels/101"
+go run ./cmd/api -env .env.portable.example
+```
+Backend akan aktif di `http://127.0.0.1:8090`.
+
+### Langkah 2 — Buka Swagger UI & Ambil Nonce Operator
+Setup hanya bisa dikontrol melalui **loopback langsung** dari komputer Mini PC itu sendiri:
+1. Buka browser: **`http://localhost:8090/api/docs/index.html`**
+2. Buka endpoint **`GET /api/v1/setup/bootstrap`** -> klik **Try it out** -> **Execute**.
+3. Salin nilai `data.nonce` dan catat IP kartu jaringan PC yang satu subnet dengan NVR (misal `"192.168.1.106"`).
+4. Klik tombol hijau **Authorize** di pojok kanan atas Swagger:
+   - Masukkan string `nonce` ke kolom **LocalControl** (`X-Local-Control`) -> klik **Authorize** -> **Close**.
+
+### Langkah 3 — Cari Endpoint ONVIF Asli (`action: "discover"`)
+Port ONVIF NVR sering kali bukan port 80 (pada NVR Xiongmai/XM/Umum adalah port **`8899`**, pada Hikvision/Dahua port **`8000`** atau **`80`**).
+Jalankan pencarian otomatis di **`POST /api/v1/setup/jobs`**:
+```json
+{
+  "action": "discover",
+  "ip": "192.168.1.106"
+}
+```
+Cek hasil job di **`GET /api/v1/setup/jobs/{id}`**:
+```json
+"result": [
+  {
+    "endpoint": "http://192.168.1.2:8899/onvif/device_service",
+    "name": "192.168.1.2"
+  }
+]
 ```
 
-> *Tips*: Path RTSP tergantung merk kamera:
-> - **Hikvision**: `/Streaming/Channels/101` (Main Stream) atau `/Streaming/Channels/102` (Sub Stream)
-> - **Dahua**: `/cam/realmonitor?channel=1&subtype=0`
-> - **Umum/ONVIF**: `/live/ch0` atau sesuai manual NVR.
-
-**Periksa output teks `ffprobe`**:
-- Jika tertulis `Video: h264 ...`: Sangat ideal. Dapat menggunakan mode `copy`.
-- Jika tertulis `Video: hevc` (H.265): Kamera memancarkan codec H.265. Karena browser HP belum tentu mendukung WebRTC H.265, nanti di konfigurasi channel harus disetel `live_mode: "transcode"`.
-
-### Langkah 3 — Konfigurasi & Jalankan `local-app`
-Di file `.env` Mini PC:
-```dotenv
-ENGINE_ACCESS_MODE=lan
-HTTP_ADDR=0.0.0.0:8090
-DATA_DIR=./data
-RUNTIME_DIR=./runtime
-ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:8090,http://192.168.1.100:8090
-MEDIA_READ_CIDRS=127.0.0.1/32,192.168.1.0/24
+### Langkah 4 — Baca Profil Stream NVR (`action: "profiles"`)
+Kirim request ke **`POST /api/v1/setup/jobs`**:
+```json
+{
+  "action": "profiles",
+  "ip": "192.168.1.106",
+  "endpoint": "http://192.168.1.2:8899/onvif/device_service",
+  "username": "admin",
+  "password": "admin"
+}
 ```
-Jalankan aplikasi:
+> **Peringatan Syntax JSON:** Jangan biarkan Swagger mengisi template default seperti `"channel"` atau `"tested_at": "string"`. Cukup kirim field yang diperlukan di atas agar tidak ditolak dengan pesan `invalid request syntax`.
+
+Cek hasil di **`GET /api/v1/setup/jobs/{id}`**:
+Backend akan mengembalikan daftar profil (misal `mainStream`, `subStream`), URL RTSP lengkap dengan token autentikasi, serta `credential_ref` sementara.
+
+### Langkah 5 — Uji Paket Stream Nyata (`action: "probe"`)
+Verifikasi apakah stream RTSP benar-benar bisa ditarik oleh FFprobe:
+```json
+{
+  "action": "probe",
+  "channel": {
+    "id": "gantangan01",
+    "source": "rtsp://192.168.1.2:554/user=admin_password=tlJwpbo6_channel=0_stream=0&onvif=0.sdp",
+    "live_mode": "transcode"
+  }
+}
+```
+Hasil probe di **`GET /api/v1/setup/jobs/{id}`** akan membeberkan karakteristik teknis kamera:
+* **`video_codec`**: `hevc` (H.265) atau `h264`
+* **`audio_codec`**: `pcm_alaw`, `aac`, dsb.
+* **`width` & `height`**: Resolusi asli (misal `2304x1296`)
+* **`fps`**: Frame rate (misal `20`)
+* **`b_frames`**: Jumlah B-frame (`0` ideal untuk WebRTC)
+
+---
+
+## 5. Menentukan `live_mode`: "copy" vs "transcode"
+
+WebRTC pada browser HP juri secara universal membutuhkan codec **H.264**. Di lapangan, banyak NVR generasi baru hanya mendukung **H.265 / H.265X**:
+
+| Kondisi Codec Kamera | Pilihan `live_mode` | Perilaku Backend & Kualitas |
+| :--- | :--- | :--- |
+| **Kamera H.264** (dan `b_frames: 0`) | `"copy"` | **Zero CPU overhead**. Stream video langsung dialirkan ke WebRTC tanpa encode ulang. |
+| **Kamera H.265 / HEVC** (hanya ada H.265 di NVR) | `"transcode"` | **Wajib**. Backend otomatis mengonversi live stream menjadi H.264 (640x360 15 FPS) agar browser HP bisa memutar video, **sedangkan file rekaman MP4 tetap disimpan dalam resolusi asli H.265 2304x1296**. |
+
+> **Catatan Validasi:** Jika kamera menghasilkan H.265 namun Anda memaksa `live_mode: "copy"`, backend pada tahap `apply` akan menolak dengan error `UNSUPPORTED_CODEC: Pilih profil H.264 tanpa B-frame atau aktifkan konversi H.264`.
+
+---
+
+## 6. Menyimpan Konfigurasi (`action: "apply"`)
+
+Sebelum menjalankan `apply`, pastikan file **`mediamtx.exe`** (v1.15.3) sudah berada di `local-app\bin\`. Download jika belum ada:
 ```powershell
-go run ./cmd/api -env .env
+Invoke-WebRequest -Uri "https://github.com/bluenviron/mediamtx/releases/download/v1.15.3/mediamtx_v1.15.3_windows_amd64.zip" -OutFile "mediamtx.zip"
+Expand-Archive -Path "mediamtx.zip" -DestinationPath "local-app\bin" -Force
+Remove-Item "mediamtx.zip"
 ```
 
-### Langkah 4 — Daftarkan Kamera (Setup di Loopback)
-Buka browser/Insomnia di dalam **Mini PC itu sendiri** (`http://127.0.0.1:8090`):
-1. **Ambil Nonce**: Panggil `GET /api/v1/setup/bootstrap`. Simpan string `nonce` yang didapat.
-2. **Kirim Probe**: Panggil `POST /api/v1/setup/jobs` dengan header `X-Local-Control: <nonce>`:
-   ```json
-   {
-     "action": "probe",
-     "channel": {
-       "id": "gantangan01",
-       "source": "rtsp://admin:password_cctv@192.168.1.64:554/Streaming/Channels/101",
-       "live_mode": "copy"
-     }
-   }
-   ```
-   Poll status job hingga `SUCCEEDED`.
-3. **Simpan (Apply)**: Kirim job `action: "apply"` berisi IP LAN Mini PC (`192.168.1.100`), CIDR (`192.168.1.0/24`), dan channel di atas. Backend akan mengunci setelan ini ke file terenkripsi DPAPI.
+Lalu kirimkan perintah `apply` ke **`POST /api/v1/setup/jobs`**:
+```json
+{
+  "action": "apply",
+  "configuration": {
+    "version": 1,
+    "lan_ip": "192.168.1.106",
+    "lan_cidr": "192.168.1.0/24",
+    "channels": [
+      {
+        "id": "gantangan01",
+        "source": "rtsp://192.168.1.2:554/user=admin_password=tlJwpbo6_channel=0_stream=0&onvif=0.sdp",
+        "live_mode": "transcode"
+      }
+    ]
+  }
+}
+```
+Setelah job berstatus `SUCCEEDED`, konfigurasi terkunci secara aman dengan enkripsi DPAPI Windows.
 
-### Langkah 5 — Mulai Sesi Lomba (Start Session)
-Kamera tidak akan disedot dan tidak direkam sebelum tombol start ditekan:
+---
+
+## 7. Menjalankan Sesi Lomba (Operasional Nyata)
+
+### A. Mulai Sesi (Start Session)
 ```http
 POST /api/v1/media/sessions
 X-Local-Control: <nonce>
+Content-Type: application/json
 
 {
   "id": "ronde-01",
   "channels": ["gantangan01"]
 }
 ```
-Detik ini juga:
-1. FFmpeg langsung menyalakan pipeline untuk menyedot RTSP kamera `192.168.1.64`.
-2. Segmen file `.mp4` mulai ditulis ke folder `data/recordings/`.
-3. Stream video diumpankan ke MediaMTX internal.
+Backend mengembalikan status `202 Accepted` (`STARTING` → `RUNNING`). Detik ini juga:
+1. FFmpeg mulai menyedot stream RTSP NVR.
+2. File rekaman `.mp4` mulai ditulis ke folder `data/recordings/`.
+3. Pipa WebRTC MediaMTX aktif.
 
-### Langkah 6 — Buka Video di Browser HP Juri
-Dari HP/Laptop juri yang terhubung ke Wi-Fi arena:
-1. Buka player WebRTC (atau file contoh `test-whep.html`) yang mengarah ke:
-   `http://192.168.1.100:8090/api/v1/playback/gantangan01/whep`
-2. Browser dan Mini PC melakukan jabat tangan WHEP.
-3. Video siaran gantangan langsung menyala di layar HP juri tanpa delay.
+### B. Membuka Live Video di Browser Juri
+Browser juri di jaringan Wi-Fi arena membuka player WHEP:
+* URL: `http://192.168.1.106:8090/api/v1/playback/gantangan01/whep`
+* Video live langsung menyala tanpa delay (< 300 ms).
 
-### Langkah 7 — Selesai Ronde (Stop Session)
-Kirim perintah Stop:
+### C. Menghentikan Sesi (Stop Session)
 ```http
 POST /api/v1/media/sessions/ronde-01/stop
 X-Local-Control: <nonce>
 ```
-1. Sinyal WebRTC ke HP juri diputus.
-2. FFmpeg berhenti menyedot RTSP.
-3. Segmen-segmen video disatukan, divalidasi dengan `ffprobe`, dan diberi status `READY` di `data/recordings/`. File MP4 utuh siap diputar ulang untuk barang bukti bila ada protes nilai juri.
+1. Sesi WHEP dan WebSocket ditutup.
+2. Pipeline rekaman FFmpeg dihentikan secara graceful.
+3. Segmen-segmen video digabung dan divalidasi ke file MP4 final berstatus `READY`.
 
 ---
 
-## 5. Ringkasan Diagnostik Masalah di Lapangan
+## 8. Ringkasan Diagnostik Error Realita Lapangan
 
-| Gejala di Lapangan | Kemungkinan Penyebab Utama | Solusi Praktis |
+| Kode Error / Gejala | Penyebab Nyata di Lapangan | Solusi Terverifikasi |
 | :--- | :--- | :--- |
-| **Probe gagal / Timeout** | Kabel LAN kamera lepas, IP kamera salah, atau akun CCTV salah. | Coba tes dengan `ffprobe` manual di terminal. Pastikan IP kamera bisa di-ping dari Mini PC. |
-| **Video tidak muncul di HP Juri (WHEP Error)** | Port UDP `8189` diblokir oleh Windows Firewall Mini PC. | Buka Windows Defender Firewall → Inbound Rules → Izinkan port **TCP 8090** dan **UDP 8189**. |
-| **Video hitam tapi suara ada / sebaliknya** | Codec kamera adalah H.265 / HEVC tanpa dukungan hardware di HP juri. | Saat setup, ubah `live_mode` dari `"copy"` menjadi `"transcode"`. |
-| **Tombol Start ditolak (409 Conflict)** | Sesi ronde sebelumnya belum di-stop atau masih tahap finalisasi file. | Tunggu beberapa detik sampai status sesi lama menjadi `STOPPED`, atau gunakan `session_id` baru. |
-| **Request setup ditolak (403 Forbidden)** | Mengakses URL setup via IP LAN (bukan localhost) atau nonce salah. | Setup hanya boleh dibuka dari `http://127.0.0.1:8090` pada keyboard/layar Mini PC itu sendiri. |
+| `invalid request syntax` | Swagger UI otomatis menyisipkan dummy struct (`"tested_at": "string"`). | Hapus field yang tidak perlu. Cukup kirim field yang dibutuhkan action terkait. |
+| `NO_PROFILES (0 layanan)` | Port ONVIF salah (misal mencoba port 80 padahal NVR memakai port lain). | Jalankan `action: "discover"` untuk mendeteksi port ONVIF asli (misal port `8899`). |
+| `BINARY_MISSING` (`ffprobe tidak ditemukan`) | File `ffprobe.exe` tidak berada di folder `local-app\bin\`. | Salin `ffprobe.exe` dan `ffmpeg.exe` langsung ke dalam folder `local-app\bin\`. |
+| `UNSUPPORTED_CODEC` saat apply | Kamera bertipe H.265 / HEVC tetapi di-apply dengan `live_mode: "copy"`. | Ubah `live_mode` menjadi `"transcode"` pada konfigurasi channel. |
+| `MediaMTX tidak ditemukan` saat apply | File `mediamtx.exe` belum diunduh ke folder `local-app\bin\`. | Download MediaMTX v1.15.3 Windows dan letakkan file `mediamtx.exe` di folder `local-app\bin\`. |
+| `403 Forbidden` pada request setup | Tidak menyertakan header `X-Local-Control` atau tidak diakses dari `localhost`. | Ambil nonce dari `GET /api/v1/setup/bootstrap` dan panggil via `http://127.0.0.1:8090`. |
