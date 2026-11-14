@@ -1,68 +1,362 @@
-# Rancangan ERD Multi-Arena Kicau Mania
+# Rancangan ERD Lengkap Kicau Mania (Multi-Arena & EO)
 
-> **Status — REVISI UNTUK PERSETUJUAN ERD**
+> **Status — REVISI PENYEDERHANAAN & EO BERBASIS AKUN**
 >
-> Tanggal revisi 10 November 2026. Keputusan ronde mandiri dan satu pemenang telah dikunci untuk rancangan ini. Kriteria bersama per arena telah diputuskan untuk tahap ini. File migrasi 004–007 sudah disiapkan berdasarkan rancangan ini; penerapan pada database aplikasi belum dilakukan. Dump sumber tetap dipertahankan. SQL dan backend bisnis kini mengikuti migrasi ini; frontend serta integrasi engine belum termasuk.
+> Tanggal revisi: 14 November 2026.
+> Rancangan ini menyederhanakan arsitektur database dengan:
+> 1. Menghapus tabel perantara dan audit mikro (`asset_owners`, `asset_bird_owner_transfers`, `competition_registration_items`, `competition_registration_payments`, `judging_participant_assessments`, `judging_score_operations`, `judging_score_revisions`).
+> 2. Menyimpan EO sebagai akun `iam.users` dengan boolean `is_eo`; event terhubung langsung ke akun penyelenggara melalui `owner_id`. Arena tetap merupakan fasilitas fisik terpisah.
+> 3. Memastikan `arena_id` selalu wajib (`NOT NULL`) pada event, serta memungkinkan **rekapan analitik riwayat EO pernah mengadakan lomba di arena mana saja**.
+> 4. Menyediakan **kustomisasi jumlah ronde yang fleksibel** (1 s/d N ronde) per event di masing-masing arena.
+> 5. Menyederhanakan registrasi menjadi entitas tunggal (1 tiket = 1 burung di 1 ronde & 1 gantangan) lengkap dengan kolom BLOB bukti bayar transfer.
+> 6. Menyederhanakan penilaian juri: revisi nilai langsung **ditimpa (`UPDATE`)** pada `judging.round_scores`.
+> 7. Menyimpan token lupa password dan verifikasi email sementara di Redis, di luar tabel PostgreSQL.
+> 8. Memisahkan status peserta dari registrasi dan pembayaran, serta mencatat penghargaan internal maupun eksternal per burung.
 
-Acuan bisnis berasal dari [diskusi awal](../../discussion_11062026_erd.txt), [diskusi 9 November](../../discussion_11092026_target%20beres.txt), dan keputusan lanjutan mengenai bracket serta pengesahan pemenang. Nama entitas seperti `asset_arenas` dalam diagram mewakili tabel `asset.arenas`. Atribut yang ditampilkan dipilih untuk menjelaskan hubungan dan aturan bisnis.
+---
 
-Urutan penerapan dan rollback tersedia di [panduan migrasi](README.md). Migrasi menjaga constraint database; UseCase mengoordinasikan aturan semantik seperti kelengkapan penilaian, otorisasi arena, dan pengesahan pemenang. Integrasi frontend dan engine masih menjadi tahap berikutnya.
+## 0. Peta Relasi Antar Tabel
 
-## 1. Gambaran utama
+Bagian ini memecah diagram lengkap menjadi beberapa tampilan. Mulai dari peta utama, lalu lihat diagram per bagian untuk menelusuri foreign key.
 
-Setiap item registrasi menyatakan satu burung mengikuti satu ronde. Status dan gantangan pada item tersebut menunjukkan apakah keikutsertaan sudah dikonfirmasi. Satu header registrasi menampung beberapa item dan pembayaran gabungannya.
+**Cakupan:** seluruh diagram mengikuti **rancangan penyederhanaan dalam dokumen ini**, bukan salinan schema database yang sudah diterapkan. Migrasi `004`–`007` masih memakai antara lain `asset.owners`, `competition.registration_items`, `competition.registration_payments`, dan histori revisi skor. Diagram di bawah tidak berarti perubahan schema atau penggunaan Redis sudah diterapkan oleh migrasi maupun kode aplikasi.
 
-Ronde berdiri sendiri. Bracket dikelola manual di luar aplikasi; operator membuat ronde dan menentukan pesertanya secara terpisah. Tidak ada tabel bracket, hubungan ronde berikutnya, atau mekanisme otomatis peserta lolos. Setiap ronde yang ditutup resmi mempunyai tepat satu pemenang, tanpa otomatis mendaftarkan pemenang tersebut ke ronde lain.
+### Navigasi
+
+- [Peta utama: arena sampai rekaman](#01-peta-utama-arena-sampai-rekaman)
+- [Akun dan hak akses](#02-akun-dan-hak-akses)
+- [Fasilitas arena dan kepemilikan burung](#03-fasilitas-arena-dan-kepemilikan-burung)
+- [EO, event, ronde, dan tiket](#04-eo-event-ronde-dan-tiket)
+- [Penjurian, pemenang, dan rekaman](#05-penjurian-pemenang-dan-rekaman)
+- [Referensi foreign key](#06-referensi-foreign-key)
+- [Riwayat penghargaan dan sertifikat](#07-riwayat-penghargaan-dan-sertifikat)
+- [Diagram lengkap beserta atribut](#1-diagram-hubungan-entitas-lengkap-erd-mermaid)
+
+### Cara membaca diagram
+
+| Notasi | Arti pada ujung garis |
+| :--- | :--- |
+| `||` | Tepat satu, wajib |
+| `o|` atau `|o` | Nol atau satu, opsional |
+| `o{` atau `}o` | Nol sampai banyak |
+| `PK` | Primary key, identitas baris |
+| `FK` | Foreign key, referensi ke tabel lain |
+| `UK` | Unique key, nilai harus unik |
+
+Contoh: `competition_events ||--o{ competition_rounds` berarti satu event dapat memiliki nol sampai banyak ronde; setiap ronde wajib mengacu ke tepat satu event. Event yang sedang disiapkan boleh belum memiliki ronde, walaupun event siap lomba secara bisnis membutuhkan minimal satu ronde.
+
+Nama node memakai underscore: `competition_rounds` berarti `competition.rounds`. Label garis pada diagram detail menyebut kolom FK di tabel anak. Tabel yang muncul di beberapa diagram adalah tabel yang sama, bukan tabel tambahan. Diagram detail hanya menampilkan kolom kunci agar relasinya mudah dibaca.
+
+### 0.1 Peta utama: arena sampai rekaman
 
 ```mermaid
-flowchart TD
-    A["Arena"] --> E["Event"]
-    E --> R["Ronde"]
-    A --> K["Kategori arena"]
-    K --> R
-    A --> G["Gantangan"]
-    REG["Registrasi · kontak pendaftar"] --> I["Item registrasi / keikutsertaan ronde"]
-    REG --> PAY["Pembayaran gabungan"]
-    B["Burung · satu pemilik"] --> I
-    R --> I
-    G --> I
-    I --> S["Nilai juri dan revisi"]
-    I --> M["Rekaman · status kirim ke pendaftar"]
-    R --> W["Pemenang ronde · satu item terkonfirmasi"]
-    I -->|"kandidat dengan rata-rata tertinggi"| W
-    O["Operator berwenang pada arena"] -->|mengesahkan_saat_penutupan| W
+erDiagram
+    direction LR
+    asset_arenas ||--o{ competition_events : lokasi
+    iam_users ||--o{ competition_events : owner_id
+    competition_events ||--o{ competition_rounds : memiliki_ronde
+    asset_bird_species ||--o{ competition_rounds : bird_species_id
+    competition_rounds ||--o{ competition_registrations : memiliki_tiket
+    iam_users ||--o{ competition_registrations : user_id
+    asset_birds ||--o{ competition_registrations : peserta
+    asset_gantangan ||--o{ competition_registrations : tempat_peserta
+    competition_registrations ||--o{ judging_round_scores : memperoleh_nilai
+    competition_registrations ||--o| media_round_recordings : memiliki_rekaman
+    asset_birds ||--o{ asset_bird_award_certificate_history : memperoleh_penghargaan
+    competition_registrations |o--o{ asset_bird_award_certificate_history : prestasi_internal
 ```
 
-Node pemenang merangkum field pada ronde, bukan tabel tambahan. Pemenang belum terisi sebelum penutupan; saat `CLOSED` wajib ada satu pemenang, sedangkan ronde `CANCELLED` tidak mempunyai pemenang.
+**Intinya:** akun dengan `is_eo = true` menyelenggarakan event di arena. Event memiliki ronde; setiap tiket menghubungkan satu ronde, satu burung, dan satu gantangan. Nilai dan rekaman mengacu ke tiket tersebut. Penghargaan selalu mengacu ke burung dan boleh mengacu ke tiket lomba internal. Hubungan EO dengan arena bersifat **banyak-ke-banyak melalui event**, sehingga riwayat kerja sama dapat ditelusuri tanpa tabel penghubung tambahan.
 
-**Keputusan yang sudah dikunci**
+### 0.2 Akun dan hak akses
 
-- Bracket manual berada di luar aplikasi; ronde tidak memiliki relasi kemajuan antarronde.
-- Burung yang sama boleh mengikuti beberapa ronde melalui item registrasi berbeda. Pada ronde yang sama, satu burung tetap hanya mempunyai satu keikutsertaan aktif.
-- Rekap rata-rata menentukan kandidat tertinggi dengan bobot juri dan kriteria yang sama. Operator mengesahkan satu pemenang bersama penutupan resmi; jika seri, operator memilih dari kandidat yang seri.
-- Kategori dikelola per arena; multi-role, batas tiga perangkat aktif per akun, pemilik tunggal burung, dan penerima video dari kontak pendaftar tetap dipertahankan.
+```mermaid
+erDiagram
+    direction LR
+    iam_users {
+        uuid id PK
+        boolean is_eo "default false"
+    }
+    iam_roles {
+        uuid id PK
+    }
+    iam_user_roles {
+        uuid id PK
+        uuid user_id FK
+        uuid role_id FK
+    }
+    iam_arena_user_roles {
+        uuid id PK
+        uuid user_id FK
+        uuid role_id FK
+        uuid arena_id FK
+    }
+    asset_arenas {
+        uuid id PK
+    }
+    iam_user_sessions {
+        uuid id PK
+        uuid user_id FK
+        text user_agent
+    }
+    iam_user_auth_providers {
+        uuid id PK
+        uuid user_id FK
+    }
+    iam_users ||--o{ iam_user_roles : user_id
+    iam_roles ||--o{ iam_user_roles : role_id
+    iam_users ||--o{ iam_arena_user_roles : user_id
+    iam_roles ||--o{ iam_arena_user_roles : role_id
+    asset_arenas ||--o{ iam_arena_user_roles : arena_id
+    iam_users ||--o{ iam_user_sessions : user_id
+    iam_users ||--o{ iam_user_auth_providers : user_id
+```
 
-**Penyederhanaan untuk review**
+`iam.users.is_eo` menandai apakah akun merupakan EO (default `false`). `user_roles` menghubungkan akun dengan role global. `arena_user_roles` menambahkan lingkup arena: akun yang sama dapat memiliki penugasan berbeda di arena berbeda. Akun juga menjadi referensi pemilik burung, penyelenggara EO, pendaftar, dan juri pada diagram berikutnya.
 
-- Satu item registrasi menyimpan burung, ronde, gantangan, dan status keikutsertaan.
-- Penugasan juri ronde langsung menunjuk akun juri.
-- Seluruh ronde memakai daftar kriteria bersama per arena. Daftar dan artinya dikunci setelah pertama digunakan, ditandai `arenas.criteria_locked_at`.
-- Status serta tujuan pengiriman video berada pada rekaman.
-- Ronde menyimpan fase saat ini. History revisi nilai dan transfer pemilik tetap ditampilkan karena keduanya sudah menjadi kebutuhan yang disepakati.
+Token lupa password dan verifikasi email disimpan di Redis dengan masa berlaku (TTL) dan dikonsumsi sekali saat berhasil digunakan. PostgreSQL tetap menyimpan hasil verifikasi pada `iam.users.email_verified_at`. Redis tidak ditampilkan sebagai tabel atau FK pada ERD.
 
-| Aturan lintas arena | Bentuk hubungan yang diusulkan |
-| --- | --- |
-| Banyak arena berjalan bersamaan | Event, registrasi, gantangan, dan engine memiliki `arena_id`. |
-| Nomor gantangan dapat sama di arena berbeda | Unik pada pasangan `(arena_id, number)`. |
-| Kategori dikelola per arena | Admin arena membuat kategorinya sendiri. Kode kategori unik pada pasangan `(arena_id, code)`. |
-| Satu registrasi untuk satu arena | Item registrasi, ronde, dan gantangan harus berada pada arena header registrasi. |
-| Satu ronde aktif per arena | Ronde berjalan atau terinterupsi membatasi arena terkait. Arena lain dapat menjalankan rondenya. |
-| Akun dapat bertugas di beberapa arena | Penugasan role menghubungkan akun, role, dan arena. |
-| Burung/pemilik dipakai lintas arena | Master burung dan pemilik bersifat global. Riwayat keikutsertaan berada pada item registrasi. |
+### 0.3 Fasilitas arena dan kepemilikan burung
 
-## 2. Akun, role, dan perangkat
+```mermaid
+erDiagram
+    direction LR
+    asset_arenas {
+        uuid id PK
+    }
+    asset_gantangan {
+        uuid id PK
+        uuid arena_id FK
+        integer baris "Posisi baris mulai 1"
+        integer kolom "Posisi kolom mulai 1"
+    }
+    iam_users {
+        uuid id PK
+        boolean is_eo "default false"
+    }
+    asset_bird_species {
+        uuid id PK
+        varchar name UK "Murai Batu, Kacer, Cucak Ijo"
+    }
+    asset_birds {
+        uuid id PK
+        varchar bird_code UK "Kode identitas burung; wajib"
+        uuid owner_id FK "Akun pemilik aktif"
+        uuid bird_species_id FK
+    }
+    asset_bird_ownership_history {
+        uuid id PK
+        uuid bird_id FK
+        uuid user_id FK "Akun pemilik pada periode tersebut"
+    }
+    asset_arenas ||--o{ asset_gantangan : arena_id
+    iam_users ||--o{ asset_birds : owner_id
+    asset_bird_species ||--o{ asset_birds : bird_species_id
+    asset_birds ||--o{ asset_bird_ownership_history : bird_id
+    iam_users ||--o{ asset_bird_ownership_history : user_id
+```
 
-Akun mempunyai role global melalui `iam.user_roles` dan penugasan operasional melalui `iam.arena_user_roles`. Superadmin mengelola lintas arena. Operator, admin arena, dan juri memperoleh akses melalui penugasan arena.
+Gantangan adalah fasilitas fisik yang dapat digunakan kembali pada ronde berbeda. `asset.birds.owner_id` wajib menunjuk akun pemilik aktif, sehingga nama dan telepon dibaca dari `iam.users`. Jenis burung disimpan sebagai master `asset.bird_species` dan diacu melalui `bird_species_id`. Histori kepemilikan mengacu langsung ke `iam.users` melalui `user_id`, sehingga nama dan telepon mengikuti data akun. Setiap baris histori wajib memiliki akun pemilik; nama dan telepon tidak diinput ulang. Posisi gantangan disimpan melalui `baris` dan `kolom`.
+
+### 0.4 EO, event, ronde, dan tiket
+
+```mermaid
+erDiagram
+    direction LR
+    iam_users {
+        uuid id PK
+        boolean is_eo "default false"
+    }
+    asset_arenas {
+        uuid id PK
+    }
+    competition_events {
+        uuid id PK
+        uuid arena_id FK
+        uuid owner_id FK
+    }
+    competition_categories {
+        uuid id PK
+        uuid arena_id FK
+    }
+    competition_rounds {
+        uuid id PK
+        uuid bird_species_id FK
+        uuid arena_id FK
+        uuid event_id FK
+        uuid category_id FK "opsional"
+    }
+    competition_registrations {
+        uuid id PK
+        uuid user_id FK "Akun pendaftar wajib tersedia"
+        uuid arena_id FK
+        uuid round_id FK
+        uuid bird_id FK
+        uuid gantangan_id FK
+        varchar status "PENDING_PAYMENT, CONFIRMED, CANCELLED"
+        varchar participant_status "ACTIVE, DISQUALIFIED; default ACTIVE"
+        text disqualification_reason "wajib saat participant_status DISQUALIFIED"
+        timestamptz disqualified_at "waktu diskualifikasi"
+    }
+    asset_birds {
+        uuid id PK
+        varchar bird_code UK "Kode identitas burung; wajib"
+    }
+    asset_gantangan {
+        uuid id PK
+        integer baris "Posisi baris mulai 1"
+        integer kolom "Posisi kolom mulai 1"
+    }
+    asset_arenas ||--o{ competition_events : arena_id
+    iam_users ||--o{ competition_events : owner_id
+    asset_arenas ||--o{ competition_categories : arena_id
+    asset_arenas ||--o{ competition_rounds : arena_id
+    competition_events ||--o{ competition_rounds : event_id
+    asset_bird_species ||--o{ competition_rounds : bird_species_id
+    competition_categories |o--o{ competition_rounds : category_id
+    asset_arenas ||--o{ competition_registrations : arena_id
+    competition_rounds ||--o{ competition_registrations : round_id
+    iam_users ||--o{ competition_registrations : user_id
+    asset_birds ||--o{ competition_registrations : bird_id
+    asset_gantangan ||--o{ competition_registrations : gantangan_id
+```
+
+Satu tiket menyimpan pembayaran langsung pada `competition.registrations`. Pendaftar wajib memiliki akun yang diacu melalui `user_id`; nama dan telepon dibaca dari `iam.users`. Jika akun belum ada, buat akun terlebih dahulu sebelum membuat registrasi. Akun pendaftar dapat berbeda dari pemilik burung; akun verifikator belum disimpan. Ronde mengacu ke `asset.bird_species` melalui `bird_species_id` untuk menentukan jenis burung yang boleh mengikuti ronde; tidak ada FK dari ronde ke akun pengesah atau tiket pemenang.
+
+### 0.5 Penjurian, pemenang, dan rekaman
+
+```mermaid
+erDiagram
+    direction LR
+    asset_arenas {
+        uuid id PK
+    }
+    iam_users {
+        uuid id PK
+        boolean is_eo "default false"
+    }
+    competition_rounds {
+        uuid id PK
+        uuid bird_species_id FK
+    }
+    competition_registrations {
+        uuid id PK
+        uuid user_id FK "Akun pendaftar wajib tersedia"
+        varchar status "PENDING_PAYMENT, CONFIRMED, CANCELLED"
+        varchar participant_status "ACTIVE, DISQUALIFIED; default ACTIVE"
+        text disqualification_reason "wajib saat participant_status DISQUALIFIED"
+        timestamptz disqualified_at "waktu diskualifikasi"
+    }
+    judging_round_judges {
+        uuid id PK
+        uuid round_id FK
+        uuid judge_user_id FK
+    }
+    judging_score_criteria {
+        uuid id PK
+        uuid arena_id FK
+    }
+    judging_round_scores {
+        uuid id PK
+        uuid arena_id FK
+        uuid round_id FK
+        uuid registration_id FK
+        uuid user_id FK
+        uuid criteria_id FK
+    }
+    media_round_recordings {
+        uuid id PK
+        uuid registration_id FK,UK
+    }
+    competition_rounds ||--o{ competition_registrations : round_id
+    iam_users ||--o{ competition_registrations : user_id
+    competition_rounds ||--o{ judging_round_judges : round_id
+    iam_users ||--o{ judging_round_judges : judge_user_id
+    asset_arenas ||--o{ judging_score_criteria : arena_id
+    asset_arenas ||--o{ judging_round_scores : arena_id
+    competition_rounds ||--o{ judging_round_scores : round_id
+    competition_registrations ||--o{ judging_round_scores : registration_id
+    iam_users ||--o{ judging_round_scores : user_id
+    judging_score_criteria ||--o{ judging_round_scores : criteria_id
+    asset_bird_species ||--o{ competition_rounds : bird_species_id
+    competition_registrations ||--o| media_round_recordings : registration_id
+```
+
+Satu baris skor berarti **satu juri menilai satu kriteria untuk satu tiket pada satu ronde**. `round_judges` menyimpan daftar penugasan; pada rancangan ini skor menyimpan `user_id` langsung, bukan FK `round_judge_id`.
+
+Aturan integritas yang perlu ditegakkan saat implementasi:
+
+- `competition.events.owner_id` wajib menunjuk akun dengan `is_eo = true` saat event dibuat; FK ke `iam.users` saja belum memeriksa boolean ini.
+- Posisi gantangan harus positif dan unik per `(arena_id, baris, kolom)`; nomor gantangan tetap unik per arena.
+- Semua referensi arena dalam satu alur harus cocok: event, kategori, ronde, tiket, gantangan, kriteria, dan skor.
+- Juri pemberi skor harus terdaftar di `round_judges` pada ronde yang sama. FK ke `iam.users` saja belum menjamin penugasan ini.
+- Tiket pada skor harus berasal dari ronde yang sama dengan `round_scores.round_id`.
+- Jenis burung peserta (`asset.birds.bird_species_id`) harus sama dengan jenis ronde (`competition.rounds.bird_species_id`) saat registrasi dibuat atau burung peserta diganti. Perubahan jenis burung atau ronde yang sudah mempunyai peserta harus menjaga kecocokan tersebut.
+- Registrasi dengan `participant_status = DISQUALIFIED` tidak masuk peringkat dan tidak dapat menjadi kandidat pemenang pada ronde tersebut.
+- `media.round_recordings.registration_id` unik: satu tiket boleh belum mempunyai rekaman, tetapi maksimal mempunyai satu baris rekaman.
+
+### 0.6 Referensi foreign key
+
+Setiap baris merangkum seluruh FK pada tabel anak menurut rancangan ini. `?` menandakan referensi yang boleh kosong, termasuk yang baru wajib diisi pada fase tertentu. Semua target menunjuk kolom `id`.
+
+| Tabel anak | Kolom FK → tabel induk |
+| :--- | :--- |
+| `iam.user_roles` | `user_id` → `iam.users`; `role_id` → `iam.roles` |
+| `iam.arena_user_roles` | `arena_id` → `asset.arenas`; `user_id` → `iam.users`; `role_id` → `iam.roles` |
+| `iam.user_sessions` | `user_id` → `iam.users` |
+| `iam.user_auth_providers` | `user_id` → `iam.users` |
+| `asset.gantangan` | `arena_id` → `asset.arenas` |
+| `asset.birds` | `owner_id` → `iam.users`; `bird_species_id` → `asset.bird_species` |
+| `asset.bird_ownership_history` | `bird_id` → `asset.birds`; `user_id` → `iam.users` |
+| `asset.bird_award_certificate_history` | `bird_id` → `asset.birds`; `registration_id?` → `competition.registrations` |
+| `competition.events` | `arena_id` → `asset.arenas`; `owner_id` → `iam.users` |
+| `competition.categories` | `arena_id` → `asset.arenas` |
+| `competition.rounds` | `arena_id` → `asset.arenas`; `event_id` → `competition.events`; `category_id?` → `competition.categories`; `bird_species_id` → `asset.bird_species` |
+| `competition.registrations` | `user_id` → `iam.users`; `arena_id` → `asset.arenas`; `round_id` → `competition.rounds`; `bird_id` → `asset.birds`; `gantangan_id` → `asset.gantangan` |
+| `judging.score_criteria` | `arena_id` → `asset.arenas` |
+| `judging.round_judges` | `round_id` → `competition.rounds`; `judge_user_id` → `iam.users` |
+| `judging.round_scores` | `arena_id` → `asset.arenas`; `round_id` → `competition.rounds`; `registration_id` → `competition.registrations`; `user_id` → `iam.users`; `criteria_id` → `judging.score_criteria` |
+| `media.round_recordings` | `registration_id` → `competition.registrations` (unik) |
+
+`iam.users`, `iam.roles`, `asset.arenas`, dan `asset.bird_species` tidak memiliki FK pada rancangan ini. Nama dan telepon pemilik maupun pendaftar dibaca dari akun pengguna melalui FK masing-masing. Kontak pengiriman rekaman ditelusuri dari rekaman ke registrasi lalu ke akun pendaftar.
+
+Untuk melihat diagram secara visual, buka Markdown preview yang mendukung Mermaid. Jika hanya tampil blok kode, gunakan renderer Markdown dengan dukungan Mermaid; teks relasi dan tabel FK di atas tetap dapat dibaca tanpa renderer.
+
+### 0.7 Riwayat penghargaan dan sertifikat
+
+```mermaid
+erDiagram
+    direction LR
+    asset_birds {
+        uuid id PK
+        varchar bird_code UK "Kode identitas burung; wajib"
+    }
+    competition_registrations {
+        uuid id PK
+        uuid bird_id FK
+        varchar participant_status "ACTIVE, DISQUALIFIED; default ACTIVE"
+    }
+    asset_bird_award_certificate_history {
+        uuid id PK
+        uuid bird_id FK
+        uuid registration_id FK "opsional untuk prestasi internal"
+        varchar award_name "wajib"
+        varchar event_name "wajib untuk prestasi eksternal"
+        varchar organizer_name "opsional untuk prestasi eksternal"
+        integer rank "opsional; lebih dari 0"
+        date awarded_at "wajib"
+        text certificate_url "opsional; URL PDF atau gambar"
+    }
+    asset_birds ||--o{ competition_registrations : bird_id
+    asset_birds ||--o{ asset_bird_award_certificate_history : bird_id
+    competition_registrations |o--o{ asset_bird_award_certificate_history : registration_id
+```
+
+Satu burung dapat memiliki banyak penghargaan. Untuk prestasi internal, `registration_id` diisi; untuk prestasi eksternal, kolom tersebut kosong dan nama event dicatat secara manual. Satu registrasi boleh memiliki banyak penghargaan. Tidak adanya URL sertifikat tidak menghalangi pencatatan prestasi.
+
+---
+
+## 1. Diagram Hubungan Entitas Lengkap (ERD Mermaid)
 
 ```mermaid
 erDiagram
@@ -74,431 +368,419 @@ erDiagram
         varchar password_hash "opsional untuk akun Google"
         timestamptz email_verified_at
         boolean is_active
+        timestamptz created_at
+        timestamptz updated_at
+        boolean is_eo "default false"
     }
+
     iam_roles {
         uuid id PK
-        varchar name UK
+        varchar name UK "SUPERADMIN, OPERATOR, JURI, EO_ADMIN, PESERTA"
     }
+
     iam_user_roles {
         uuid id PK
         uuid user_id FK
         uuid role_id FK
     }
-    asset_arenas {
-        uuid id PK
-        varchar name
-        varchar timezone
-        boolean is_active
-    }
+
     iam_arena_user_roles {
         uuid id PK
         uuid arena_id FK
         uuid user_id FK
         uuid role_id FK
     }
+
     iam_user_sessions {
         uuid id PK
         uuid user_id FK
-        uuid device_id
+        varchar device_id
         timestamptz expires_at
         timestamptz revoked_at
+        text user_agent
     }
 
     iam_user_auth_providers {
         uuid id PK
         uuid user_id FK
-        varchar provider
-        varchar provider_user_id "Google sub"
-    }
-    iam_account_tokens {
-        uuid id PK
-        uuid user_id FK
-        varchar purpose "VERIFY_EMAIL atau RESET_PASSWORD"
-        bytea token_hash UK
-        timestamptz expires_at
-        timestamptz consumed_at
+        varchar provider "google"
+        varchar provider_user_id UK
     }
 
-    iam_users ||..o{ iam_user_auth_providers : metode_login
-    iam_users ||..o{ iam_account_tokens : verifikasi_dan_pemulihan
-
-    iam_users ||..o{ iam_user_roles : memiliki
-    iam_roles ||..o{ iam_user_roles : role_global
-    iam_users ||..o{ iam_arena_user_roles : ditugaskan
-    iam_roles ||..o{ iam_arena_user_roles : role_arena
-    asset_arenas ||..o{ iam_arena_user_roles : memberi_lingkup
-    iam_users ||..o{ iam_user_sessions : memiliki_perangkat
-```
-
-- Pasangan akun–role global dan kombinasi akun–arena–role operasional harus unik.
-- Login email/password berjalan tanpa Google; akun password harus memverifikasi email. Google adalah metode tambahan dan pengaitan akun lama dilakukan secara eksplisit. Akun Google-only tidak harus mempunyai password.
-- Token verifikasi/reset sekali pakai disimpan sebagai hash. Sesi menyimpan hash access/refresh token, bukan token mentah; detail teknis tersebut tidak ditampilkan seluruhnya pada diagram.
-- Maksimal tiga perangkat/browser aktif dihitung per akun secara keseluruhan. Login ulang pada perangkat yang sama memakai slot yang sama. Perangkat keempat ditolak.
-- Penugasan sebagai juri arena perlu dilanjutkan dengan penugasan pada ronde, yang terlihat pada diagram penjurian.
-
-## 3. Arena, perangkat, burung, dan pemilik
-
-Setiap arena mengelola gantangan dan engine media. Fase awal menggunakan satu engine media aktif per arena. Setiap burung wajib menunjuk tepat satu pemilik. Seorang pemilik dapat memiliki beberapa burung dan dapat ditautkan ke akun cloud.
-
-```mermaid
-erDiagram
     asset_arenas {
         uuid id PK
         varchar name
         text address
         varchar timezone
+        boolean is_active
         timestamptz criteria_locked_at
+        timestamptz created_at
+        timestamptz updated_at
     }
+
     asset_gantangan {
         uuid id PK
         uuid arena_id FK
-        integer number
+        integer number "Nomor gantangan/tiang fisik"
         text description
+        integer baris "Posisi baris mulai 1"
+        integer kolom "Posisi kolom mulai 1"
     }
-    asset_engines {
+
+    asset_bird_species {
         uuid id PK
-        uuid arena_id FK
-        varchar name
-        boolean is_active
-        timestamptz last_heartbeat_at
+        varchar name UK "Murai Batu, Kacer, Cucak Ijo"
+        timestamptz created_at
+        timestamptz updated_at
     }
-    asset_devices {
-        uuid id PK
-        uuid arena_id FK
-        uuid engine_id FK
-        uuid gantangan_id FK "opsional"
-        varchar type
-        varchar ip_address
-    }
-    iam_users {
-        uuid id PK
-        varchar name
-    }
-    asset_owners {
-        uuid id PK
-        uuid user_id FK "opsional"
-        uuid created_by_user_id FK "opsional untuk data lama"
-        uuid created_in_arena_id FK "asal input manual"
-        varchar name
-        varchar phone
-    }
+
     asset_birds {
         uuid id PK
-        uuid owner_id FK
-        varchar ring_number UK
+        varchar bird_code UK "Kode identitas burung; wajib"
         varchar name
-        varchar bird_type
+        uuid owner_id FK "Akun pemilik aktif"
+        uuid bird_species_id FK
+        timestamptz created_at
+        timestamptz updated_at
     }
-    asset_bird_owner_transfers {
+
+    asset_bird_ownership_history {
         uuid id PK
         uuid bird_id FK
-        uuid from_owner_id FK
-        uuid to_owner_id FK
-        uuid performed_by_user_id FK
-        text reason
-        timestamptz transferred_at
+        uuid user_id FK "Akun pemilik pada periode tersebut"
+        timestamptz ownership_date "Tanggal mulai/alih kepemilikan"
+        text notes "Catatan transfer"
     }
 
-    asset_arenas ||..o{ asset_gantangan : menyediakan
-    asset_arenas ||..o{ asset_engines : memiliki
-    asset_arenas ||..o{ asset_devices : memiliki
-    asset_engines ||..o{ asset_devices : menangani
-    asset_gantangan |o..o{ asset_devices : ditempati
-    iam_users |o..o| asset_owners : tertaut
-    iam_users |o..o{ asset_owners : mencatat
-    asset_arenas |o..o{ asset_owners : asal_input_manual
-    asset_owners ||..o{ asset_birds : memiliki
-    asset_birds ||..o{ asset_bird_owner_transfers : riwayat_transfer
-    asset_owners ||..o{ asset_bird_owner_transfers : pemilik_asal
-    asset_owners ||..o{ asset_bird_owner_transfers : pemilik_tujuan
-    iam_users ||..o{ asset_bird_owner_transfers : admin_pelaksana
-```
-
-- Tautan akun pada master pemilik opsional dan unik jika terisi. Pemilik tanpa akun tetap dapat tercatat.
-- Peserta mengelola burungnya sendiri. Petugas mengelola master manual pada arena asal inputnya; provenance ini tidak membatasi burung mengikuti arena lain. Pengaitan owner ke akun hanya oleh superadmin.
-- Transfer dilakukan superadmin dengan alasan dan history. Pemilik aktif disimpan pada `asset.birds.owner_id`.
-- Burung yang pernah mengikuti lomba tetap mempunyai riwayat peserta meskipun pemiliknya kemudian berubah.
-- Perangkat boleh belum ditempatkan pada gantangan. Arena engine, perangkat, dan gantangan yang ditautkan harus sesuai.
-
-## 4. Registrasi, pembayaran, dan keikutsertaan
-
-Pendaftaran manual menyimpan nama dan kontak pendaftar dengan akun opsional. Pendaftaran online memakai akun login. Satu header registrasi membayar beberapa item burung/ronde dalam satu arena. Tarif per item disimpan sebagai snapshot saat pendaftaran.
-
-```mermaid
-erDiagram
-    asset_arenas {
+    asset_bird_award_certificate_history {
         uuid id PK
-        varchar name
+        uuid bird_id FK
+        uuid registration_id FK "opsional untuk prestasi internal"
+        varchar award_name "wajib"
+        varchar event_name "wajib untuk prestasi eksternal"
+        varchar organizer_name "opsional untuk prestasi eksternal"
+        integer rank "opsional; lebih dari 0"
+        date awarded_at "wajib"
+        text certificate_url "opsional; URL PDF atau gambar"
+        timestamptz created_at
+        timestamptz updated_at
     }
-    iam_users {
-        uuid id PK
-        varchar name
-    }
+
     competition_events {
         uuid id PK
-        uuid arena_id FK
-        varchar title
-        date date
+        uuid arena_id FK "Lokasi arena gantangan (WAJIB)"
+        uuid owner_id FK "Akun EO penyelenggara (WAJIB)"
+        varchar title "Judul Event, misal Piala 17 Agustus"
+        text description
+        date event_date
+        varchar status "SCHEDULED, ACTIVE, COMPLETED, CANCELLED"
+        timestamptz created_at
+        timestamptz updated_at
     }
+
     competition_categories {
         uuid id PK
         uuid arena_id FK
-        varchar code
+        varchar code "VIP, REGULAR, dll"
         varchar name
     }
+
     competition_rounds {
         uuid id PK
+        uuid bird_species_id FK
         uuid arena_id FK
         uuid event_id FK
-        uuid category_id FK
-        integer round_number
-        varchar bird_type
-        numeric entry_fee
-        varchar phase
-        uuid winner_registration_item_id FK "opsional sebelum CLOSED"
-        uuid winner_confirmed_by_user_id FK "opsional sebelum CLOSED"
-        timestamptz winner_confirmed_at "opsional sebelum CLOSED"
+        uuid category_id FK "opsional"
+        integer round_number "Nomor urut ronde customize (1..N)"
+        varchar title "Judul Ronde, misal Ronde 01 - Murai VIP"
+        varchar status "PREPARED, RUNNING, JUDGING, CLOSED, CANCELLED"
+        timestamptz created_at
+        timestamptz updated_at
     }
-    asset_birds {
-        uuid id PK
-        varchar name
-    }
-    asset_gantangan {
-        uuid id PK
-        uuid arena_id FK
-        integer number
-    }
+
     competition_registrations {
         uuid id PK
+        uuid user_id FK "Akun pendaftar wajib tersedia"
         uuid arena_id FK
-        uuid registered_by_user_id FK "opsional"
-        uuid created_by_user_id FK
-        varchar registration_source
-        varchar registrant_name
-        varchar registrant_phone
-        numeric total_amount
-        varchar status
-    }
-    competition_registration_items {
-        uuid id PK
-        uuid arena_id FK
-        uuid registration_id FK
         uuid round_id FK
         uuid bird_id FK
-        uuid gantangan_id FK "opsional sebelum konfirmasi"
-        numeric entry_fee_snapshot
-        varchar status
-    }
-    competition_registration_payments {
-        uuid id PK
-        uuid arena_id FK
-        uuid registration_id FK
-        numeric amount
-        varchar method
-        text proof_reference
-        varchar status
-        uuid verified_by_user_id FK "opsional sebelum verifikasi"
+        uuid gantangan_id FK
+        numeric entry_fee
+        varchar payment_method "CASH, TRANSFER"
+        varchar payment_status "PENDING, VERIFIED, REJECTED"
+        bytea payment_proof "BLOB bukti bayar transfer"
+        varchar payment_proof_mime "image/jpeg, image/png, dll"
         timestamptz verified_at
+        varchar status "PENDING_PAYMENT, CONFIRMED, CANCELLED"
+        varchar participant_status "ACTIVE, DISQUALIFIED; default ACTIVE"
+        timestamptz created_at
+        timestamptz updated_at
+        text disqualification_reason "wajib saat participant_status DISQUALIFIED"
+        timestamptz disqualified_at "waktu diskualifikasi"
     }
 
-    asset_arenas ||..o{ competition_events : menyelenggarakan
-    competition_events ||..o{ competition_rounds : berisi
-    asset_arenas ||..o{ competition_categories : memiliki_kategori
-    competition_categories ||..o{ competition_rounds : mengelompokkan
-    asset_arenas ||..o{ competition_registrations : menerima
-    iam_users |o..o{ competition_registrations : akun_pendaftar
-    iam_users ||..o{ competition_registrations : membuat_catatan
-    competition_registrations ||..o{ competition_registration_items : berisi
-    competition_registrations ||..o{ competition_registration_payments : pembayaran_gabungan
-    iam_users |o..o{ competition_registration_payments : memverifikasi
-    competition_rounds ||..o{ competition_registration_items : dituju
-    competition_registration_items |o..o| competition_rounds : menjadi_pemenang_resmi
-    iam_users |o..o{ competition_rounds : mengesahkan_pemenang
-    asset_birds ||..o{ competition_registration_items : didaftarkan
-    asset_gantangan |o..o{ competition_registration_items : alokasi_tempat
-```
-
-- Header dapat berstatus draft ketika belum mempunyai item atau pembayaran. Item berstatus menunggu pembayaran sampai pembayaran gabungan diverifikasi dan seluruh alokasi berhasil. Item terkonfirmasi menyimpan gantangan yang wajib terisi.
-- Metode pembayaran awal adalah tunai atau transfer dengan verifikasi operator/admin. Satu pembayaran berlaku untuk header beserta itemnya. Tabel pembayaran dapat menyimpan beberapa percobaan dengan satu pembayaran gabungan yang diverifikasi untuk konfirmasi.
-- Pendaftar tanpa akun disimpan pada snapshot nama dan kontak. `created_by_user_id` menunjuk operator untuk input manual atau akun pendaftar untuk input online.
-- Kontak pendaftar menjadi penerima video. Transfer pemilik burung tidak mengubah snapshot registrasi.
-- Untuk item aktif, satu burung hanya memiliki satu keikutsertaan pada ronde yang sama. Gantangan yang sudah dialokasikan hanya dapat dipakai satu item aktif per ronde. Item yang dibatalkan melepas alokasi. Arena header, item, ronde, serta gantangan harus sama.
-- Burung boleh didaftarkan pada ronde berbeda menggunakan item lain. Hubungan ini menyatakan keikutsertaan terpisah, bukan hubungan lolos atau promosi bracket.
-- Kategori dimiliki arena melalui `competition.categories.arena_id`. Admin hanya mengelola kategori pada arena tempat ia ditugaskan. Arena berbeda boleh memiliki kode kategori yang sama, misalnya `VIP`, dengan keunikan `(arena_id, code)`.
-- Kategori ronde harus berasal dari arena ronde tersebut. Rancangan SQL memakai FK gabungan `competition.rounds(category_id, arena_id)` ke `competition.categories(id, arena_id)`, dengan constraint unik pendukung `(id, arena_id)` pada kategori.
-
-### Contoh satu burung mengikuti dua ronde
-
-| Burung | Item registrasi | Ronde | Makna |
-| --- | --- | --- | --- |
-| Burung A | Item 001 | Ronde 1 | Keikutsertaan pada Ronde 1. |
-| Burung A | Item 002 | Ronde 2 | Keikutsertaan baru pada Ronde 2. |
-
-Kedua item menunjuk `bird_id` yang sama dan `round_id` berbeda, serta dapat berada pada header registrasi yang sama selama arenanya sama. Operator menyiapkan peserta masing-masing ronde secara terpisah. Burung A boleh ikut Ronde 2 terlepas dari hasil Ronde 1; tidak ada hubungan bracket antara kedua item tersebut.
-
-## 5. Penjurian, revisi nilai, dan media
-
-Setiap ronde memiliki daftar juri yang ditugaskan langsung melalui `judge_user_id`. Kriteria berasal dari daftar bersama arena yang dikunci setelah pertama digunakan. Item registrasi berstatus terkonfirmasi menjadi peserta yang dinilai dan direkam. Rekap seluruh nilai wajib menghasilkan kandidat pemenang untuk disahkan operator saat menutup ronde.
-
-```mermaid
-erDiagram
-    asset_arenas {
-        uuid id PK
-        varchar name
-    }
-    competition_rounds {
-        uuid id PK
-        uuid arena_id FK
-        varchar phase
-        varchar interrupted_from_phase
-        integer session_duration_minutes
-        integer judging_duration_minutes
-        uuid winner_registration_item_id FK "opsional sebelum CLOSED"
-        uuid winner_confirmed_by_user_id FK "opsional sebelum CLOSED"
-        timestamptz winner_confirmed_at "opsional sebelum CLOSED"
-    }
-    iam_users {
-        uuid id PK
-        varchar name
-    }
     judging_score_criteria {
         uuid id PK
         uuid arena_id FK
-        varchar criteria_name
+        varchar criteria_name "Nama kriteria penilaian"
     }
+
     judging_round_judges {
         uuid id PK
         uuid round_id FK
         uuid judge_user_id FK
     }
-    competition_registration_items {
-        uuid id PK
-        uuid arena_id FK
-        uuid registration_id FK
-        uuid round_id FK
-        varchar status
-    }
+
     judging_round_scores {
         uuid id PK
-        uuid registration_item_id FK
-        uuid round_judge_id FK
-        uuid criteria_id FK
-        numeric score_value
-        integer revision_number
-    }
-    judging_participant_assessments {
-        uuid id PK
         uuid arena_id FK
         uuid round_id FK
-        uuid registration_item_id FK
-        uuid round_judge_id FK
-        integer version
+        uuid registration_id FK
+        uuid user_id FK
+        uuid criteria_id FK
+        numeric score_value "Nilai 1.0 - 10.0 (revisi ditimpa)"
+        timestamptz created_at
         timestamptz updated_at
     }
-    judging_score_operations {
-        uuid actor_user_id PK, FK
-        uuid operation_id PK
-        uuid assessment_id FK
-        bytea payload_hash
-        jsonb result
-        timestamptz created_at
-    }
-    judging_score_revisions {
-        uuid id PK
-        uuid score_id FK
-        uuid operation_id
-        integer revision_number
-        numeric score_value
-        timestamptz submitted_at
-    }
+
     media_round_recordings {
         uuid id PK
-        uuid registration_item_id FK, UK
+        uuid registration_id FK,UK "1 rekaman per tiket peserta"
         text video_url
         text audio_url
-        varchar recording_status
-        varchar delivery_status
-        varchar recipient_phone_snapshot
+        varchar recording_status "RECORDING, COMPLETED, FAILED"
+        varchar delivery_status "PENDING, SENT, FAILED"
         timestamptz sent_at
-    }
-    competition_registrations {
-        uuid id PK
-        uuid arena_id FK
-        varchar registrant_phone
+        timestamptz created_at
+        timestamptz updated_at
     }
 
-    asset_arenas ||..o{ competition_rounds : menyelenggarakan
-    asset_arenas ||..o{ judging_score_criteria : menentukan_kriteria
-    competition_rounds ||..o{ judging_round_judges : menugaskan
-    iam_users ||..o{ judging_round_judges : menjadi_juri
-    competition_rounds ||..o{ competition_registration_items : diikuti
-    competition_registration_items |o..o| competition_rounds : menjadi_pemenang_resmi
-    iam_users |o..o{ competition_rounds : mengesahkan_pemenang
-    competition_registrations ||..o{ competition_registration_items : berisi
-    competition_registration_items ||..o{ judging_participant_assessments : penilaian_per_juri
-    judging_round_judges ||..o{ judging_participant_assessments : mengisi
-    judging_participant_assessments ||..o{ judging_round_scores : seluruh_kriteria
-    judging_participant_assessments ||..o{ judging_score_operations : deduplikasi_operasi
-    iam_users ||..o{ judging_score_operations : mengirim
-    competition_registration_items ||..o{ judging_round_scores : dinilai
-    judging_round_judges ||..o{ judging_round_scores : memberi_nilai
-    judging_score_criteria ||..o{ judging_round_scores : diukur
-    judging_round_scores ||..o{ judging_score_revisions : riwayat_revisi
-    competition_registration_items ||..o| media_round_recordings : direkam_dan_dikirim
+    %% Relasi IAM
+    iam_users ||--o{ iam_user_roles : memiliki
+    iam_roles ||--o{ iam_user_roles : role_global
+    iam_users ||--o{ iam_arena_user_roles : ditugaskan_di_arena
+    iam_roles ||--o{ iam_arena_user_roles : role_arena
+    asset_arenas ||--o{ iam_arena_user_roles : lingkup_arena
+    iam_users ||--o{ iam_user_sessions : memiliki_perangkat
+    iam_users ||--o{ iam_user_auth_providers : metode_login
+
+    %% Relasi Fasilitas Arena
+    asset_arenas ||--o{ asset_gantangan : memiliki_tiang
+
+    %% Relasi Burung & Histori
+    asset_birds ||--o{ asset_bird_ownership_history : riwayat_pemilik
+    iam_users ||--o{ asset_bird_ownership_history : user_id
+    iam_users ||--o{ asset_birds : owner_id
+    asset_bird_species ||--o{ asset_birds : bird_species_id
+
+    %% Relasi Penghargaan Burung
+    asset_birds ||--o{ asset_bird_award_certificate_history : bird_id
+    competition_registrations |o--o{ asset_bird_award_certificate_history : registration_id
+
+    %% Relasi EO & Event
+    iam_users ||--o{ competition_events : owner_id
+    asset_arenas ||--o{ competition_events : lokasi_event
+
+    %% Relasi Kategori & Ronde
+    asset_arenas ||--o{ competition_categories : memiliki_kategori
+    competition_events ||--o{ competition_rounds : memayungi
+    asset_arenas ||--o{ competition_rounds : lokasi_ronde
+    competition_categories |o--o{ competition_rounds : mengelompokkan
+
+    %% Relasi Registrasi Tiket Lomba
+    asset_arenas ||--o{ competition_registrations : lingkup_arena
+    competition_rounds ||--o{ competition_registrations : keikutsertaan
+    iam_users ||--o{ competition_registrations : user_id
+    asset_birds ||--o{ competition_registrations : didaftarkan
+    asset_gantangan ||--o{ competition_registrations : nomor_gantangan
+
+    %% Relasi Jenis Burung Ronde
+    asset_bird_species ||--o{ competition_rounds : bird_species_id
+
+    %% Relasi Penjurian & Skor
+    asset_arenas ||--o{ judging_round_scores : lingkup_arena
+    competition_rounds ||--o{ judging_round_scores : ronde_penilaian
+    asset_arenas ||--o{ judging_score_criteria : daftar_kriteria
+    competition_rounds ||--o{ judging_round_judges : daftar_juri_ronde
+    iam_users ||--o{ judging_round_judges : akun_juri
+    competition_registrations ||--o{ judging_round_scores : dinilai
+    judging_score_criteria ||--o{ judging_round_scores : kriteria_nilai
+    iam_users ||--o{ judging_round_scores : juri_penilai
+
+    %% Relasi Media & Rekaman
+    competition_registrations ||--o| media_round_recordings : direkam_dan_dikirim
 ```
 
-| Aturan | Makna pada rancangan |
-| --- | --- |
-| Juri | Pasangan `(round_id, judge_user_id)` unik. Akun harus memiliki penugasan juri pada arena ronde. Daftar juri dikunci saat ronde dimulai. |
-| Kriteria | Daftar bersama per arena, nama unik per arena, dan terkunci setelah ronde pertama dimulai. |
-| Fase ronde | `PREPARED → RUNNING → JUDGING → CLOSED`, dengan `INTERRUPTED` dan `CANCELLED`. Operator mengendalikan perpindahan fase. |
-| Waktu penilaian | Submit dan revisi diterima pada fase `JUDGING` untuk item terkonfirmasi. |
-| Kelengkapan | Seluruh item terkonfirmasi, juri yang ditugaskan, dan kriteria arena harus sudah dinilai sebelum penutupan. |
-| Nilai | Satu skor berlaku per kombinasi item–juri ronde–kriteria. Nilai bulat 1–10 dan berbobot sama. Skor terkini dan history revisi diperbarui bersama. |
-| Kandidat pemenang | Rata-rata seluruh nilai wajib yang berlaku dihitung untuk setiap peserta terkonfirmasi. Seluruh juri dan kriteria berbobot sama. Kandidat adalah peserta dengan rata-rata tertinggi; gunakan nilai sebelum pembulatan tampilan untuk membandingkan dan menentukan seri. |
-| Pengesahan | Setelah semua penilaian wajib lengkap, operator mengonfirmasi kandidat tertinggi. Jika seri, operator memilih tepat satu dari kandidat yang seri; tidak dapat memilih peserta di luar kandidat tertinggi. |
-| Penutupan resmi | Pengesahan pemenang dan transisi `JUDGING → CLOSED` merupakan satu tindakan atomik pada implementasi kelak. `CLOSED` wajib memiliki pemenang, akun pengesah, dan waktu pengesahan; ketiga field kosong sebelum penutupan dan pada `CANCELLED`. Ronde tanpa peserta terkonfirmasi tidak dapat ditutup resmi. |
-| Lingkup pemenang | `winner_registration_item_id` menunjuk item terkonfirmasi dari ronde dan arena yang sama. `winner_confirmed_by_user_id` menunjuk operator yang berwenang pada arena ronde. |
-| Hasil terkunci | Nilai dan pemenang tidak dapat diubah setelah `CLOSED`. Pembukaan ulang ronde serta koreksi hasil resmi belum disediakan pada tahap ini. |
-| Konsistensi | Item dan juri pada skor harus berasal dari ronde yang sama. Kriteria harus berasal dari arena ronde tersebut. |
-| Submit dan revisi | Satu assessment per peserta–juri menyimpan versi seluruh kriteria. Seluruh nilai dan history direvisi dalam satu transaksi. |
-| Pengiriman ulang | Ledger aktor–operation ID menyimpan hash payload dan hasil. Payload sama mengembalikan hasil semula; payload berbeda ditolak. Expected version mencegah revisi saling menimpa. |
-| Konektivitas | Cloud menjadi sumber nilai resmi. Gangguan koneksi engine menginterupsi arena terkait dan resume dilakukan operator. |
-| Media | Engine/worker sistem menulis metadata rekaman dan status pengiriman. Rekaman terhubung ke item registrasi. |
-| Penerima | Worker menyalin kontak pendaftar dari header registrasi ke `recipient_phone_snapshot` pada rekaman saat menyiapkan pengiriman. |
-| Jadwal | Durasi 10 menit lomba, 15 menit penjurian, jeda siang, dan batas pukul 17 menjadi panduan operator. |
+---
 
-Contoh satu ronde dengan 24 item terkonfirmasi, 2 juri, dan 3 kriteria membutuhkan **144 nilai kriteria**. Item registrasi sudah menyediakan daftar peserta, sedangkan `round_judges` menyediakan daftar juri yang bertugas.
+## 2. Alur Bisnis & Aturan Relasi
 
-## Cara membaca relasi
+### A. Akun EO dan Arena
 
-Pada diagram ER, `||` berarti tepat satu, `|o` atau `o|` berarti nol atau satu, dan `o{` berarti nol atau banyak. FK opsional dapat kosong, seperti akun pemilik, akun pendaftar manual, dan gantangan sebelum item dikonfirmasi.
+1. **EO adalah akun pengguna**:
+   - `iam.users.is_eo` adalah boolean dengan default `false`; akun EO memiliki nilai `true`.
+   - Data nama, email, dan telepon EO menggunakan kolom yang sudah tersedia di `iam.users`.
+   - Role dan penugasan arena tetap menggunakan tabel IAM; flag EO tidak menggantikan pemeriksaan hak akses.
+2. **Event terikat arena dan akun EO**:
+   - `competition.events.arena_id` wajib mengacu ke `asset.arenas.id`.
+   - `competition.events.owner_id` wajib mengacu ke `iam.users.id` sebagai penyelenggara.
+   - Validasi aplikasi memastikan akun penyelenggara ditandai sebagai EO saat membuat event.
+3. **Riwayat kerja sama**:
+   - Pasangan `(owner_id, arena_id)` pada event menghubungkan akun EO dengan arena yang pernah digunakan, tanggal event, dan frekuensi penyelenggaraan.
 
-Relasi `menjadi_pemenang_resmi` bersifat nol-atau-satu di kedua sisi: satu ronde menunjuk maksimal satu item pemenang dan satu item hanya dapat menjadi pemenang pada rondenya sendiri. Ini berbeda dari relasi keikutsertaan satu ronde ke banyak item. Satu akun operator dapat mengesahkan banyak ronde; setiap ronde memiliki maksimal satu akun pengesah. FK pemenang dan pengesah opsional secara umum karena ronde belum tentu ditutup, tetapi wajib terisi pada fase `CLOSED`.
+---
 
-Lingkup arena diperoleh melalui event/ronde, registrasi, dan master aset. `arena_id` ditampilkan pada titik lingkup utama. Pada tahap SQL, kombinasi relasi perlu menjamin bahwa kategori, item registrasi, gantangan, juri, kriteria, serta pemenang saling sesuai. Rujukan pemenang perlu menjamin kecocokan item–ronde–arena, bukan hanya keberadaan ID item. Penugasan operator pengesah juga harus diperiksa pada arena ronde. Batas tiga perangkat berlaku global per akun.
+### B. Kustomisasi Jumlah Ronde (1..N) per Event
+1. **Jumlah Ronde Fleksibel**:
+   - Pada tabel `competition_rounds`, setiap ronde mengikat `event_id` dan `arena_id`.
+   - Jumlah ronde **tidak dibatasi** dan disesuaikan dengan kebutuhan EO pada event tersebut (misal: Event di Arena A menggelar 12 ronde, sedangkan Event di Arena B menggelar 20 ronde).
+2. **Atribut Ronde**:
+   - `round_number`: Nomor urut ronde (1, 2, 3, ... N), unik per `(arena_id, event_id, round_number)`.
+   - `title`: Nama ronde (misal: *"Ronde 01 - Murai Batu Ring A"*, *"Ronde 02 - Kacer Lossgan"*).
+   - `status`: Status ronde (`PREPARED`, `RUNNING`, `JUDGING`, `CLOSED`, `CANCELLED`).
+   - `bird_species_id`: FK wajib ke `asset.bird_species.id`, menentukan jenis burung peserta ronde.
+   - Biaya tiket tetap disimpan pada registrasi; ronde tidak menyimpan biaya maupun durasi sesi dan penjurian.
 
-## Read layer dan laporan administratif
+---
 
-View `cloud_read.v_*` hanya dipakai untuk baca. Create/update/delete menulis tabel sumber. Pembacaan kredensial, otorisasi internal dan locking transaksi memakai jalur internal terbatas.
+### C. Master Burung & Riwayat Kepemilikan Sederhana
+1. **Identitas burung dan referensi pemilik**:
+   - `id`: UUID primary key untuk relasi antar tabel.
+   - `bird_code`: Kode identitas internal yang wajib, tidak kosong, dan unik secara global; misalnya `BRD-000001`. Kode ini dapat digunakan untuk pencarian atau ditampilkan pada identitas burung.
+   - Kode ditetapkan sekali saat burung dibuat dan tetap sama ketika nama atau pemilik berubah. Format contoh bukan nomor ring atau identitas pribadi pemilik. Pembentukan kode pada implementasi harus menjamin keunikan saat pembuatan bersamaan; tidak menggunakan jumlah baris sebagai nomor berikutnya.
+   - `asset.birds.owner_id` wajib mengacu ke `iam.users.id` sebagai pemilik aktif. Nama dan telepon tidak disalin ke tabel burung.
+   - `asset.bird_species` menyimpan master jenis burung dengan `id`, `name` unik, serta waktu pembuatan dan perubahan.
+   - `asset.birds.bird_species_id` wajib mengacu ke master jenis burung; kolom teks jenis burung diganti dengan FK ini.
+   - Ronde memakai `bird_species_id` ke master jenis burung yang sama. Jenis pada burung peserta dan ronde harus cocok.
+2. **Riwayat Kepemilikan Masa Lalu**:
+   - Tabel `asset_bird_ownership_history` mencatat log sederhana ketika burung dialihkan/dijual ke pemilik baru:
+     - `bird_id`: Burung yang bersangkutan.
+     - `user_id`: FK wajib ke `iam.users.id` untuk akun pemilik pada periode tersebut. Nama dan telepon dibaca dari akun, bukan disalin ke histori.
+     - `ownership_date`: Tanggal kepemilikan/pengalihan.
+     - `notes`: Catatan ringkas (opsional).
 
-`v_round_score_summary` membaca skor berlaku untuk rekap aktif dan penetapan pemenang. `mv_round_score_summary` serta `mv_arena_dashboard` adalah snapshot laporan, dengan waktu snapshot/refresh tersimpan pada metadata pemeliharaan. Kedua materialized view bukan sumber keputusan penutupan resmi. Tabel pemeliharaan snapshot dan kepemilikan seed migrasi adalah metadata teknis, bukan entitas lomba pada diagram utama.
+---
 
-Induk assessment diperlukan karena satu submit/revisi sekarang mencakup seluruh kriteria satu peserta. Ledger operasi diperlukan untuk pengiriman ulang aman; history nilai tetap melekat pada skor tiap kriteria. FK gabungan skor ke assessment memakai pasangan item–juri ronde.
+### D. Registrasi Mandiri (Single Ticket Entity)
+1. **Penghapusan Tabel Item & Payment Terpisah**:
+   - Tabel `competition_registration_items` dan `competition_registration_payments` dihapus.
+   - Tabel `competition_registrations` menjadi entitas tunggal yang merepresentasikan **1 tiket keikutsertaan lomba**:
+     - 1 registrasi = 1 burung mengikuti 1 ronde di 1 nomor gantangan fisik.
+2. **Akun pendaftar wajib tersedia**:
+   - `competition.registrations.user_id` wajib mengacu ke `iam.users.id`.
+   - Cari akun pendaftar yang sudah ada. Jika belum ada, buat akun terlebih dahulu, lalu gunakan ID akun tersebut untuk registrasi.
+   - Nama dan telepon pendaftar menggunakan data akun; tidak ada input duplikat pada tiket.
+   - Pemilik burung (`asset.birds.owner_id`) dan pendaftar (`competition.registrations.user_id`) tidak harus sama.
+3. **Inlining Bukti Pembayaran**:
+   - Kolom pembayaran langsung berada pada baris registrasi:
+     - `payment_method`: 'CASH' (tunai di tempat) atau 'TRANSFER' (transfer bank/QRIS).
+     - `payment_status`: 'PENDING', 'VERIFIED', 'REJECTED'.
+     - `payment_proof`: Format biner `BYTEA` (BLOB gambar struk transfer) sehingga tidak memerlukan bucket penyimpanan eksternal yang rumit di awal.
+     - `payment_proof_mime`: Format file gambar (misal: `'image/jpeg'`, `'image/png'`).
+     - `verified_at`: Waktu verifikasi pembayaran; akun verifikator belum disimpan pada rancangan ini.
+4. **Integritas Gantangan & Ronde**:
+   - `UNIQUE (round_id, bird_id)`: Satu burung hanya boleh didaftarkan 1 kali pada ronde yang sama.
+   - `UNIQUE (round_id, gantangan_id)`: Satu nomor gantangan fisik hanya boleh ditempati oleh 1 burung terkonfirmasi pada ronde yang sama.
 
-## Ringkasan penyederhanaan
+---
 
-| Bagian | Rancangan untuk review |
-| --- | --- |
-| Peserta ronde | Item registrasi menyimpan status serta gantangan dan langsung dipakai skor/rekaman. |
-| Ronde dan bracket | Ronde mandiri; bracket manual di luar aplikasi, tanpa relasi ronde berikutnya atau peserta otomatis lolos. |
-| Burung lintas ronde | Burung yang sama dapat mengikuti beberapa ronde melalui item berbeda, tetap satu keikutsertaan aktif per burung per ronde. |
-| Pemenang | Satu kandidat tertinggi disahkan operator saat penutupan; seri dipilih dari kandidat tertinggi. Identitas item, pengesah, dan waktu disimpan pada ronde. |
-| Penugasan juri | `round_judges` menunjuk `users` melalui `judge_user_id`. |
-| Kriteria | Daftar bersama per arena, dikunci setelah pertama digunakan. |
-| Pengiriman video | Status kirim, tujuan, dan waktu kirim disimpan pada rekaman. |
-| Fase ronde | Fase sekarang dan fase asal interupsi disimpan pada ronde. |
-| Revisi nilai | Assessment berversi per peserta–juri; seluruh kriteria/history atomik, dengan ledger deduplikasi. |
-| Transfer pemilik | Pemilik aktif disimpan pada burung dengan history transfer admin. |
+### D.1 Status peserta dan diskualifikasi per ronde
 
-Rancangan tetap memuat multi-arena, kategori buatan admin arena, registrasi multi-item, pembayaran gabungan, serta pendaftar manual dengan akun opsional. Auth provider ditampilkan pada diagram akun. Paket/langganan membership tetap ada pada skema sumber dan belum masuk API bisnis tahap ini. [Skema sumber saat ini](../../db-dump/full_db.dump)
+Tidak diperlukan tabel diskualifikasi terpisah untuk menyimpan kondisi peserta saat ini. Satu registrasi sudah menghubungkan satu burung dengan satu ronde. `competition.rounds.status` tetap menyatakan status jalannya ronde.
+
+| Kolom registrasi | Fungsi |
+| :--- | :--- |
+| `status` | Status registrasi: `PENDING_PAYMENT`, `CONFIRMED`, `CANCELLED` |
+| `payment_status` | Status pembayaran: `PENDING`, `VERIFIED`, `REJECTED` |
+| `participant_status` | Status peserta: `ACTIVE` atau `DISQUALIFIED`; default `ACTIVE` |
+| `disqualification_reason` | Alasan tidak kosong; wajib saat `participant_status = DISQUALIFIED` |
+| `disqualified_at` | Waktu diskualifikasi; wajib saat `participant_status = DISQUALIFIED` |
+
+Contoh: tiket R1 burung A pada ronde 1 tetap memiliki `status = CONFIRMED` dan `payment_status = VERIFIED`, sementara `participant_status` berubah menjadi `DISQUALIFIED`. Tiket R2 burung yang sama pada ronde 2 tetap `ACTIVE`. Status akun pengguna tidak berubah.
+
+Aturan implementasi:
+
+- Diskualifikasi mengubah `participant_status` tiket terpilih serta mengisi alasan dan waktu secara bersamaan. Saat `participant_status = ACTIVE`, kedua kolom diskualifikasi kosong.
+- `ACTIVE` hanya berarti peserta tidak didiskualifikasi; kelayakan ikut lomba tetap memerlukan status registrasi dan pembayaran yang sesuai.
+- Skor yang sudah masuk tetap disimpan sebagai catatan, tetapi peserta diskualifikasi tidak masuk peringkat atau kandidat pemenang. Penilaian baru maupun revisi skor untuk peserta diskualifikasi ditolak.
+- Diskualifikasi tidak mengubah `status` registrasi atau `payment_status` dan tidak melakukan refund otomatis. Registrasi pada ronde lain tidak berubah.
+- Data registrasi, burung, dan rekaman tidak dihapus. Nomor gantangan tidak otomatis dialihkan ke peserta lain karena diskualifikasi.
+- Pemeriksaan izin diskualifikasi dilakukan di aplikasi. Rancangan ini menyimpan alasan dan waktu, tanpa kolom akun pemberi diskualifikasi atau tabel histori kejadian diskualifikasi.
+
+---
+
+### E. Penjurian & Revisi Skor Langsung (`UPDATE`)
+1. **Penghapusan Overhead Ledger & Versi**:
+   - Tabel `judging_score_operations`, `judging_participant_assessments`, dan `judging_score_revisions` dihapus total.
+2. **Tabel Skor Tunggal**:
+   - Tabel `judging_round_scores` langsung mencatat nilai juri:
+     - `round_id`, `registration_id`, `user_id`, `criteria_id`.
+     - `score_value`: Nilai bulat/desimal (skala 1.0 s/d 10.0).
+     - `CONSTRAINT uq_judge_round_criteria UNIQUE (round_id, registration_id, user_id, criteria_id)`.
+3. **Mekanisme Revisi**:
+   - Jika juri mengoreksi nilai selama status penjurian (`JUDGING`), sistem langsung melakukan **`UPDATE` (menimpa baris yang sama)** dan memperbarui kolom `updated_at`.
+   - Rekap memakai rata-rata nilai (`AVG(score_value)`) dari baris skor terkini.
+
+---
+
+### F. Pengesahan Pemenang & Media Rekaman
+1. **Satu Pemenang Resmi per Ronde**:
+   - Rekap rata-rata skor dapat digunakan untuk menampilkan kandidat pemenang. Pilihan pemenang resmi belum disimpan melalui relasi tiket pada rancangan ini.
+   - Ronde tidak menyimpan akun pengesah, waktu pengesahan khusus, maupun identitas tiket pemenang. Rekap kandidat pemenang hanya menyertakan peserta yang tidak didiskualifikasi.
+2. **Media Rekaman**:
+   - Setiap `media_round_recordings` mengacu ke satu registrasi; satu registrasi memiliki nol atau satu rekaman.
+   - Menyimpan URL rekaman video/audio dan status pengiriman. Nomor tujuan dibaca melalui JOIN `media.round_recordings.registration_id` → `competition.registrations.id` → `competition.registrations.user_id` → `iam.users.id`, dari kolom `iam.users.phone`. Perubahan nomor pada akun pendaftar akan digunakan oleh pengiriman berikutnya.
+
+---
+
+### G. Riwayat penghargaan dan sertifikat burung
+
+`asset.bird_award_certificate_history` mencatat prestasi internal maupun eksternal. Penghargaan tetap terkait dengan burung ketika pemilik burung berubah.
+
+| Kolom | Aturan |
+| :--- | :--- |
+| `id` | UUID, primary key |
+| `bird_id` | FK wajib ke `asset.birds.id` |
+| `registration_id` | FK opsional ke `competition.registrations.id` untuk prestasi internal |
+| `award_name` | Nama penghargaan, wajib tidak kosong |
+| `event_name` | Nama event eksternal; wajib tidak kosong ketika `registration_id` kosong |
+| `organizer_name` | Nama penyelenggara eksternal, opsional |
+| `rank` | Peringkat positif, opsional untuk penghargaan tanpa peringkat |
+| `awarded_at` | Tanggal penghargaan, wajib |
+| `certificate_url` | URL PDF atau gambar sertifikat, opsional; bukan BLOB |
+| `created_at`, `updated_at` | Waktu pencatatan dan perubahan |
+
+Aturan relasi dan pencatatan:
+
+- **Internal:** `registration_id` diisi dan `bird_id` harus sama dengan burung pada registrasi tersebut. Event, ronde, dan penyelenggara ditelusuri melalui registrasi → ronde → event → akun EO. `event_name` dan `organizer_name` tidak perlu disalin untuk prestasi internal.
+- **Eksternal:** `registration_id` kosong; burung, nama penghargaan, nama event, dan tanggal penghargaan wajib diisi. Nama penyelenggara boleh kosong.
+- Burung dan registrasi masing-masing boleh memiliki banyak catatan penghargaan; `registration_id` tidak unik pada tabel ini.
+- Penghargaan dapat dicatat tanpa peringkat atau tanpa file sertifikat. Jika `rank` diisi, nilainya harus lebih dari nol.
+- Peserta dengan `participant_status = DISQUALIFIED` tidak boleh menerima penghargaan dari registrasi tersebut. FK saja tidak memvalidasi kecocokan burung atau status peserta; validasi dilakukan pada implementasi aplikasi.
+- Penyimpanan file, penerbitan sertifikat, dan mekanisme pencabutan penghargaan belum termasuk rancangan ini. Tabel menyimpan metadata dan URL file bila tersedia.
+
+---
+
+## 3. Kamus Data Entitas Utama
+
+| Schema | Nama Tabel | Deskripsi Singkat |
+| :--- | :--- | :--- |
+| `iam` | `users` | Akun pengguna, termasuk akun EO yang ditandai dengan `is_eo`. |
+| `iam` | `roles` | Master daftar role sistem. |
+| `iam` | `user_roles` | Role pengguna pada tingkat global sistem. |
+| `iam` | `arena_user_roles` | Penugasan role operasional per arena (misal: juri/operator di Arena X). |
+| `iam` | `user_sessions` | Sesi aktif perangkat login beserta user agent (dibatasi maks 3 perangkat aktif per akun). |
+| `asset` | `arenas` | Data arena/gantangan fisik (fasilitas, lokasi, zona waktu). |
+| `asset` | `gantangan` | Nomor tiang gantangan fisik beserta posisi baris dan kolom di arena. |
+| `asset` | `bird_species` | Master jenis burung yang direferensikan oleh burung dan ronde. |
+| `asset` | `birds` | Master burung dengan kode identitas unik, owner_id ke akun pemilik aktif, dan referensi jenis burung. |
+| `asset` | `bird_ownership_history`| Riwayat kepemilikan burung yang mengacu langsung ke akun pemilik. |
+| `asset` | `bird_award_certificate_history` | Riwayat prestasi internal maupun eksternal per burung, dengan URL sertifikat opsional. |
+| `competition`| `events` | Event lomba di arena tertentu dengan FK langsung ke akun EO penyelenggara. |
+| `competition`| `categories` | Kategori tiket lomba per arena (VIP, Regular, dll). |
+| `competition`| `rounds` | Ronde perlombaan per event dengan jenis burung wajib dari master spesies. |
+| `competition`| `registrations` | Tiket peserta per ronde; status registrasi, pembayaran, dan peserta disimpan terpisah, termasuk alasan diskualifikasi. |
+| `judging` | `score_criteria` | Kriteria penilaian lomba bersama per arena. |
+| `judging` | `round_judges` | Penugasan juri yang bertugas di ronde tertentu. |
+| `judging` | `round_scores` | Skor nilai kriteria juri (revisi langsung menimpa baris ini). |
+| `media` | `round_recordings` | Link rekaman video kamera gantangan dan status pengiriman ke WA pendaftar. |
