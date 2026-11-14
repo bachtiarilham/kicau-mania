@@ -8,6 +8,8 @@ import (
 
 type Channel struct {
 	ID             string `json:"id"`
+	IP             string `json:"ip,omitempty"`
+	MAC            string `json:"mac,omitempty"`
 	Source         string `json:"source"`
 	LiveMode       string `json:"live_mode" enums:"copy,transcode" example:"copy"`
 	Username       string `json:"username,omitempty"`
@@ -20,6 +22,8 @@ type Configuration struct {
 	Version  int       `json:"version" example:"1"`
 	LANIP    string    `json:"lan_ip" example:"192.168.1.10"`
 	LANCIDR  string    `json:"lan_cidr" example:"192.168.1.0/24"`
+	NVRIP    string    `json:"nvr_ip,omitempty"`
+	NVRMAC   string    `json:"nvr_mac,omitempty"`
 	Channels []Channel `json:"channels"`
 }
 type Probe struct {

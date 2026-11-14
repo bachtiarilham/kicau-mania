@@ -71,7 +71,11 @@ func NewCoordinator(ctx context.Context, c config.Config) (*Coordinator, error) 
 	}
 	c.LocalControlToken = hex.EncodeToString(secret[:])
 	m := &Coordinator{ctx: ctx, base: c, settings: setupRepo.New(filepath.Join(c.DataDir, "setup.json"), credentials.Protector{}), jobs: setupWorker.New(ctx)}
-	initial := model.Configuration{Channels: []model.Channel{}}
+	initial := model.Configuration{
+		Channels: []model.Channel{},
+		NVRIP:    c.NVRIP,
+		NVRMAC:   c.NVRMAC,
+	}
 	networks := onvif.Client{}.Networks()
 	if len(networks) > 0 {
 		initial.LANIP = networks[0].IP
@@ -82,7 +86,13 @@ func NewCoordinator(ctx context.Context, c config.Config) (*Coordinator, error) 
 		if mode == "" {
 			mode = "copy"
 		}
-		initial.Channels = append(initial.Channels, model.Channel{ID: ch.ID, Source: ch.Source, LiveMode: mode})
+		initial.Channels = append(initial.Channels, model.Channel{
+			ID:       ch.ID,
+			IP:       ch.IP,
+			MAC:      ch.MAC,
+			Source:   ch.Source,
+			LiveMode: mode,
+		})
 	}
 	u := setupUC.New(initialSettings{m.settings, initial}, onvif.Client{}, ffmpeg.Inspector{Binary: c.FFmpeg, ProbeBinary: c.FFprobe, MediaBinary: c.MediaMTX}, m, m.jobs)
 	m.setup = setupDelivery.New(u, c.LocalControlToken)

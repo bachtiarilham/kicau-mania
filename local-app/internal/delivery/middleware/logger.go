@@ -38,7 +38,7 @@ func LoggerAndTraceMiddleware() gin.HandlerFunc {
 		c.Next()
 		path := c.FullPath()
 		if path == "" {
-			path = "/unmatched"
+			path = c.Request.URL.Path
 		}
 		fields := []zap.Field{zap.String("method", c.Request.Method), zap.String("path", path),
 			zap.Int("status", c.Writer.Status()), zap.Duration("latency", time.Since(started)), zap.String("ip", c.ClientIP())}

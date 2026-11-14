@@ -12,13 +12,17 @@ type SessionUseCase interface {
 	StartSession(context.Context, model.StartRequest) (model.Session, error)
 	StopSession(context.Context, string) (model.Session, error)
 	Get(context.Context, string) (model.Session, error)
+	Current(context.Context) (*model.Session, error)
+	Reset(context.Context) error
 }
 type Handler struct{ uc SessionUseCase }
 
 func New(uc SessionUseCase) *Handler { return &Handler{uc: uc} }
 func RegisterRoutes(g *gin.RouterGroup, h *Handler) {
 	g.POST("/media/sessions", h.start)
+	g.POST("/media/sessions/reset", h.reset)
 	g.POST("/media/sessions/:id/stop", h.stop)
+	g.GET("/media/sessions/current", h.current)
 	g.GET("/media/sessions/:id", h.get)
 }
 
@@ -88,4 +92,39 @@ func (h *Handler) get(c *gin.Context) {
 		return
 	}
 	response.Success(c, "Media session retrieved", s)
+}
+
+// current godoc
+// @Summary Baca status sesi media yang sedang aktif atau terakhir
+// @Tags Media sessions
+// @Produce json
+// @Security LocalControl
+// @Success 200 {object} response.Response{data=model.Session}
+// @Router /api/v1/media/sessions/current [get]
+func (h *Handler) current(c *gin.Context) {
+	s, err := h.uc.Current(c.Request.Context())
+	if err != nil {
+		response.WriteError(c, err)
+		return
+	}
+	if s == nil {
+		response.Success(c, "No session active", nil)
+		return
+	}
+	response.Success(c, "Current media session", s)
+}
+
+// reset godoc
+// @Summary Reset riwayat sesi media dan manifest
+// @Tags Media sessions
+// @Produce json
+// @Security LocalControl
+// @Success 200 {object} response.Response
+// @Router /api/v1/media/sessions/reset [post]
+func (h *Handler) reset(c *gin.Context) {
+	if err := h.uc.Reset(c.Request.Context()); err != nil {
+		response.WriteError(c, err)
+		return
+	}
+	response.Success(c, "Media sessions reset", nil)
 }

@@ -9,6 +9,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"sync"
 	"time"
@@ -172,9 +173,13 @@ func (u *UseCase) StartSession(ctx context.Context, req model.StartRequest) (mod
 		if u.active != nil && u.active.session.ID == req.ID && (old.State == "STARTING" || old.State == "RUNNING" || old.State == "DEGRADED") && string(a) == string(b) {
 			return clone(u.active.session), nil
 		}
-		return model.Session{}, apperror.ErrConflict
+		if u.active == nil && model.Terminal(old.State) {
+			_ = os.Remove(filepath.Join(u.opts.DataDir, "media-sessions", req.ID+".json"))
+		} else {
+			return model.Session{}, apperror.ErrConflict
+		}
 	}
-	if !errors.Is(err, apperror.ErrNotFound) {
+	if !errors.Is(err, apperror.ErrNotFound) && err != nil {
 		return model.Session{}, err
 	}
 	if u.active != nil {
@@ -186,7 +191,7 @@ func (u *UseCase) StartSession(ctx context.Context, req model.StartRequest) (mod
 	}
 	for _, r := range all {
 		if r.RoundID == req.ID {
-			return model.Session{}, apperror.ErrConflict
+			_ = os.Remove(filepath.Join(u.opts.DataDir, "queue", r.ID+".json"))
 		}
 	}
 	// Copy caller slices before persisting or using them in asynchronous work.
@@ -290,6 +295,36 @@ func (u *UseCase) Current(ctx context.Context) (*model.Session, error) {
 	return latest, nil
 }
 func (u *UseCase) Busy() bool { u.mu.Lock(); defer u.mu.Unlock(); return u.active != nil }
+
+// Reset clears recorded terminal sessions so the operator can restart from Ronde 1 cleanly.
+func (u *UseCase) Reset(ctx context.Context) error {
+	u.ops.Lock()
+	defer u.ops.Unlock()
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	if u.active != nil {
+		return apperror.ErrConflict
+	}
+	sessionDir := filepath.Join(u.opts.DataDir, "media-sessions")
+	entries, err := os.ReadDir(sessionDir)
+	if err == nil {
+		for _, e := range entries {
+			if !e.IsDir() && strings.HasSuffix(e.Name(), ".json") {
+				_ = os.Remove(filepath.Join(sessionDir, e.Name()))
+			}
+		}
+	}
+	queueDir := filepath.Join(u.opts.DataDir, "queue")
+	qEntries, qErr := os.ReadDir(queueDir)
+	if qErr == nil {
+		for _, e := range qEntries {
+			if !e.IsDir() && strings.HasSuffix(e.Name(), ".json") {
+				_ = os.Remove(filepath.Join(queueDir, e.Name()))
+			}
+		}
+	}
+	return nil
+}
 
 // AcquirePlayback admits a POST before Stop may wait, preventing late session creation.
 func (u *UseCase) AcquirePlayback(channel string) (func(), error) {

@@ -56,6 +56,8 @@ type Config struct {
 	ReadCIDRs      []string
 	Channels       []Channel
 	Destinations   map[string]string
+	NVRIP          string
+	NVRMAC         string
 
 	// Audio
 	SampleRate int
@@ -79,6 +81,8 @@ type Config struct {
 
 type Channel struct {
 	ID       string `json:"id"`
+	IP       string `json:"ip,omitempty"`
+	MAC      string `json:"mac,omitempty"`
 	Source   string `json:"source"`
 	LiveMode string `json:"live_mode,omitempty"`
 	HasAudio *bool  `json:"has_audio,omitempty"`
@@ -170,6 +174,8 @@ func Load(path string) (Config, error) {
 		ReadCIDRs:      strings.Split(getEnv("MEDIA_READ_CIDRS", "127.0.0.1/32,::1/128"), ","),
 		Channels:       channels,
 		Destinations:   destinations,
+		NVRIP:          getEnv("NVR_IP", "192.168.1.123"),
+		NVRMAC:         getEnv("NVR_MAC", "B8:86:87:C0:C3:AF"),
 
 		// Audio
 		SampleRate: 16000,
