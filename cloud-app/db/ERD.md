@@ -1,8 +1,8 @@
 # Rancangan ERD Lengkap Kicau Mania (Multi-Arena & EO)
 
-> **Status — REVISI PENYEDERHANAAN & EO BERBASIS AKUN**
+> **Status — SKEMA LOKAL SUDAH MENGIKUTI REVISI PENYEDERHANAAN & EO BERBASIS AKUN**
 >
-> Tanggal revisi: 14 November 2026.
+> Tanggal revisi: 14 November 2026. Skema diterapkan pada 15 November 2026 ke PostgreSQL lokal `localhost:5433/kicau_mania` melalui migrasi 008–009; data bisnis lama dihapus. Backend/query bisnis, seed dan integrasi Redis masih menunggu adaptasi. VPS tidak diubah.
 > Rancangan ini menyederhanakan arsitektur database dengan:
 > 1. Menghapus tabel perantara dan audit mikro (`asset_owners`, `asset_bird_owner_transfers`, `competition_registration_items`, `competition_registration_payments`, `judging_participant_assessments`, `judging_score_operations`, `judging_score_revisions`).
 > 2. Menyimpan EO sebagai akun `iam.users` dengan boolean `is_eo`; event terhubung langsung ke akun penyelenggara melalui `owner_id`. Arena tetap merupakan fasilitas fisik terpisah.
@@ -19,7 +19,7 @@
 
 Bagian ini memecah diagram lengkap menjadi beberapa tampilan. Mulai dari peta utama, lalu lihat diagram per bagian untuk menelusuri foreign key.
 
-**Cakupan:** seluruh diagram mengikuti **rancangan penyederhanaan dalam dokumen ini**, bukan salinan schema database yang sudah diterapkan. Migrasi `004`–`007` masih memakai antara lain `asset.owners`, `competition.registration_items`, `competition.registration_payments`, dan histori revisi skor. Diagram di bawah tidak berarti perubahan schema atau penggunaan Redis sudah diterapkan oleh migrasi maupun kode aplikasi.
+**Cakupan:** diagram mengikuti skema bisnis baru yang diterapkan oleh migrasi `008`–`009`. Migrasi `004`–`007` tetap dipertahankan sebagai riwayat skema lama. Struktur PostgreSQL sudah diperbarui, sedangkan penggunaan Redis, aturan semantik UseCase dan penyesuaian query/API masih harus diimplementasikan. Detail penerapan, privilege, read layer dan batas kompatibilitas ada pada [panduan database](README.md).
 
 ### Navigasi
 

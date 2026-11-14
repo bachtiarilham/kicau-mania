@@ -1,5 +1,7 @@
 # Integrasi local-app dan cloud-app
 
+> **Pembaruan database 15 November 2026:** PostgreSQL lokal telah direset ke ERD sederhana melalui migrasi 008–009. Backend/query bisnis lama belum kompatibel dengan skema tersebut; kesiapan API bisnis harus diperiksa kembali setelah adaptasi. Lihat [status database](../cloud-app/db/README.md). Perilaku media local-app tidak berubah.
+
 Status ditinjau dari source pada **11 November 2026**. Dokumen ini menjelaskan hubungan sistem, bukan bukti bahwa seluruh integrasi sudah aktif di VPS atau siap pada NVR arena. Untuk instalasi, gunakan [README local-app](../local-app/README.md) dan [README cloud-app](../cloud-app/README.md).
 
 ## 1. Pembagian tanggung jawab

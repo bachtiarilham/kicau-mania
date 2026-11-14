@@ -1,5 +1,7 @@
 # Cloud-app: backend bisnis online
 
+> **Perubahan database 15 November 2026:** skema lokal sudah mengikuti ERD baru melalui 008–009. Backend, query, bootstrap serta seed/koleksi request lama belum kompatibel. Jangan menerapkan seed lama atau menganggap endpoint bisnis siap sebelum adaptasi aplikasi. Lihat [status database](db/README.md).
+
 Hubungan kedua aplikasi dijelaskan pada [panduan integrasi proyek](../docs/integration.md); indeks lintas aplikasi ada di [dokumentasi proyek](../docs/README.md).
 
 Backend Go memakai **Gin**, pgx dan PostgreSQL. Tersedia autentikasi email/password serta Google, CRUD persiapan arena, registrasi/pembayaran, penilaian/revisi juri, dan pengesahan pemenang. Operasi penuh memerlukan migrasi database dan konfigurasi layanan terkait.
