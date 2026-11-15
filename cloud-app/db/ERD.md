@@ -1,8 +1,8 @@
 # Rancangan ERD Lengkap Kicau Mania (Multi-Arena & EO)
 
-> **Status — SKEMA LOKAL SUDAH MENGIKUTI REVISI PENYEDERHANAAN & EO BERBASIS AKUN**
+> **Status — RANCANGAN HISTORY MASTER, VERSI DATA, DAN SOFT DELETE**
 >
-> Tanggal revisi: 14 November 2026. Skema diterapkan pada 15 November 2026 ke PostgreSQL lokal `localhost:5433/kicau_mania` melalui migrasi 008–009; data bisnis lama dihapus. Backend/query bisnis, seed dan integrasi Redis masih menunggu adaptasi. VPS tidak diubah.
+> Tanggal revisi: 15 November 2026. Database lokal `localhost:5433/kicau_mania` sebelumnya sudah menerapkan migrasi 008–009. Tambahan history master, version, soft delete, dan empat role dalam revisi ini **baru rancangan ERD, belum diterapkan ke database**. Backend/query bisnis dan integrasi Redis masih menunggu adaptasi.
 > Rancangan ini menyederhanakan arsitektur database dengan:
 > 1. Menghapus tabel perantara dan audit mikro (`asset_owners`, `asset_bird_owner_transfers`, `competition_registration_items`, `competition_registration_payments`, `judging_participant_assessments`, `judging_score_operations`, `judging_score_revisions`).
 > 2. Menyimpan EO sebagai akun `iam.users` dengan boolean `is_eo`; event terhubung langsung ke akun penyelenggara melalui `owner_id`. Arena tetap merupakan fasilitas fisik terpisah.
@@ -12,6 +12,8 @@
 > 6. Menyederhanakan penilaian juri: revisi nilai langsung **ditimpa (`UPDATE`)** pada `judging.round_scores`.
 > 7. Menyimpan token lupa password dan verifikasi email sementara di Redis, di luar tabel PostgreSQL.
 > 8. Memisahkan status peserta dari registrasi dan pembayaran, serta mencatat penghargaan internal maupun eksternal per burung.
+> 9. Menyimpan snapshot awal dan versi baru master peserta/burung pada history append-only; data identik tidak menambah versi.
+> 10. Memakai soft delete dan pemeriksaan versi untuk mencegah perubahan admin saling menimpa. Role bisnis hanya `ADMIN`, `OPERATOR`, `JURI`, dan `PESERTA`.
 
 ---
 
@@ -19,7 +21,7 @@
 
 Bagian ini memecah diagram lengkap menjadi beberapa tampilan. Mulai dari peta utama, lalu lihat diagram per bagian untuk menelusuri foreign key.
 
-**Cakupan:** diagram mengikuti skema bisnis baru yang diterapkan oleh migrasi `008`–`009`. Migrasi `004`–`007` tetap dipertahankan sebagai riwayat skema lama. Struktur PostgreSQL sudah diperbarui, sedangkan penggunaan Redis, aturan semantik UseCase dan penyesuaian query/API masih harus diimplementasikan. Detail penerapan, privilege, read layer dan batas kompatibilitas ada pada [panduan database](README.md).
+**Cakupan:** diagram menggambarkan rancangan terbaru, mencakup schema 008–009 beserta tambahan history master, versi data, soft delete, dan penyelarasan role. Tambahan tersebut belum dimigrasikan. Migrasi 004–007 tetap menjadi riwayat schema lama. Aturan transaksi, privilege, Redis, dan penyesuaian query/API perlu diterapkan pada tahap implementasi; status schema yang sudah terpasang dijelaskan di [panduan database](README.md).
 
 ### Navigasi
 
@@ -30,6 +32,7 @@ Bagian ini memecah diagram lengkap menjadi beberapa tampilan. Mulai dari peta ut
 - [Penjurian, pemenang, dan rekaman](#05-penjurian-pemenang-dan-rekaman)
 - [Referensi foreign key](#06-referensi-foreign-key)
 - [Riwayat penghargaan dan sertifikat](#07-riwayat-penghargaan-dan-sertifikat)
+- [History master peserta dan burung](#08-history-master-peserta-dan-burung)
 - [Diagram lengkap beserta atribut](#1-diagram-hubungan-entitas-lengkap-erd-mermaid)
 
 ### Cara membaca diagram
@@ -76,6 +79,8 @@ erDiagram
     iam_users {
         uuid id PK
         boolean is_eo "default false"
+        integer version "default 1; bertambah saat isi berubah"
+        timestamptz deleted_at "nullable; soft delete"
     }
     iam_roles {
         uuid id PK
@@ -114,6 +119,11 @@ erDiagram
 
 `iam.users.is_eo` menandai apakah akun merupakan EO (default `false`). `user_roles` menghubungkan akun dengan role global. `arena_user_roles` menambahkan lingkup arena: akun yang sama dapat memiliki penugasan berbeda di arena berbeda. Akun juga menjadi referensi pemilik burung, penyelenggara EO, pendaftar, dan juri pada diagram berikutnya.
 
+
+Role bisnis terdiri dari `ADMIN`, `OPERATOR`, `JURI`, dan `PESERTA`. ADMIN dan OPERATOR mengelola event, ronde, dan tiket hanya pada arena penugasannya; CRUD arena hanya ADMIN. ADMIN yang membuat arena otomatis mendapat penugasan ADMIN di arena baru. Penanda role akun tidak memberi akses otomatis ke semua arena. JURI memberi skor hanya pada ronde penugasannya.
+
+Master peserta dan burung tetap merupakan data bersama yang dapat dikelola petugas ADMIN/OPERATOR. Akses read-only ke history berarti tidak ada form atau query edit/hapus history bagi petugas; perubahan master hanya menambahkan versi melalui sistem.
+
 Token lupa password dan verifikasi email disimpan di Redis dengan masa berlaku (TTL) dan dikonsumsi sekali saat berhasil digunakan. PostgreSQL tetap menyimpan hasil verifikasi pada `iam.users.email_verified_at`. Redis tidak ditampilkan sebagai tabel atau FK pada ERD.
 
 ### 0.3 Fasilitas arena dan kepemilikan burung
@@ -133,6 +143,8 @@ erDiagram
     iam_users {
         uuid id PK
         boolean is_eo "default false"
+        integer version "default 1; bertambah saat isi berubah"
+        timestamptz deleted_at "nullable; soft delete"
     }
     asset_bird_species {
         uuid id PK
@@ -143,6 +155,8 @@ erDiagram
         varchar bird_code UK "Kode identitas burung; wajib"
         uuid owner_id FK "Akun pemilik aktif"
         uuid bird_species_id FK
+        integer version "default 1; bertambah saat isi berubah"
+        timestamptz deleted_at "nullable; soft delete"
     }
     asset_bird_ownership_history {
         uuid id PK
@@ -166,6 +180,8 @@ erDiagram
     iam_users {
         uuid id PK
         boolean is_eo "default false"
+        integer version "default 1; bertambah saat isi berubah"
+        timestamptz deleted_at "nullable; soft delete"
     }
     asset_arenas {
         uuid id PK
@@ -201,6 +217,8 @@ erDiagram
     asset_birds {
         uuid id PK
         varchar bird_code UK "Kode identitas burung; wajib"
+        integer version "default 1; bertambah saat isi berubah"
+        timestamptz deleted_at "nullable; soft delete"
     }
     asset_gantangan {
         uuid id PK
@@ -234,6 +252,8 @@ erDiagram
     iam_users {
         uuid id PK
         boolean is_eo "default false"
+        integer version "default 1; bertambah saat isi berubah"
+        timestamptz deleted_at "nullable; soft delete"
     }
     competition_rounds {
         uuid id PK
@@ -305,8 +325,10 @@ Setiap baris merangkum seluruh FK pada tabel anak menurut rancangan ini. `?` men
 | `iam.arena_user_roles` | `arena_id` → `asset.arenas`; `user_id` → `iam.users`; `role_id` → `iam.roles` |
 | `iam.user_sessions` | `user_id` → `iam.users` |
 | `iam.user_auth_providers` | `user_id` → `iam.users` |
+| `iam.user_master_history` | `user_id` → `iam.users`; `actor_id?` → `iam.users`; `arena_id?` → `asset.arenas` |
 | `asset.gantangan` | `arena_id` → `asset.arenas` |
 | `asset.birds` | `owner_id` → `iam.users`; `bird_species_id` → `asset.bird_species` |
+| `asset.bird_master_history` | `bird_id` → `asset.birds`; `actor_id?` → `iam.users`; `arena_id?` → `asset.arenas` |
 | `asset.bird_ownership_history` | `bird_id` → `asset.birds`; `user_id` → `iam.users` |
 | `asset.bird_award_certificate_history` | `bird_id` → `asset.birds`; `registration_id?` → `competition.registrations` |
 | `competition.events` | `arena_id` → `asset.arenas`; `owner_id` → `iam.users` |
@@ -330,6 +352,8 @@ erDiagram
     asset_birds {
         uuid id PK
         varchar bird_code UK "Kode identitas burung; wajib"
+        integer version "default 1; bertambah saat isi berubah"
+        timestamptz deleted_at "nullable; soft delete"
     }
     competition_registrations {
         uuid id PK
@@ -356,6 +380,62 @@ Satu burung dapat memiliki banyak penghargaan. Untuk prestasi internal, `registr
 
 ---
 
+### 0.8 History master peserta dan burung
+
+History menyimpan data awal dan setiap versi baru yang berbeda. Petugas tetap dapat mengelola master bersama; history hanya dapat dibaca oleh petugas dan ditambah otomatis oleh sistem.
+
+```mermaid
+erDiagram
+    direction LR
+    iam_users {
+        uuid id PK
+        integer version
+        timestamptz deleted_at
+    }
+    asset_birds {
+        uuid id PK
+        uuid owner_id FK
+        integer version
+        timestamptz deleted_at
+    }
+    asset_arenas {
+        uuid id PK
+    }
+    iam_user_master_history {
+        uuid id PK
+        uuid user_id FK
+        integer version "unik bersama user_id"
+        jsonb snapshot "snapshot identitas; tanpa password atau token"
+        varchar change_type "BASELINE, CREATE, UPDATE, DELETE"
+        uuid actor_id FK "nullable hanya untuk baseline"
+        uuid arena_id FK "opsional; konteks pencatatan"
+        timestamptz recorded_at
+    }
+    asset_bird_master_history {
+        uuid id PK
+        uuid bird_id FK
+        integer version "unik bersama bird_id"
+        jsonb snapshot "snapshot identitas burung"
+        varchar change_type "BASELINE, CREATE, UPDATE, DELETE"
+        uuid actor_id FK "nullable hanya untuk baseline"
+        uuid arena_id FK "opsional; konteks pencatatan"
+        timestamptz recorded_at
+    }
+    iam_users ||--o{ asset_birds : owner_id
+    iam_users ||--o{ iam_user_master_history : user_id
+    iam_users |o--o{ iam_user_master_history : actor_id
+    asset_arenas |o--o{ iam_user_master_history : arena_id
+    asset_birds ||--o{ asset_bird_master_history : bird_id
+    iam_users |o--o{ asset_bird_master_history : actor_id
+    asset_arenas |o--o{ asset_bird_master_history : arena_id
+```
+
+`user_id` dan `bird_id` menunjuk master yang dicatat; `actor_id` menunjuk akun petugas yang melakukan perubahan. `arena_id` adalah konteks tindakan, bukan pemilik atau pembatas kepemilikan master. Karena penghapusan menggunakan soft delete, FK history tetap menunjuk master yang sama.
+
+Kombinasi `(user_id, version)` dan `(bird_id, version)` masing-masing unik. Nomor `version` tidak unik sendiri dan isi snapshot tidak dibuat unik sepanjang masa: perubahan A → B → A tetap menghasilkan tiga versi berurutan.
+
+---
+
 ## 1. Diagram Hubungan Entitas Lengkap (ERD Mermaid)
 
 ```mermaid
@@ -371,11 +451,24 @@ erDiagram
         timestamptz created_at
         timestamptz updated_at
         boolean is_eo "default false"
+        integer version "default 1; bertambah saat isi berubah"
+        timestamptz deleted_at "nullable; soft delete"
+    }
+
+    iam_user_master_history {
+        uuid id PK
+        uuid user_id FK
+        integer version "unik bersama user_id"
+        jsonb snapshot "snapshot identitas; tanpa password atau token"
+        varchar change_type "BASELINE, CREATE, UPDATE, DELETE"
+        uuid actor_id FK "nullable hanya untuk baseline"
+        uuid arena_id FK "opsional; konteks pencatatan"
+        timestamptz recorded_at
     }
 
     iam_roles {
         uuid id PK
-        varchar name UK "SUPERADMIN, OPERATOR, JURI, EO_ADMIN, PESERTA"
+        varchar name UK "ADMIN, OPERATOR, JURI, PESERTA"
     }
 
     iam_user_roles {
@@ -442,6 +535,19 @@ erDiagram
         uuid bird_species_id FK
         timestamptz created_at
         timestamptz updated_at
+        integer version "default 1; bertambah saat isi berubah"
+        timestamptz deleted_at "nullable; soft delete"
+    }
+
+    asset_bird_master_history {
+        uuid id PK
+        uuid bird_id FK
+        integer version "unik bersama bird_id"
+        jsonb snapshot "snapshot identitas burung"
+        varchar change_type "BASELINE, CREATE, UPDATE, DELETE"
+        uuid actor_id FK "nullable hanya untuk baseline"
+        uuid arena_id FK "opsional; konteks pencatatan"
+        timestamptz recorded_at
     }
 
     asset_bird_ownership_history {
@@ -554,6 +660,14 @@ erDiagram
         timestamptz created_at
         timestamptz updated_at
     }
+
+    %% Relasi History Master Append-Only
+    iam_users ||--o{ iam_user_master_history : user_id
+    iam_users |o--o{ iam_user_master_history : actor_id
+    asset_arenas |o--o{ iam_user_master_history : arena_id
+    asset_birds ||--o{ asset_bird_master_history : bird_id
+    iam_users |o--o{ asset_bird_master_history : actor_id
+    asset_arenas |o--o{ asset_bird_master_history : arena_id
 
     %% Relasi IAM
     iam_users ||--o{ iam_user_roles : memiliki
@@ -761,11 +875,67 @@ Aturan relasi dan pencatatan:
 
 ---
 
+### H. History master, versi data, dan soft delete
+
+#### H.1 Tabel master dan snapshot
+
+`iam.user_master_history` mencatat identitas akun yang menjadi master peserta/pemilik. `asset.bird_master_history` mencatat identitas burung. Keduanya menambahkan jejak perubahan, bukan menggantikan master atau snapshot transaksi lomba.
+
+| Bagian | Isi |
+| :--- | :--- |
+| Master | `version` integer positif, default 1; `deleted_at` nullable |
+| Identitas history | `id`, ID master (`user_id` atau `bird_id`), dan `version` |
+| Isi history | `snapshot` JSONB lengkap dengan daftar field bisnis yang diizinkan |
+| Metadata history | `change_type`, `actor_id`, `arena_id` opsional, `recorded_at` |
+| Keunikan | `(user_id, version)` atau `(bird_id, version)` |
+| Jenis perubahan | `BASELINE`, `CREATE`, `UPDATE`, `DELETE` |
+
+Snapshot akun berisi `name`, `phone`, `email`, `is_active`, `is_eo`, dan boolean `is_deleted` yang diturunkan dari `deleted_at IS NOT NULL`. Snapshot burung berisi `bird_code`, `name`, `owner_id`, `bird_species_id`, dan boolean `is_deleted` yang sama. Nilai nullable tetap dicatat secara eksplisit. Password/hash, token, sesi, penugasan role, dan metadata autentikasi tidak disalin ke history.
+
+`actor_id` wajib untuk perubahan normal, tetapi boleh kosong pada `BASELINE` karena pelaku perubahan sebelum migrasi tidak diketahui. Untuk master yang sudah ada ketika fitur diterapkan, rencana migrasi membuat versi awal 1 dengan tipe `BASELINE`; data baru memakai tipe `CREATE`.
+
+#### H.2 Perbandingan dan transaksi
+
+1. **Create:** master dan snapshot awal versi 1 disimpan bersama dalam satu transaksi.
+2. **Edit:** request membawa `expected_version` yang dibuka petugas. Bandingkan dengan versi master terkini sebelum melakukan perubahan.
+3. **Versi tidak cocok:** tolak sebagai konflik; master dan history tidak berubah. Petugas perlu memuat ulang data.
+4. **Versi cocok dan isi sama:** berhasil tanpa perubahan. Versi, `updated_at`, dan jumlah history tetap.
+5. **Versi cocok dan isi berbeda:** ubah master, naikkan versi tepat satu kali, dan simpan snapshot hasil perubahan sebagai history baru.
+6. **Delete:** isi `deleted_at` dan, untuk akun, ubah `is_active` menjadi false serta cabut sesi PostgreSQL. Perubahan penanda terhapus menghasilkan versi baru. Delete ulang pada versi terkini yang sudah terhapus tidak menambah history.
+7. **Gagal:** kegagalan update master atau pencatatan history membatalkan seluruh transaksi.
+
+Perbandingan hanya memakai isi bisnis dalam snapshot terakhir, dengan pembandingan JSONB yang memperlakukan nilai null secara benar. Urutan key JSON tidak menentukan perbedaan. `version`, `updated_at`, `recorded_at`, `actor_id`, `arena_id`, dan timestamp penghapusan tidak ikut dibandingkan; hanya boolean `is_deleted` masuk snapshot. Dengan demikian, penyimpanan ulang data yang sama tidak menghasilkan versi baru karena pergantian waktu atau petugas.
+
+Contoh urutan:
+
+| Tindakan | Master | Versi terakhir | Jumlah history |
+| :--- | :--- | :--- | :--- |
+| Buat burung Gacor | Gacor, aktif | 1 | 1 |
+| Simpan nama yang sama | Gacor, aktif | 1 | 1 |
+| Ubah menjadi Gacor Baru | Gacor Baru, aktif | 2 | 2 |
+| Ubah kembali menjadi Gacor | Gacor, aktif | 3 | 3 |
+| Soft delete | Gacor, terhapus | 4 | 4 |
+| Delete ulang dengan versi 4 | Gacor, terhapus | 4 | 4 |
+
+#### H.3 Hak akses dan dampak relasi
+
+- History bersifat append-only. Role aplikasi hanya mendapat SELECT pada history; INSERT otomatis dilakukan trigger melalui fungsi database dengan privilege terbatas. INSERT langsung, UPDATE, DELETE, dan TRUNCATE history tidak diberikan ke role aplikasi.
+- Perlindungan privilege ini berlaku pada role aplikasi, bukan pemilik objek/database atau DBA. Pembaca history tetap dibatasi petugas yang berhak karena snapshot akun mengandung kontak pribadi.
+- `version` dikelola sistem. Query mutasi wajib memeriksa `expected_version`; history saja tidak mencegah dua admin saling menimpa data.
+- Master terhapus tidak ditawarkan pada login atau registrasi baru. Tiket, skor, rekaman, penghargaan, dan history yang sudah ada tetap terhubung; jangan menghapus fisik master tersebut.
+- Kontak dan `bird_code` yang sudah dipakai tetap mengikuti constraint unik meskipun master dihapus; tidak dibuat akun/burung pengganti otomatis dengan identitas yang sama.
+- Transfer owner tetap memakai proses khusus: update owner, histori kepemilikan, dan snapshot master baru harus konsisten dalam satu transaksi. Transfer ke owner yang sama tidak menambah history. Kode burung tetap.
+- History master berbeda dari histori kepemilikan dan penghargaan: yang pertama menyimpan semua versi identitas, yang kedua mencatat pemilik pada periode sebelumnya, dan yang ketiga mencatat prestasi burung.
+- Belum ada fitur pemulihan otomatis atau snapshot tiket. Tampilan nama dari JOIN master pada tiket lama dapat mengikuti master terkini; history menyediakan jejak perubahan, bukan membekukan tampilan tiket.
+
+---
+
 ## 3. Kamus Data Entitas Utama
 
 | Schema | Nama Tabel | Deskripsi Singkat |
 | :--- | :--- | :--- |
-| `iam` | `users` | Akun pengguna, termasuk akun EO yang ditandai dengan `is_eo`. |
+| `iam` | `users` | Akun pengguna termasuk flag EO, versi master, dan soft delete. |
+| `iam` | `user_master_history` | Snapshot awal dan tiap perubahan identitas akun; append-only. |
 | `iam` | `roles` | Master daftar role sistem. |
 | `iam` | `user_roles` | Role pengguna pada tingkat global sistem. |
 | `iam` | `arena_user_roles` | Penugasan role operasional per arena (misal: juri/operator di Arena X). |
@@ -773,7 +943,8 @@ Aturan relasi dan pencatatan:
 | `asset` | `arenas` | Data arena/gantangan fisik (fasilitas, lokasi, zona waktu). |
 | `asset` | `gantangan` | Nomor tiang gantangan fisik beserta posisi baris dan kolom di arena. |
 | `asset` | `bird_species` | Master jenis burung yang direferensikan oleh burung dan ronde. |
-| `asset` | `birds` | Master burung dengan kode identitas unik, owner_id ke akun pemilik aktif, dan referensi jenis burung. |
+| `asset` | `birds` | Master burung dengan kode unik, owner, spesies, versi, dan soft delete. |
+| `asset` | `bird_master_history` | Snapshot awal dan tiap perubahan identitas burung; append-only. |
 | `asset` | `bird_ownership_history`| Riwayat kepemilikan burung yang mengacu langsung ke akun pemilik. |
 | `asset` | `bird_award_certificate_history` | Riwayat prestasi internal maupun eksternal per burung, dengan URL sertifikat opsional. |
 | `competition`| `events` | Event lomba di arena tertentu dengan FK langsung ke akun EO penyelenggara. |
