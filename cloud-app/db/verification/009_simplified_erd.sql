@@ -1,3 +1,4 @@
+-- Legacy verification for schema 009 only; after 010 use run_business_flows.py.
 -- PostgreSQL integration checks, not Go tests. No fixture data is committed.
 -- Run after 008 + 009 with psql -X -v ON_ERROR_STOP=1 -f this-file.sql.
 BEGIN;

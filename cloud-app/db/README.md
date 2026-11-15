@@ -1,101 +1,91 @@
 # Database dan SQL cloud-app
 
-**Database lokal sudah mengikuti ERD revisi 14 November 2026 melalui migrasi 008–009, diterapkan pada 15 November 2026 ke `localhost:5433/kicau_mania`.** Data bisnis lama dihapus sesuai persetujuan. Hanya lima role konfigurasi sistem diisi; tidak ada akun/password, arena, spesies atau peserta contoh.
+**Status lokal 15 November 2026:** `localhost:5433/kicau_mania` sudah menerapkan migrasi **008–010** dan mengikuti [ERD terbaru](ERD.md). Migrasi 008 sebelumnya mereset data lama; migrasi 010 menambahkan history/version/soft delete tanpa reset data. Ada **22 tabel bisnis, 24 view baca dan dua materialized view**. Role bisnis sekarang `ADMIN`, `OPERATOR`, `JURI`, `PESERTA`.
 
-**Backend Go, query SQL bisnis, bootstrap superadmin dan seed/Insomnia lama belum disesuaikan.** Jangan menjalankan seed lama atau menyatakan API siap hanya karena skema berhasil dibuat. Kesiapan database aplikasi lama dapat gagal karena tabel/kolom yang dihapus. Integrasi Redis untuk token verifikasi/reset email juga belum diimplementasikan; migrasi PostgreSQL tidak memasang Redis.
+**Query untuk 13 flow bisnis sudah tersedia** pada [panduan query](queries/README.md). Repository/UseCase/handler, otorisasi role, bootstrap, seed/Insomnia dan dokumentasi endpoint lama belum diadaptasi ke kontrak SQL terbaru. Jangan menganggap login/API siap hanya karena SQL lolos pemeriksaan. Redis untuk token verifikasi/reset email juga belum dipasang atau diintegrasikan.
 
 ## Skema yang berlaku
 
-Rujukan: [ERD](ERD.md). Ada 20 tabel bisnis:
-
 | Schema | Tabel |
 | --- | --- |
-| `iam` | `users`, `roles`, `user_roles`, `arena_user_roles`, `user_sessions`, `user_auth_providers` |
-| `asset` | `arenas`, `gantangan`, `bird_species`, `birds`, `bird_ownership_history`, `bird_award_certificate_history` |
+| `iam` | `users`, `user_master_history`, `roles`, `user_roles`, `arena_user_roles`, `user_sessions`, `user_auth_providers` |
+| `asset` | `arenas`, `gantangan`, `bird_species`, `birds`, `bird_master_history`, `bird_ownership_history`, `bird_award_certificate_history` |
 | `competition` | `events`, `categories`, `rounds`, `registrations` |
 | `judging` | `score_criteria`, `round_judges`, `round_scores` |
 | `media` | `round_recordings` |
 
-EO adalah akun `iam.users.is_eo=true`. Pemilik burung dan pendaftar mengacu ke akun pengguna; spesies menjadi master bersama. Satu registrasi adalah satu burung pada satu ronde/gantangan, dengan pembayaran dan bukti transfer BYTEA pada tiket. Diskualifikasi terpisah dari status registrasi/pembayaran. Nilai desimal 1–10 direvisi dengan UPDATE pada baris yang sama. Penghargaan mendukung prestasi internal maupun eksternal.
+EO adalah akun dengan `is_eo=true`, terpisah dari role/hak akses. Pemilik burung dan pendaftar mengacu ke akun; spesies memakai master bersama. Satu tiket mewakili satu burung pada satu ronde/gantangan. Pembayaran/BYTEA bukti transfer ada pada tiket; diskualifikasi terpisah dari pembayaran. Skor 1–10 mendukung desimal dan revisi langsung UPDATE. Ronde mandiri tidak menyimpan bracket otomatis atau pengesahan pemenang resmi.
 
-Tabel pemilik/perantara pembayaran, assessment, ledger operasi, histori revisi skor, token akun PostgreSQL, engine/perangkat, dan membership lama tidak ada pada skema baru. Ronde tidak menyimpan pemenang resmi, akun pengesah, biaya atau durasi. Schema `member` lama dihapus karena tidak termasuk ERD ini.
+`iam.user_master_history` dan `asset.bird_master_history` berbeda dari histori kepemilikan, achievement serta histori skor lama. Histori skor/ledger/assessment, tabel owner, item/pembayaran perantara, account_tokens PostgreSQL, engine/perangkat dan membership lama tetap tidak ada. Tidak ada shadow table kompatibilitas untuk query lama.
 
-Role aplikasi bisnis sekarang: `SUPERADMIN`, `OPERATOR`, `JURI`, `EO_ADMIN`, `PESERTA`. Penamaan ini mengikuti ERD dan berbeda dari seed/otorisasi backend lama. Grup login PostgreSQL `kicau_cloud_app` tetap merupakan grup privilege database yang terpisah dari role bisnis.
+## Migrasi
 
-## Migrasi dan reset eksplisit
-
-| Versi | Status |
+| Versi | Isi dan batas |
 | --- | --- |
-| 001–007 | Riwayat skema lama; jangan diedit atau diulang pada database yang sudah menerapkannya. |
-| 008 | **Reset destruktif** schema bisnis lama menjadi ERD baru. Menghapus seluruh data pada schema terkait dan mempertahankan akun/login PostgreSQL. |
-| 009 | Membuat 22 view baca, dua materialized view, metadata snapshot dan grant sesuai skema 008. |
+| 001–007 | Riwayat skema lama; jangan diubah atau diulang. |
+| 008 | Reset destruktif skema lama menjadi tiket tunggal; menghapus data bisnis lama. |
+| 009 | Read layer baru: 22 view, dua snapshot dan privilege. |
+| 010 | Version/soft delete master, snapshot BASELINE/trigger append-only, dua view history, serta penggabungan role SUPERADMIN/EO_ADMIN menjadi ADMIN. Data master dan penugasan lama dipertahankan. |
 
-Target lokal sudah menerima 008 dan 009; **jangan jalankan ulang**. Database VPS tidak disentuh pada pekerjaan ini. Untuk database lain yang memang sudah di versi 007 dan sengaja boleh dikosongkan, hentikan aplikasi dahulu dan jalankan dari root repo:
+Target lokal **sudah sampai 010; jangan jalankan ulang**. Jika database lain sudah sampai 009, hentikan aplikasi dan terapkan hanya 010 dengan transaksi dan ON_ERROR_STOP. Contoh dari root repo:
 
 ```powershell
 $pgBin = 'C:/Program Files/PostgreSQL/18/bin'
-# Pastikan host/port/nama database sesuai target yang secara eksplisit akan dihapus.
-& "$pgBin/psql.exe" -X -h localhost -p 5433 -U postgres -d kicau_mania -v ON_ERROR_STOP=1 -1 `
-  -f cloud-app/db/migrations/008_simplified_erd_reset.up.sql `
-  -f cloud-app/db/migrations/009_simplified_cloud_read.up.sql
-if ($LASTEXITCODE -ne 0) { throw 'Reset dibatalkan; periksa error PostgreSQL' }
+# Sesuaikan koneksi ke target yang memang hendak dimigrasikan.
+& "$pgBin/psql.exe" -X -h localhost -p 5433 -U postgres -d NAMA_TARGET -v ON_ERROR_STOP=1 -1 `
+  -f cloud-app/db/migrations/010_master_history_and_soft_delete.up.sql
+if ($LASTEXITCODE -ne 0) { throw 'Migrasi gagal; transaksi dibatalkan' }
 ```
 
-Dua file dijalankan dalam satu transaksi. Password diminta psql atau diberikan melalui konfigurasi koneksi lokal; tidak ditanam pada file SQL. Perintah ini bukan migrasi startup/deployment otomatis. Jangan menerapkannya pada database berisi data yang hendak dipertahankan.
+Tidak ada migrasi startup otomatis. Password tidak ditanam pada SQL. Database VPS tidak disentuh. Untuk database pengujian baru, restore [baseline historis](../../db-dump/full_db.dump) PostgreSQL 18 tanpa owner, lalu terapkan 001–010 berurutan. Dump itu tetap baseline lama, bukan snapshot skema sekarang. Jangan memakai migrasi 008 pada data yang ingin dipertahankan.
 
-Untuk database pengujian baru, [dump baseline lama](../../db-dump/full_db.dump) tetap dipertahankan sebagai baseline historis PostgreSQL 18. Restore tanpa owner/privilege ke database sementara, kemudian terapkan 001–009 berurutan dengan `ON_ERROR_STOP` dan transaksi. Dump tersebut bukan snapshot terbaru. Rantai lengkap ini telah diperiksa pada PostgreSQL 18.6; versi 008 mensyaratkan struktur 007 dan menolak penerapan ulang.
+Rollback 009 hanya menghapus read layer. Down 008 sengaja menolak karena reset tidak dapat memulihkan data terhapus. Down 010 juga menolak pembuangan otomatis history/pemisahan role ADMIN yang sudah digabung. Pemulihan versi lama harus menggunakan database/backup yang dipilih secara eksplisit; bukan membuang history diam-diam.
 
-Rollback 009 hanya menghapus lapisan baca, tanpa menghapus tabel bisnis 008. **008 tidak menyediakan rollback otomatis** karena data lama telah dihapus; file down sengaja berhenti dengan pesan yang jelas. Untuk memakai aplikasi/skema lama, bangun database baru dari baseline dan 001–007 secara eksplisit. Data yang sudah dihapus tidak dapat dipulihkan lewat file down.
+## History, context dan optimistic concurrency
 
-## Integritas dan batas aplikasi
+Setiap master mempunyai `version` positif dan `deleted_at`. Migrasi mencatat BASELINE versi 1 untuk master yang sudah ada; data baru menghasilkan CREATE versi 1. Snapshot hanya berisi field identitas allowlist, bukan password, provider ID, sesi, role atau token. Nilai null disimpan eksplisit.
 
-Database memeriksa FK/lingkup arena, penugasan juri pada ronde skor, keunikan burung per ronde, gantangan terkonfirmasi per ronde, alasan/waktu diskualifikasi, kecocokan burung penghargaan internal, rentang skor, nominal pembayaran finite/nonnegatif, serta pasangan bukti bayar dan MIME. Gantangan harus memiliki baris/kolom positif dan posisi unik per arena.
+Sebelum mutasi master, UseCase memulai transaksi, memverifikasi hak aktor, lalu repository menjalankan `SetMutationContext(actor_id, arena_id nullable)`. Context memakai `set_config(..., true)` dan habis ketika transaksi selesai. Aktor diambil dari auth/context yang telah diverifikasi; bukan dipercaya dari body browser. Context ini untuk audit, bukan mekanisme authorization database.
 
-`bird_code` dibuat dengan sequence (`BRD-000001`, dst.) sehingga aman dari benturan nomor default pada pembuatan bersamaan. Sequence dapat memiliki celah termasuk setelah rollback; bukan jumlah baris. Aplikasi harus mempertahankan kode saat mengubah nama/pemilik burung dan memperbarui `updated_at` ketika melakukan mutasi.
+Trigger membandingkan snapshot bisnis. Isi identik tidak menaikkan versi/waktu/history; perubahan A → B → A tetap menghasilkan versi berurutan. Query update/delete menyertakan `expected_version`. Versi usang harus menjadi konflik, termasuk jika isinya sama. ID, kode burung dan versi dikelola sistem. Kolom autentikasi di luar snapshot tidak menambah versi identitas.
 
-**Validasi semantik tetap wajib pada UseCase berikutnya:** akun EO saat membuat event, kecocokan spesies burung/ronde, batas tiga sesi perangkat, penugasan role arena, kriteria/roster terkunci, submit hanya pada fase JUDGING, kelayakan peserta, penolakan skor/penghargaan untuk peserta diskualifikasi, transisi/penutupan ronde dan otorisasi mutasi. FK tidak menggantikan aturan tersebut. Kolom sesi mengikuti ERD; penyimpanan/pemeriksaan token sesi lama belum kompatibel dan perlu diputuskan pada adaptasi aplikasi.
+History otomatis ditulis oleh fungsi trigger security-definer dengan `search_path` tetap. Grup aplikasi hanya SELECT; INSERT/UPDATE/DELETE/TRUNCATE history ditolak. Kegagalan history membatalkan master juga. DBA/pemilik objek tetap dapat mengelola objek tersebut.
 
-## View dan materialized view
+Soft delete akun menonaktifkan akun dan mencabut sesi PostgreSQL atomik. Soft delete tidak menghapus tiket/skor/rekaman/history atau membebaskan phone/email/kode burung. Query login/list master/registrasi baru menolak master terhapus; relasi historis tetap dapat dibaca. Tidak ada restore otomatis. Transfer owner menggunakan query khusus yang menggabungkan update owner, histori kepemilikan dan snapshot master dalam satu transaksi.
 
-GET nantinya membaca `cloud_read.v_*`; INSERT/UPDATE/DELETE menulis tabel sumber. Query lama pada [queries](queries/) masih memakai model sebelum 008 dan **ditahan untuk refactor berikutnya**, bukan query kompatibel skema terbaru. Jangan menjalankan file query berparameter sebagai migrasi.
+## View, query dan snapshot
 
-View baru mencakup master spesies, histori kepemilikan/penghargaan, tiket tunggal, skor terkini, serta `v_eo_arena_history` untuk hubungan EO–arena melalui event. Pada histori EO, `held_event_count` hanya menghitung event ACTIVE/COMPLETED; rencana dan pembatalan dihitung terpisah.
+GET bisnis memakai `cloud_read.v_*`; INSERT/UPDATE/DELETE memakai tabel sumber. Auth internal, locking dan resolusi bukti/URL adalah pengecualian internal terbatas. List/detail umum tidak mengeluarkan hash, provider ID, BLOB bukti atau URL privat. `v_users`/`v_birds` menyertakan version/deleted_at untuk administrasi; query list biasa memfilter master terhapus, sementara tiket historis tetap memakai JOIN master yang sama.
 
-`v_round_score_summary` menghitung rata-rata desimal terkini untuk peserta CONFIRMED, pembayaran VERIFIED dan peserta ACTIVE. Peserta tanpa skor mempunyai count 0 dan average NULL; `is_complete` membutuhkan roster/kriteria tidak kosong serta seluruh nilai wajib. Peserta diskualifikasi dikeluarkan dari rekap tetapi skornya tetap ada di tabel.
+Lihat [queries/README.md](queries/README.md) untuk peta 13 flow, urutan transaksi, parameter dan query yang harus digabung. File `*.sql` memakai penanda nama, bukan PREPARE deployment; package Go meng-embed statement dan pgx mengikat `$1`, `$2`, dst. Query telah diganti untuk schema terkini; caller Go lama belum kompatibel dan tidak disediakan alias palsu.
 
-`mv_round_score_summary` dan `mv_arena_dashboard` adalah snapshot administratif. Keduanya diisi saat migrasi dan memiliki indeks unik penuh untuk refresh concurrent. Gunakan view biasa untuk penilaian/keputusan langsung. `verified_payment_amount` adalah jumlah fee tiket VERIFIED, termasuk tiket yang kemudian dibatalkan; skema tidak mencatat refund otomatis.
+`v_round_score_summary` memakai rata-rata desimal terkini dari tiket CONFIRMED, pembayaran VERIFIED dan peserta ACTIVE. Count awal nol, average NULL, dan `is_complete` membutuhkan roster/kriteria tidak kosong serta semua nilai wajib. Diskualifikasi tidak menghapus skor tetapi mengeluarkan tiket dari rekap eligible.
 
-Refresh dilakukan manual setelah perubahan commit sampai worker aplikasi disesuaikan. Gunakan transaksi/lock terpisah untuk masing-masing snapshot:
+`mv_round_score_summary` dan `mv_arena_dashboard` adalah snapshot administratif, diisi pada 009 dan hanya berubah setelah refresh. Indeks unik penuh mendukung refresh concurrent. Jangan memakai snapshot untuk memutuskan kelengkapan penilaian/penutupan ronde. `verified_payment_amount` menjumlahkan fee VERIFIED termasuk tiket yang kemudian CANCELLED; refund otomatis tidak tersedia.
 
-```sql
-BEGIN;
-SELECT pg_advisory_xact_lock(753120);
--- Catat waktu awal, bukan akhir refresh, sebagai batas snapshot.
-SELECT clock_timestamp() AS snapshot_started \gset
-REFRESH MATERIALIZED VIEW CONCURRENTLY cloud_read.mv_round_score_summary;
-UPDATE cloud_read.refresh_status
-SET snapshot_at = :'snapshot_started'::timestamptz, refreshed_at = clock_timestamp()
-WHERE view_name = 'mv_round_score_summary';
-COMMIT;
-```
+Refresh **setelah transaksi bisnis commit**, dalam transaksi pemeliharaan lain: lock advisory → catat waktu awal → refresh → update `refresh_status` → commit. Query `ReportRefreshLock`, `ReportRoundRefresh`/`ReportDashboardRefresh`, dan `ReportMarkRefreshed` tersedia. Lock skor 753120 dan dashboard 753121; timestamp snapshot adalah waktu awal, bukan akhir refresh. Worker aplikasi lama belum disambungkan ke kontrak query baru.
 
-Untuk dashboard, gunakan lock `753121` dan nama `mv_arena_dashboard`. Contoh memakai psql karena `\gset` dan variabel adalah fitur client psql, bukan sintaks SQL server. Aplikasi nantinya mengikat timestamp sebagai parameter. Jangan menganggap snapshot otomatis mutakhir tanpa refresh yang berhasil.
+## Hak akses dan aturan UseCase
 
-## Hak akses dan data privat
+PUBLIC tidak mendapat akses schema bisnis/read layer. Reader operasional hanya view master yang diizinkan; IAM/history, kontak tiket, skor dan rekap memerlukan reader admin/aplikasi. History master hanya bisa dibaca role aplikasi, tidak dimutasi langsung. Master akun/burung tidak diberi DELETE/TRUNCATE. Grup pemelihara hanya MAINTAIN dua materialized view dan SELECT/UPDATE metadata refresh. Akun login dan membership PostgreSQL tidak dihapus oleh migrasi 010.
 
-PUBLIC tidak mendapat akses schema bisnis/read layer. `kicau_cloud_reader` hanya membaca view master yang diizinkan. IAM, tiket/kontak, skor, histori dan rekap dibatasi ke pembaca admin/aplikasi. View tidak mengeluarkan password hash, ID provider eksternal, BYTEA bukti bayar atau URL rekaman/sertifikat mentah. Nomor penerima media dibaca dari akun pendaftar terkini; tidak memakai snapshot nomor lama.
+Database memeriksa FK/arena/roster, keunikan tiket/gantangan, bukti/MIME, status diskualifikasi, kecocokan burung penghargaan, skor 1–10 dan fee finite/nonnegatif. Kode burung memakai sequence yang aman untuk pembuatan bersamaan, dapat memiliki celah setelah rollback, dan tetap sama ketika nama/owner berubah.
 
-Grup aplikasi mendapat privilege tabel sumber dan sequence untuk adaptasi repository nanti; role master tidak dapat dimutasi oleh grup tersebut. `kicau_cloud_recap_maintainer` mendapat MAINTAIN pada dua materialized view dan SELECT/UPDATE metadata refresh. Membership akun layanan PostgreSQL tetap dipertahankan oleh reset schema.
+**UseCase tetap wajib** mengatur role ADMIN/OPERATOR/JURI/PESERTA, scope arena, flag EO, kriteria/roster terkunci, kelayakan peserta, fase ronde, hak transfer/diskualifikasi, penghargaan untuk peserta aktif, validasi upload, batas tiga sesi dan verifikasi password/token. Trigger history tidak mengimplementasikan aturan bisnis tersebut. Query sesi mengikuti ERD: UUID sesi bukan credential; format access/refresh token harus dipilih serta diverifikasi service sebelum menggunakan query validasi sesi. Verifikasi/reset email memerlukan Redis TTL/consume-once pada adaptasi aplikasi berikutnya.
 
-## Verifikasi yang sudah dilakukan
+## Pemeriksaan yang sudah dilakukan
 
-Di PostgreSQL sementara: restore baseline, terapkan 001–009, pastikan akun fixture lama terhapus, lalu periksa skema dan operasi melalui grup aplikasi terbatas. Di target lokal: 008–009 diterapkan bersama secara atomik, lalu pemeriksaan integrasi yang sama dijalankan dalam transaksi yang di-rollback.
+- PostgreSQL 18.6 sementara: restore baseline dan migrasi 001–010; master lama menjadi BASELINE dan dua role admin lama bergabung tanpa kehilangan penugasan.
+- Semua query berparameter diprepare oleh PostgreSQL dengan role aplikasi; utility REFRESH dieksekusi dalam skenario.
+- [Skenario bisnis SQL](verification/010_business_flows.sql) menggunakan statement aktual melalui [runner](verification/run_business_flows.py), lalu me-rollback fixture. Tidak menduplikasi body query pada fixture.
+- Skenario mencakup create/no-op/update/A→B→A, konflik versi, transfer/no-op transfer, tiket/pembayaran, skor/revisi desimal, diskualifikasi, media, soft delete/pencabutan sesi, privilege history dan pembatalan master ketika history gagal.
+- Dua koneksi editor bersamaan: satu update berhasil, satu tidak mendapatkan row karena versi usang; tepat satu history baru ditulis.
+- Target lokal menerima 010 tanpa reset data. Tidak ada akun contoh/superadmin yang dibuat, tidak ada build/deploy VPS atau instalasi Redis. Suite tes Go tidak dijalankan.
 
-Script [verification/009_simplified_erd.sql](verification/009_simplified_erd.sql) memeriksa relasi opsional, batas arena/roster, tiket lintas ronde, benturan burung/gantangan, skor desimal dan overwrite, snapshot sebelum/sesudah refresh, diskualifikasi, penghargaan internal/eksternal, nomor penerima media terkini, dan privilege read layer. Fixture tidak di-commit; sequence dapat tetap bertambah. Jalankan pada database pengujian, bukan saat aplikasi aktif:
+Jalankan pemeriksaan pada database sementara yang telah menerima 010:
 
 ```powershell
-& 'C:/Program Files/PostgreSQL/18/bin/psql.exe' -X -h localhost -p 5433 -U postgres -d kicau_mania `
-  -v ON_ERROR_STOP=1 -f cloud-app/db/verification/009_simplified_erd.sql
+python cloud-app/db/verification/run_business_flows.py --database NAMA_DATABASE_PENGUJIAN
 ```
 
-Suite tes Go tidak dijalankan. Tidak ada seed, akun superadmin, instalasi Redis atau perubahan source aplikasi pada fase database ini.
+Runner memakai koneksi host/port/user dari `.env`, tetapi mewajibkan nama database terpisah dan menolak DB aplikasi yang dikonfigurasi. Script verifikasi 009 hanya untuk schema sebelum 010; gunakan runner terbaru untuk schema aktif.

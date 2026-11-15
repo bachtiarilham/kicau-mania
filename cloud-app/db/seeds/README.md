@@ -1,6 +1,6 @@
 # Data mock dan pengujian Insomnia
 
-> **Perubahan database 15 November 2026:** skema lokal sudah mengikuti ERD baru melalui 008–009. Backend, query, bootstrap serta seed/koleksi request lama belum kompatibel. Jangan menerapkan seed lama atau menganggap endpoint bisnis siap sebelum adaptasi aplikasi. Lihat [status database](../README.md).
+> **Perubahan database 15 November 2026:** skema lokal sudah mengikuti ERD melalui 008–010 dan query 13 flow sudah tersedia. Repository/UseCase/handler, bootstrap dan seed/Insomnia lama belum kompatibel; jangan menerapkan seed lama atau menganggap API bisnis siap sebelum adaptasi. Lihat [status database](../README.md).
 
 Fixture ini hanya untuk database pengembangan/pengujian. Tidak dipanggil startup, migrasi atau pipeline deployment. SQL tidak menghapus data lama dan tidak menimpa baris yang sudah ada. Gunakan database terpisah untuk mengulang satu siklus penuh.
 

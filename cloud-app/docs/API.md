@@ -1,6 +1,6 @@
 # API bisnis cloud-app
 
-> **Perubahan database 15 November 2026:** skema lokal sudah mengikuti ERD baru melalui 008–009. Backend, query, bootstrap serta seed/koleksi request lama belum kompatibel. Jangan menerapkan seed lama atau menganggap endpoint bisnis siap sebelum adaptasi aplikasi. Lihat [status database](../db/README.md).
+> **Perubahan database 15 November 2026:** skema lokal sudah mengikuti ERD melalui 008–010 dan query 13 flow sudah tersedia. Repository/UseCase/handler, bootstrap dan seed/Insomnia lama belum kompatibel; jangan menerapkan seed lama atau menganggap API bisnis siap sebelum adaptasi. Lihat [status database](../db/README.md).
 
 Seluruh route bisnis berada pada `/api/v1`. `GET/HEAD /healthz` dan `/readyz` berada di root. Envelope dan pagination mengikuti [README](../README.md).
 

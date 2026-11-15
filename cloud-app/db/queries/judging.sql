@@ -1,49 +1,54 @@
--- Named statements; placeholders are bound by pgx. No PREPARE execution required.
+-- ERD 2026-11-15. Parameters are bound by pgx, never string interpolation.
+-- UseCase validates authorization, semantics and transaction/lock order; see README.md.
 
--- name: EntityScoreCriteriaGet
-SELECT to_jsonb(v) FROM cloud_read.v_score_criteria v WHERE id=$1::uuid;
+-- name: ScoreCriterionList
+-- params: arena_id uuid, cursor uuid nullable, limit int
+SELECT to_jsonb(v) FROM cloud_read.v_score_criteria v WHERE arena_id=$1::uuid AND ($2::uuid IS NULL OR id>$2) ORDER BY id LIMIT $3::int;
 
--- name: EntityScoreCriteriaList
-SELECT to_jsonb(v) FROM cloud_read.v_score_criteria v WHERE id::text>$1 AND ($2::text='' OR arena_id::text=$2) ORDER BY id LIMIT $3;
+-- name: ScoreCriterionGet
+-- params: arena_id uuid, id uuid
+SELECT to_jsonb(v) FROM cloud_read.v_score_criteria v WHERE arena_id=$1::uuid AND id=$2::uuid;
 
--- name: EntityScoreCriteriaCreate
-INSERT INTO judging.score_criteria(arena_id,criteria_name) VALUES(($1::jsonb->>'arena_id')::uuid,($1::jsonb->>'criteria_name')::text) RETURNING jsonb_build_object('id',id);
+-- name: ScoreCriterionCreate
+-- params: arena_id uuid, criteria_name text
+INSERT INTO judging.score_criteria(arena_id,criteria_name) VALUES($1::uuid,$2::text) RETURNING jsonb_build_object('id',id);
 
--- name: EntityScoreCriteriaUpdate
-UPDATE judging.score_criteria SET arena_id=CASE WHEN $2::jsonb?'arena_id' THEN ($2->>'arena_id')::uuid ELSE arena_id END,criteria_name=CASE WHEN $2::jsonb?'criteria_name' THEN ($2->>'criteria_name')::text ELSE criteria_name END WHERE id=$1::uuid RETURNING jsonb_build_object('id',id);
+-- name: ScoreCriterionUpdate
+-- params: arena_id uuid, id uuid, patch jsonb
+UPDATE judging.score_criteria SET criteria_name=CASE WHEN $3::jsonb ? 'criteria_name' THEN ($3::jsonb->>'criteria_name')::text ELSE criteria_name END WHERE arena_id=$1::uuid AND id=$2::uuid RETURNING jsonb_build_object('id',id);
 
--- name: EntityScoreCriteriaDelete
-DELETE FROM judging.score_criteria WHERE id=$1::uuid RETURNING jsonb_build_object('id',id);
+-- name: ScoreCriterionDelete
+-- params: arena_id uuid, id uuid
+DELETE FROM judging.score_criteria WHERE arena_id=$1::uuid AND id=$2::uuid RETURNING jsonb_build_object('id',id);
 
--- name: JudgeAssignment
-SELECT to_jsonb(v) FROM cloud_read.v_round_judges v WHERE round_id=$1::uuid AND judge_user_id=$2::uuid;
+-- name: RoundJudgeAssign
+-- params: arena_id uuid, round_id uuid, judge_user_id uuid
+INSERT INTO judging.round_judges(round_id,judge_user_id) SELECT r.id,u.id FROM competition.rounds r CROSS JOIN iam.users u WHERE r.id=$2::uuid AND r.arena_id=$1::uuid AND u.id=$3::uuid AND u.deleted_at IS NULL AND u.is_active ON CONFLICT(round_id,judge_user_id) DO NOTHING RETURNING jsonb_build_object('id',id);
 
--- name: JudgeRounds
-SELECT to_jsonb(r) FROM cloud_read.v_rounds r JOIN cloud_read.v_round_judges j ON j.round_id=r.id WHERE j.judge_user_id=$1::uuid AND EXISTS(SELECT FROM iam.arena_user_roles a JOIN iam.roles role ON role.id=a.role_id WHERE a.user_id=$1::uuid AND a.arena_id=r.arena_id AND role.name='juri') AND r.id::text>$2 ORDER BY r.id LIMIT $3;
+-- name: RoundJudgeRemove
+-- params: arena_id uuid, round_id uuid, judge_user_id uuid
+DELETE FROM judging.round_judges j USING competition.rounds r WHERE j.round_id=r.id AND r.arena_id=$1::uuid AND r.id=$2::uuid AND j.judge_user_id=$3::uuid RETURNING jsonb_build_object('id',j.id);
 
--- name: JudgeItem
-SELECT to_jsonb(v) FROM cloud_read.v_registration_items v WHERE id=$1::uuid;
+-- name: RoundJudgeList
+-- params: arena_id uuid, round_id uuid
+SELECT to_jsonb(v) FROM cloud_read.v_round_judges v WHERE arena_id=$1::uuid AND round_id=$2::uuid ORDER BY judge_user_id,id;
 
--- name: AssessmentGet
-SELECT to_jsonb(v) FROM cloud_read.v_participant_assessments v WHERE registration_item_id=$1::uuid AND round_judge_id=$2::uuid;
+-- name: JudgeRoundList
+-- params: judge_user_id uuid, cursor uuid nullable, limit int
+SELECT to_jsonb(v) FROM cloud_read.v_rounds v WHERE EXISTS(SELECT FROM cloud_read.v_round_judges j WHERE j.round_id=v.id AND j.judge_user_id=$1::uuid) AND ($2::uuid IS NULL OR v.id>$2) ORDER BY v.id LIMIT $3::int;
 
--- name: AssessmentSave
-INSERT INTO judging.participant_assessments(arena_id,round_id,registration_item_id,round_judge_id,version) VALUES($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5) ON CONFLICT(registration_item_id,round_judge_id) DO UPDATE SET version=excluded.version,updated_at=CURRENT_TIMESTAMP RETURNING jsonb_build_object('id',id,'version',version);
-
--- name: AssessmentScores
-SELECT to_jsonb(s) FROM cloud_read.v_round_scores s WHERE registration_item_id=$1::uuid AND round_judge_id=$2::uuid ORDER BY criteria_id;
-
--- name: AssessmentHistory
-SELECT to_jsonb(h)||jsonb_build_object('criteria_id',s.criteria_id) FROM cloud_read.v_score_revisions h JOIN cloud_read.v_round_scores s ON s.id=h.score_id WHERE s.registration_item_id=$1::uuid AND s.round_judge_id=$2::uuid ORDER BY h.revision_number,s.criteria_id;
+-- name: ScoreList
+-- params: arena_id uuid, registration_id uuid, judge_user_id uuid
+SELECT to_jsonb(v) FROM cloud_read.v_round_scores v WHERE arena_id=$1::uuid AND registration_id=$2::uuid AND user_id=$3::uuid ORDER BY criteria_id,id;
 
 -- name: ScoreUpsert
-INSERT INTO judging.round_scores(arena_id,round_id,registration_item_id,round_judge_id,criteria_id,score_value,revision_number) VALUES($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5::uuid,$6,$7) ON CONFLICT(registration_item_id,round_judge_id,criteria_id) DO UPDATE SET score_value=excluded.score_value,revision_number=excluded.revision_number RETURNING jsonb_build_object('id',id);
+-- params: arena_id uuid, round_id uuid, registration_id uuid, judge_user_id uuid, criterion_id uuid, score numeric
+INSERT INTO judging.round_scores(arena_id,round_id,registration_id,user_id,criteria_id,score_value) SELECT r.arena_id,r.id,t.id,u.id,$5::uuid,$6::numeric FROM competition.rounds r JOIN competition.registrations t ON t.round_id=r.id CROSS JOIN iam.users u WHERE r.arena_id=$1::uuid AND r.id=$2::uuid AND t.id=$3::uuid AND u.id=$4::uuid AND u.deleted_at IS NULL AND u.is_active AND r.status='JUDGING' AND t.status='CONFIRMED' AND t.payment_status='VERIFIED' AND t.participant_status='ACTIVE' ON CONFLICT(round_id,registration_id,user_id,criteria_id) DO UPDATE SET score_value=excluded.score_value,updated_at=clock_timestamp() RETURNING jsonb_build_object('id',id,'score_value',score_value);
 
--- name: ScoreRevision
-INSERT INTO judging.score_revisions(score_id,operation_id,revision_number,score_value) VALUES($1::uuid,$2::uuid,$3,$4);
+-- name: RoundLiveSummary
+-- params: arena_id uuid, round_id uuid
+SELECT to_jsonb(v) FROM cloud_read.v_round_score_summary v WHERE arena_id=$1::uuid AND round_id=$2::uuid ORDER BY average_score DESC NULLS LAST,registration_id;
 
--- name: ScoreOperation
-SELECT to_jsonb(v)||jsonb_build_object('payload_hash',encode(payload_hash,'hex')) FROM judging.score_operations v WHERE actor_user_id=$1::uuid AND operation_id=$2::uuid;
-
--- name: ScoreOperationSave
-INSERT INTO judging.score_operations(actor_user_id,operation_id,payload_hash,assessment_id,result) VALUES($1::uuid,$2::uuid,$3,$4::uuid,$5::jsonb);
+-- name: RoundCompleteness
+-- params: arena_id uuid, round_id uuid
+SELECT jsonb_build_object('participant_count',count(*),'complete_count',count(*) FILTER(WHERE is_complete),'all_complete',count(*)>0 AND bool_and(is_complete)) FROM cloud_read.v_round_score_summary WHERE arena_id=$1::uuid AND round_id=$2::uuid;

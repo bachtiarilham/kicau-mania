@@ -1,8 +1,8 @@
 # Rancangan ERD Lengkap Kicau Mania (Multi-Arena & EO)
 
-> **Status — RANCANGAN HISTORY MASTER, VERSI DATA, DAN SOFT DELETE**
+> **Status — SKEMA LOKAL SUDAH MENGIKUTI HISTORY MASTER, VERSI DATA, DAN SOFT DELETE**
 >
-> Tanggal revisi: 15 November 2026. Database lokal `localhost:5433/kicau_mania` sebelumnya sudah menerapkan migrasi 008–009. Tambahan history master, version, soft delete, dan empat role dalam revisi ini **baru rancangan ERD, belum diterapkan ke database**. Backend/query bisnis dan integrasi Redis masih menunggu adaptasi.
+> Tanggal revisi: 15 November 2026. Database lokal `localhost:5433/kicau_mania` sudah menerapkan migrasi 008–010. History master, version, soft delete, trigger append-only dan empat role sudah diterapkan; query 13 alur bisnis tersedia. Repository/UseCase/handler, seed/Insomnia dan integrasi Redis masih menunggu adaptasi. VPS tidak diubah.
 > Rancangan ini menyederhanakan arsitektur database dengan:
 > 1. Menghapus tabel perantara dan audit mikro (`asset_owners`, `asset_bird_owner_transfers`, `competition_registration_items`, `competition_registration_payments`, `judging_participant_assessments`, `judging_score_operations`, `judging_score_revisions`).
 > 2. Menyimpan EO sebagai akun `iam.users` dengan boolean `is_eo`; event terhubung langsung ke akun penyelenggara melalui `owner_id`. Arena tetap merupakan fasilitas fisik terpisah.
@@ -21,7 +21,7 @@
 
 Bagian ini memecah diagram lengkap menjadi beberapa tampilan. Mulai dari peta utama, lalu lihat diagram per bagian untuk menelusuri foreign key.
 
-**Cakupan:** diagram menggambarkan rancangan terbaru, mencakup schema 008–009 beserta tambahan history master, versi data, soft delete, dan penyelarasan role. Tambahan tersebut belum dimigrasikan. Migrasi 004–007 tetap menjadi riwayat schema lama. Aturan transaksi, privilege, Redis, dan penyesuaian query/API perlu diterapkan pada tahap implementasi; status schema yang sudah terpasang dijelaskan di [panduan database](README.md).
+**Cakupan:** diagram mengikuti schema 008–010, termasuk history master, versi data, soft delete dan empat role. Migrasi 004–007 tetap menjadi riwayat schema lama. Privilege/trigger database dan query SQL sudah tersedia; otorisasi dan transaksi UseCase, Redis serta endpoint/API belum diadaptasi. Detail status pada [panduan database](README.md) dan [panduan query bisnis](queries/README.md).
 
 ### Navigasi
 

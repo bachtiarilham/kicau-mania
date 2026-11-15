@@ -1,117 +1,130 @@
--- Named statements; placeholders are bound by pgx. No PREPARE execution required.
+-- ERD 2026-11-15. Parameters are bound by pgx, never string interpolation.
+-- UseCase validates authorization, semantics and transaction/lock order; see README.md.
 
--- name: EntityArenasGet
+-- name: ArenaList
+-- params: cursor uuid nullable, limit int
+SELECT to_jsonb(v) FROM cloud_read.v_arenas v WHERE ($1::uuid IS NULL OR id>$1) ORDER BY id LIMIT $2::int;
+
+-- name: ArenaGet
+-- params: id uuid
 SELECT to_jsonb(v) FROM cloud_read.v_arenas v WHERE id=$1::uuid;
 
--- name: EntityArenasList
-SELECT to_jsonb(v) FROM cloud_read.v_arenas v WHERE id::text>$1 AND ($2::text='' OR true) ORDER BY id LIMIT $3;
+-- name: ArenaCreate
+-- params: name text, address text, timezone text, is_active boolean
+INSERT INTO asset.arenas(name,address,timezone,is_active) VALUES($1::text,$2::text,$3::text,$4::boolean) RETURNING jsonb_build_object('id',id);
 
--- name: EntityArenasCreate
-INSERT INTO asset.arenas(name,address,timezone,is_active) VALUES(($1::jsonb->>'name')::text,($1::jsonb->>'address')::text,coalesce(($1::jsonb->>'timezone')::text,'Asia/Jakarta'),coalesce(($1::jsonb->>'is_active')::boolean,true)) RETURNING jsonb_build_object('id',id);
+-- name: ArenaUpdate
+-- params: id uuid, patch jsonb
+UPDATE asset.arenas SET name=CASE WHEN $2::jsonb ? 'name' THEN ($2::jsonb->>'name')::text ELSE name END,
+ address=CASE WHEN $2::jsonb ? 'address' THEN ($2::jsonb->>'address')::text ELSE address END,
+ timezone=CASE WHEN $2::jsonb ? 'timezone' THEN ($2::jsonb->>'timezone')::text ELSE timezone END,
+ is_active=CASE WHEN $2::jsonb ? 'is_active' THEN ($2::jsonb->>'is_active')::boolean ELSE is_active END,
+ updated_at=CURRENT_TIMESTAMP WHERE id=$1::uuid RETURNING jsonb_build_object('id',id);
 
--- name: EntityArenasUpdate
-UPDATE asset.arenas SET name=CASE WHEN $2::jsonb?'name' THEN ($2->>'name')::text ELSE name END,address=CASE WHEN $2::jsonb?'address' THEN ($2->>'address')::text ELSE address END,timezone=CASE WHEN $2::jsonb?'timezone' THEN ($2->>'timezone')::text ELSE timezone END,is_active=CASE WHEN $2::jsonb?'is_active' THEN ($2->>'is_active')::boolean ELSE is_active END WHERE id=$1::uuid RETURNING jsonb_build_object('id',id);
-
--- name: EntityArenasDelete
+-- name: ArenaDelete
+-- params: id uuid
 DELETE FROM asset.arenas WHERE id=$1::uuid RETURNING jsonb_build_object('id',id);
 
--- name: EntityOwnersGet
-SELECT to_jsonb(v) FROM cloud_read.v_owners v WHERE id=$1::uuid;
+-- name: GantanganList
+-- params: arena_id uuid, cursor uuid nullable, limit int
+SELECT to_jsonb(v) FROM cloud_read.v_gantangan v WHERE arena_id=$1::uuid AND ($2::uuid IS NULL OR id>$2) ORDER BY id LIMIT $3::int;
 
--- name: EntityOwnersList
-SELECT to_jsonb(v) FROM cloud_read.v_owners v WHERE id::text>$1 AND ($2::text='' OR true) ORDER BY id LIMIT $3;
+-- name: GantanganGet
+-- params: arena_id uuid, id uuid
+SELECT to_jsonb(v) FROM cloud_read.v_gantangan v WHERE arena_id=$1::uuid AND id=$2::uuid;
 
--- name: EntityOwnersCreate
-INSERT INTO asset.owners(user_id,name,phone,created_by_user_id,created_in_arena_id) VALUES(($1::jsonb->>'user_id')::uuid,($1::jsonb->>'name')::text,($1::jsonb->>'phone')::text,($1::jsonb->>'created_by_user_id')::uuid,($1::jsonb->>'created_in_arena_id')::uuid) RETURNING jsonb_build_object('id',id);
+-- name: GantanganCreate
+-- params: arena_id uuid, number integer, description text, baris integer, kolom integer
+INSERT INTO asset.gantangan(arena_id,number,description,baris,kolom) VALUES($1::uuid,$2::integer,$3::text,$4::integer,$5::integer) RETURNING jsonb_build_object('id',id);
 
--- name: EntityOwnersUpdate
-UPDATE asset.owners SET user_id=CASE WHEN $2::jsonb?'user_id' THEN ($2->>'user_id')::uuid ELSE user_id END,name=CASE WHEN $2::jsonb?'name' THEN ($2->>'name')::text ELSE name END,phone=CASE WHEN $2::jsonb?'phone' THEN ($2->>'phone')::text ELSE phone END,created_by_user_id=CASE WHEN $2::jsonb?'created_by_user_id' THEN ($2->>'created_by_user_id')::uuid ELSE created_by_user_id END,created_in_arena_id=CASE WHEN $2::jsonb?'created_in_arena_id' THEN ($2->>'created_in_arena_id')::uuid ELSE created_in_arena_id END WHERE id=$1::uuid RETURNING jsonb_build_object('id',id);
+-- name: GantanganUpdate
+-- params: arena_id uuid, id uuid, patch jsonb
+UPDATE asset.gantangan SET number=CASE WHEN $3::jsonb ? 'number' THEN ($3::jsonb->>'number')::integer ELSE number END,
+ description=CASE WHEN $3::jsonb ? 'description' THEN ($3::jsonb->>'description')::text ELSE description END,
+ baris=CASE WHEN $3::jsonb ? 'baris' THEN ($3::jsonb->>'baris')::integer ELSE baris END,
+ kolom=CASE WHEN $3::jsonb ? 'kolom' THEN ($3::jsonb->>'kolom')::integer ELSE kolom END WHERE arena_id=$1::uuid AND id=$2::uuid RETURNING jsonb_build_object('id',id);
 
--- name: EntityOwnersDelete
-DELETE FROM asset.owners WHERE id=$1::uuid RETURNING jsonb_build_object('id',id);
+-- name: GantanganDelete
+-- params: arena_id uuid, id uuid
+DELETE FROM asset.gantangan WHERE arena_id=$1::uuid AND id=$2::uuid RETURNING jsonb_build_object('id',id);
 
--- name: EntityBirdsGet
-SELECT to_jsonb(v) FROM cloud_read.v_birds v WHERE id=$1::uuid;
+-- name: BirdSpeciesList
+-- params: cursor uuid nullable, limit int
+SELECT to_jsonb(v) FROM cloud_read.v_bird_species v WHERE ($1::uuid IS NULL OR id>$1) ORDER BY id LIMIT $2::int;
 
--- name: EntityBirdsList
-SELECT to_jsonb(v) FROM cloud_read.v_birds v WHERE id::text>$1 AND ($2::text='' OR true) ORDER BY id LIMIT $3;
+-- name: BirdSpeciesGet
+-- params: id uuid
+SELECT to_jsonb(v) FROM cloud_read.v_bird_species v WHERE id=$1::uuid;
 
--- name: EntityBirdsCreate
-INSERT INTO asset.birds(owner_id,ring_number,bird_type,name) VALUES(($1::jsonb->>'owner_id')::uuid,($1::jsonb->>'ring_number')::text,($1::jsonb->>'bird_type')::text,($1::jsonb->>'name')::text) RETURNING jsonb_build_object('id',id);
+-- name: BirdSpeciesCreate
+-- params: name text
+INSERT INTO asset.bird_species(name) VALUES($1::text) RETURNING jsonb_build_object('id',id);
 
--- name: EntityBirdsUpdate
-UPDATE asset.birds SET owner_id=CASE WHEN $2::jsonb?'owner_id' THEN ($2->>'owner_id')::uuid ELSE owner_id END,ring_number=CASE WHEN $2::jsonb?'ring_number' THEN ($2->>'ring_number')::text ELSE ring_number END,bird_type=CASE WHEN $2::jsonb?'bird_type' THEN ($2->>'bird_type')::text ELSE bird_type END,name=CASE WHEN $2::jsonb?'name' THEN ($2->>'name')::text ELSE name END WHERE id=$1::uuid RETURNING jsonb_build_object('id',id);
+-- name: BirdSpeciesUpdate
+-- params: id uuid, patch jsonb
+UPDATE asset.bird_species SET name=CASE WHEN $2::jsonb ? 'name' THEN ($2::jsonb->>'name')::text ELSE name END,
+ updated_at=CURRENT_TIMESTAMP WHERE id=$1::uuid RETURNING jsonb_build_object('id',id);
 
--- name: EntityBirdsDelete
-DELETE FROM asset.birds WHERE id=$1::uuid RETURNING jsonb_build_object('id',id);
+-- name: BirdSpeciesDelete
+-- params: id uuid
+DELETE FROM asset.bird_species WHERE id=$1::uuid RETURNING jsonb_build_object('id',id);
 
--- name: EntityGantanganGet
-SELECT to_jsonb(v) FROM cloud_read.v_gantangan v WHERE id=$1::uuid;
+-- name: BirdList
+-- params: owner_id uuid nullable, cursor uuid nullable, limit int
+SELECT to_jsonb(v) FROM cloud_read.v_birds v WHERE deleted_at IS NULL AND ($1::uuid IS NULL OR owner_id=$1) AND ($2::uuid IS NULL OR id>$2) ORDER BY id LIMIT $3::int;
 
--- name: EntityGantanganList
-SELECT to_jsonb(v) FROM cloud_read.v_gantangan v WHERE id::text>$1 AND ($2::text='' OR arena_id::text=$2) ORDER BY id LIMIT $3;
+-- name: BirdGet
+-- params: bird_id uuid
+SELECT to_jsonb(v) FROM cloud_read.v_birds v WHERE id=$1::uuid AND deleted_at IS NULL;
 
--- name: EntityGantanganCreate
-INSERT INTO asset.gantangan(arena_id,number,description) VALUES(($1::jsonb->>'arena_id')::uuid,($1::jsonb->>'number')::integer,($1::jsonb->>'description')::text) RETURNING jsonb_build_object('id',id);
+-- name: BirdLock
+-- params: bird_id uuid
+SELECT jsonb_build_object('id',id,'owner_id',owner_id,'bird_species_id',bird_species_id,'version',version,'deleted_at',deleted_at) FROM asset.birds WHERE id=$1::uuid FOR UPDATE;
 
--- name: EntityGantanganUpdate
-UPDATE asset.gantangan SET arena_id=CASE WHEN $2::jsonb?'arena_id' THEN ($2->>'arena_id')::uuid ELSE arena_id END,number=CASE WHEN $2::jsonb?'number' THEN ($2->>'number')::integer ELSE number END,description=CASE WHEN $2::jsonb?'description' THEN ($2->>'description')::text ELSE description END WHERE id=$1::uuid RETURNING jsonb_build_object('id',id);
+-- name: BirdCreate
+-- params: name text, owner_id uuid, species_id uuid
+WITH b AS (INSERT INTO asset.birds(name,owner_id,bird_species_id) VALUES($1,$2::uuid,$3::uuid) RETURNING id,owner_id,version), h AS (INSERT INTO asset.bird_ownership_history(bird_id,user_id) SELECT id,owner_id FROM b RETURNING id) SELECT jsonb_build_object('id',b.id,'version',b.version) FROM b;
 
--- name: EntityGantanganDelete
-DELETE FROM asset.gantangan WHERE id=$1::uuid RETURNING jsonb_build_object('id',id);
+-- name: BirdUpdate
+-- params: bird_id uuid, expected_version int, patch jsonb (name/bird_species_id)
+UPDATE asset.birds SET name=CASE WHEN $3::jsonb?'name' THEN $3->>'name' ELSE name END,bird_species_id=CASE WHEN $3::jsonb?'bird_species_id' THEN ($3->>'bird_species_id')::uuid ELSE bird_species_id END WHERE id=$1::uuid AND version=$2::int AND deleted_at IS NULL RETURNING jsonb_build_object('id',id,'version',version);
 
--- name: EntityEnginesGet
-SELECT to_jsonb(v) FROM cloud_read.v_engines v WHERE id=$1::uuid;
+-- name: BirdTransferOwner
+-- params: bird_id uuid, expected_version int, new_owner_id uuid, notes text nullable
+WITH old AS (SELECT id,owner_id,version FROM asset.birds WHERE id=$1::uuid AND deleted_at IS NULL FOR UPDATE), changed AS (UPDATE asset.birds b SET owner_id=$3::uuid FROM old WHERE b.id=old.id AND old.version=$2::int AND old.owner_id<>$3::uuid AND EXISTS(SELECT FROM iam.users u WHERE u.id=$3::uuid AND u.deleted_at IS NULL AND u.is_active) RETURNING b.id,b.owner_id,b.version), history AS (INSERT INTO asset.bird_ownership_history(bird_id,user_id,notes) SELECT id,owner_id,$4 FROM changed RETURNING id) SELECT jsonb_build_object('id',id,'version',version,'changed',true) FROM changed UNION ALL SELECT jsonb_build_object('id',id,'version',version,'changed',false) FROM old WHERE version=$2::int AND owner_id=$3::uuid AND NOT EXISTS(SELECT FROM changed);
 
--- name: EntityEnginesList
-SELECT to_jsonb(v) FROM cloud_read.v_engines v WHERE id::text>$1 AND ($2::text='' OR arena_id::text=$2) ORDER BY id LIMIT $3;
+-- name: BirdSoftDelete
+-- params: bird_id uuid, expected_version int
+UPDATE asset.birds SET deleted_at=coalesce(deleted_at,CURRENT_TIMESTAMP) WHERE id=$1::uuid AND version=$2::int RETURNING jsonb_build_object('id',id,'version',version);
 
--- name: EntityEnginesCreate
-INSERT INTO asset.engines(arena_id,name,is_active) VALUES(($1::jsonb->>'arena_id')::uuid,($1::jsonb->>'name')::text,coalesce(($1::jsonb->>'is_active')::boolean,true)) RETURNING jsonb_build_object('id',id);
+-- name: BirdMasterHistory
+-- params: bird_id uuid, after_version int, limit int
+SELECT to_jsonb(v) FROM cloud_read.v_bird_master_history v WHERE bird_id=$1::uuid AND version>$2::int ORDER BY version,id LIMIT $3::int;
 
--- name: EntityEnginesUpdate
-UPDATE asset.engines SET arena_id=CASE WHEN $2::jsonb?'arena_id' THEN ($2->>'arena_id')::uuid ELSE arena_id END,name=CASE WHEN $2::jsonb?'name' THEN ($2->>'name')::text ELSE name END,is_active=CASE WHEN $2::jsonb?'is_active' THEN ($2->>'is_active')::boolean ELSE is_active END WHERE id=$1::uuid RETURNING jsonb_build_object('id',id);
+-- name: BirdOwnershipHistory
+-- params: bird_id uuid
+SELECT to_jsonb(v) FROM cloud_read.v_bird_ownership_history v WHERE bird_id=$1::uuid ORDER BY ownership_date,id;
 
--- name: EntityEnginesDelete
-DELETE FROM asset.engines WHERE id=$1::uuid RETURNING jsonb_build_object('id',id);
+-- name: BirdAwardList
+-- params: bird_id uuid, cursor uuid nullable, limit int
+SELECT to_jsonb(v) FROM cloud_read.v_bird_award_certificate_history v WHERE bird_id=$1::uuid AND ($2::uuid IS NULL OR id>$2) ORDER BY id LIMIT $3::int;
 
--- name: EntityDevicesGet
-SELECT to_jsonb(v) FROM cloud_read.v_devices v WHERE id=$1::uuid;
+-- name: BirdAwardGet
+-- params: bird_id uuid, award_id uuid
+SELECT to_jsonb(v) FROM cloud_read.v_bird_award_certificate_history v WHERE bird_id=$1::uuid AND id=$2::uuid;
 
--- name: EntityDevicesList
-SELECT to_jsonb(v) FROM cloud_read.v_devices v WHERE id::text>$1 AND ($2::text='' OR arena_id::text=$2) ORDER BY id LIMIT $3;
+-- name: BirdAwardCreate
+-- params: bird_id uuid, registration_id uuid nullable, award_name text, event_name text nullable, organizer_name text nullable, rank int nullable, awarded_at date, certificate_url text nullable
+INSERT INTO asset.bird_award_certificate_history(bird_id,registration_id,award_name,event_name,organizer_name,rank,awarded_at,certificate_url) VALUES($1::uuid,$2::uuid,$3,$4,$5,$6::int,$7::date,$8) RETURNING jsonb_build_object('id',id);
 
--- name: EntityDevicesCreate
-INSERT INTO asset.devices(arena_id,engine_id,gantangan_id,type,ip_address,rtsp_url) VALUES(($1::jsonb->>'arena_id')::uuid,($1::jsonb->>'engine_id')::uuid,($1::jsonb->>'gantangan_id')::uuid,($1::jsonb->>'type')::text,($1::jsonb->>'ip_address')::text,($1::jsonb->>'rtsp_url')::text) RETURNING jsonb_build_object('id',id);
+-- name: BirdAwardUpdate
+-- params: bird_id uuid, award_id uuid, award_name text, event_name text nullable, organizer_name text nullable, rank int nullable, awarded_at date, certificate_url text nullable
+UPDATE asset.bird_award_certificate_history SET award_name=$3,event_name=$4,organizer_name=$5,rank=$6::int,awarded_at=$7::date,certificate_url=$8,updated_at=CURRENT_TIMESTAMP WHERE bird_id=$1::uuid AND id=$2::uuid RETURNING jsonb_build_object('id',id);
 
--- name: EntityDevicesUpdate
-UPDATE asset.devices SET arena_id=CASE WHEN $2::jsonb?'arena_id' THEN ($2->>'arena_id')::uuid ELSE arena_id END,engine_id=CASE WHEN $2::jsonb?'engine_id' THEN ($2->>'engine_id')::uuid ELSE engine_id END,gantangan_id=CASE WHEN $2::jsonb?'gantangan_id' THEN ($2->>'gantangan_id')::uuid ELSE gantangan_id END,type=CASE WHEN $2::jsonb?'type' THEN ($2->>'type')::text ELSE type END,ip_address=CASE WHEN $2::jsonb?'ip_address' THEN ($2->>'ip_address')::text ELSE ip_address END,rtsp_url=CASE WHEN $2::jsonb?'rtsp_url' THEN ($2->>'rtsp_url')::text ELSE rtsp_url END WHERE id=$1::uuid RETURNING jsonb_build_object('id',id);
+-- name: BirdAwardDelete
+-- params: bird_id uuid, award_id uuid
+DELETE FROM asset.bird_award_certificate_history WHERE bird_id=$1::uuid AND id=$2::uuid RETURNING jsonb_build_object('id',id);
 
--- name: EntityDevicesDelete
-DELETE FROM asset.devices WHERE id=$1::uuid RETURNING jsonb_build_object('id',id);
-
--- name: LockBird
-SELECT to_jsonb(b) FROM asset.birds b WHERE id=$1::uuid FOR UPDATE;
-
--- name: TransferBird
-INSERT INTO asset.bird_owner_transfers(bird_id,from_owner_id,to_owner_id,performed_by_user_id,reason) VALUES($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5);
-
--- name: UpdateBirdOwner
-UPDATE asset.birds SET owner_id=$2::uuid WHERE id=$1::uuid;
-
--- name: BirdLookup
-SELECT jsonb_build_object('id',id,'name',name,'ring_number',ring_number,'bird_type',bird_type) FROM cloud_read.v_birds WHERE ring_number=$1;
-
--- name: OwnerBirds
-SELECT to_jsonb(b) FROM cloud_read.v_birds b JOIN cloud_read.v_owners o ON o.id=b.owner_id WHERE b.id::text>$1 AND ($4::boolean OR o.user_id=$2::uuid OR ($5::boolean AND o.user_id IS NULL AND o.created_in_arena_id::text=$3)) ORDER BY b.id LIMIT $6;
-
--- name: ManageableOwners
-SELECT to_jsonb(o) FROM cloud_read.v_owners o WHERE o.id::text>$1 AND ($4::boolean OR o.user_id=$2::uuid OR ($5::boolean AND o.user_id IS NULL AND o.created_in_arena_id::text=$3)) ORDER BY o.id LIMIT $6;
-
--- name: ArenaCatalog
-SELECT to_jsonb(v) FROM cloud_read.v_arenas v WHERE id::text>$1 AND ($3::boolean OR v.is_active OR EXISTS(SELECT FROM iam.arena_user_roles a WHERE a.user_id=$2::uuid AND a.arena_id=v.id)) ORDER BY id LIMIT $4;
-
--- name: LockOwner
-SELECT to_jsonb(o) FROM asset.owners o WHERE id=$1::uuid FOR UPDATE;
--- name: ArenaHasActiveRound
-SELECT jsonb_build_object('active',exists(SELECT FROM competition.rounds WHERE arena_id=$1::uuid AND phase IN ('RUNNING','JUDGING','INTERRUPTED')));
+-- name: BirdAwardCertificateInternal
+-- params: award_id uuid
+SELECT jsonb_build_object('id',id,'bird_id',bird_id,'certificate_url',certificate_url) FROM asset.bird_award_certificate_history WHERE id=$1::uuid;
