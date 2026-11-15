@@ -14,18 +14,16 @@ import (
 )
 
 type Config struct {
-	HTTPAddress                                                    string
-	DatabaseURL                                                    string
-	DBMaxConns, DBMinConns                                         int32
-	DBConnectTimeout, DBHealthTimeout                              time.Duration
-	RequestTimeout, ShutdownTimeout                                time.Duration
-	AllowedOrigins                                                 []string
-	TrustedProxies                                                 []string
-	FrontendURL, GoogleClientID, CookieName                        string
-	CookieSecure                                                   bool
-	SMTPHost, SMTPPort, SMTPUser, SMTPPassword, SMTPFrom, SMTPMode string
-	SMTPAllowInsecure                                              bool
-	MVRefreshInterval, MVRefreshTimeout                            time.Duration
+	HTTPAddress                       string
+	DatabaseURL                       string
+	RedisURL                          string
+	DBMaxConns, DBMinConns            int32
+	DBConnectTimeout, DBHealthTimeout time.Duration
+	RequestTimeout, ShutdownTimeout   time.Duration
+	AllowedOrigins                    []string
+	TrustedProxies                    []string
+	FrontendURL, CookieName           string
+	CookieSecure                      bool
 }
 
 func Load(path string) (Config, error) {
@@ -33,6 +31,7 @@ func Load(path string) (Config, error) {
 		return Config{}, fmt.Errorf("cannot load environment file")
 	}
 	c := Config{HTTPAddress: env("HTTP_ADDR", "127.0.0.1:8091"), DatabaseURL: strings.TrimSpace(env("DATABASE_URL", ""))}
+	c.RedisURL = strings.TrimSpace(env("REDIS_URL", ""))
 	_, port, err := net.SplitHostPort(c.HTTPAddress)
 	if err != nil {
 		return c, fmt.Errorf("HTTP_ADDR must contain host:port")

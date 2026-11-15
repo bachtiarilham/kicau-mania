@@ -47,7 +47,7 @@ UPDATE iam.users SET deleted_at=coalesce(deleted_at,CURRENT_TIMESTAMP) WHERE id=
 
 -- name: MasterUserHistory
 -- params: user_id uuid, after_version int, limit int
-SELECT to_jsonb(v) FROM cloud_read.v_user_master_history v WHERE user_id=$1::uuid AND version>$2::int ORDER BY version,id LIMIT $3::int;
+SELECT to_jsonb(v)||jsonb_build_object('actor_name',u.name) FROM cloud_read.v_user_master_history v LEFT JOIN cloud_read.v_users u ON u.id=v.actor_id WHERE v.user_id=$1::uuid AND v.version>$2::int ORDER BY v.version,v.id LIMIT $3::int;
 
 -- name: AssignArenaRole
 -- params: user_id uuid, arena_id uuid, role_name text

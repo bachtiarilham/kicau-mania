@@ -1,92 +1,30 @@
-# Membaca backend cloud-app dari alur bisnis
+# Alur bisnis dan peta kode schema 010
 
-Mulai dari usecase yang sedang dikerjakan, lalu ikuti `model → handler → UseCase → repository → SQL`. Jangan membaca semua folder sekaligus. [Kontrak API](API.md) menjelaskan request/response; [SQL](../db/README.md) menjelaskan transaksi dan view.
+1. Bootstrap ADMIN pertama melalui CLI, login, lalu buat arena. Pembuat arena mendapat ADMIN hanya di arena itu.
+2. ADMIN membuat akun operator/juri, menugaskan role arena, lalu menetapkan password awal. Petugas mengganti password melalui profil.
+3. Petugas membuat atau mencari peserta, spesies dan burung. Peserta biasa tidak otomatis mendapat login. Master bersama dapat diedit petugas; setiap edit/arsip memakai expected_version dan context actor. Trigger menulis snapshot berbeda saja; history tidak dapat diubah melalui API.
+4. Buat EO (akun is_eo), event, kategori tiket, gantangan dan konfigurasi ronde.
+5. Daftarkan akun → burung → ronde → gantangan. Bila akun baru sukses tetapi tiket gagal, frontend mempertahankan akun terpilih untuk percobaan berikutnya.
+6. Tunai diverifikasi eksplisit; transfer unggah bukti terlebih dahulu. Tiket confirmed/verified menjadi peserta ronde. Edit tiket hanya sebelum terkonfirmasi dan saat kedua ronde PREPARED dalam arena sama. Batalkan tiket melalui aksi, bukan hard delete.
+7. Tetapkan kriteria dan roster juri. Mulai ronde mengunci kriteria arena. Juri yang masih mempunyai ronde berjalan tidak dapat dicabut/dinonaktifkan.
+8. Mulai penjurian. JURI hanya mengirim nilai untuk peserta eligible pada ronde tugasnya; seluruh kriteria disimpan atomik. Revisi mendukung desimal.
+9. Diskualifikasi membutuhkan alasan dan hanya memengaruhi tiket pada ronde itu. Pemulihan tersedia sebelum CLOSED/CANCELLED. Pembayaran tetap utuh.
+10. Tutup ronde setelah rekap langsung menyatakan semua nilai lengkap. Penutupan dan submit memakai round lock yang sama. Tidak ada pemenang atau bracket disimpan.
+11. Transfer burung melalui tindakan khusus dan expected_version; catat history kepemilikan dan master. Penghargaan internal mengacu tiket yang sah, eksternal menyimpan nama event/penyelenggara.
 
-## Peta folder
+## Lapisan aktif
 
-| Lokasi | Tugas |
-| --- | --- |
-| `cmd/api` | Memuat env/logger, sinyal proses, dan menjalankan server. |
-| `cmd/bootstrap-admin` | Membuat akun awal yang dipilih operator melalui environment, tanpa password bawaan. |
-| `config` | Validasi koneksi, origin, proxy, SMTP, Google dan jadwal refresh. |
-| `internal/app` | Merakit dependency konkret dan interface; menutup worker sebelum pool. |
-| `internal/server` | HTTP listener, timeout dan graceful shutdown. |
-| `internal/delivery` | Router Gin dan kelompok route. |
-| `internal/delivery/middleware` | Header, request ID, log route, CORS, batas body/context, verifikasi identitas. |
-| `internal/delivery/rest` | Handler per domain, helper parsing/response dan adapter CRUD bersama. |
-| `internal/auth` | Identitas, login, verifikasi/reset, Google, sesi serta adapter password/SMTP. |
-| `internal/iam` | Profil aman, pemeriksaan role dan penugasan arena. |
-| `internal/asset` | Arena/gantangan/engine/perangkat, master pemilik/burung dan transfer. |
-| `internal/competition` | Persiapan event/ronde, registrasi, pembayaran, lifecycle dan laporan. |
-| `internal/judging` | Kriteria bersama arena, assessment peserta, revisi/history dan idempotensi. |
-| `internal/core/model` | Record transport-independent, scope aktor, pemeriksaan nilai scalar/UUID/uang. |
-| `internal/infra/postgres` | Pool, eksekusi SQL bernama, transaksi dan klasifikasi error DB. |
-| `internal/infra/logger` | Logging Zap dan redaksi rahasia. |
-| `db/queries` | Satu sumber SQL berparameter yang di-embed. Tidak ada SQL bisnis duplikat di Go. |
-| `db/migrations` | Perubahan skema dan rollback manual. |
+| Lokasi | Tanggung jawab |
+|---|---|
+| internal/app | Wiring schema 010, PostgreSQL/Redis dan readiness; tidak memigrasi database. |
+| internal/login/usecase | Login, maksimal 3 perangkat, sesi PostgreSQL, refresh dan logout. |
+| internal/login/service | SHA-256 token Redis, TTL, rotasi Lua atomik dan fail closed. |
+| internal/workflow/usecase | Scope arena/role, expected_version, transaksi dan aturan lomba. |
+| internal/workflow/repository | Adapter port data ke named SQL; tidak menyimpan SQL inline. |
+| db/queries | Satu sumber SQL; integration.sql menambahkan query aplikasi yang belum tersedia. |
+| internal/delivery/rest/workflow | Parsing JSON/multipart, cookie, Origin, DTO transport dan envelope. |
+| cmd/openapi | Menghasilkan Swagger dari route aktif. |
 
-Model Record dipakai pada resource CRUD agar setiap tabel tidak memerlukan lapisan DTO identik. Field mutasi tetap mempunyai allowlist dan validasi pada UseCase. Alur transaksi kompleks memakai input bertipe seperti Registration, Payment, dan Submit assessment. View membatasi field output; query autentikasi sensitif tidak dikembalikan sebagai DTO.
+Urutan mutasi lomba: arena → ronde terurut bila lebih dari satu → registrasi → burung. Paket skor memakai ronde → registrasi; tidak mengambil lock arena setelah round lock. Lock arena menserialisasi perubahan kriteria/roster/status. Mutasi master memakai lock versi. Konflik deadlock/constraint/version dipetakan ke 409; input form tidak dibuang. Tidak ada worker materialized-view pada jalur keputusan resmi.
 
-## 1. Daftar akun dan login password
-
-`auth/model/auth.go` → `delivery/rest/auth/handler.go` → `auth/usecase/account.go` → `auth/repository/auth.go` → `db/queries/auth.sql`.
-
-UseCase menormalisasi email, memeriksa format telepon/password, meng-hash password, lalu menyimpan akun dan role peserta dalam transaksi. Token verifikasi disimpan hash-nya; email dikirim setelah commit. SMTP gagal tidak membatalkan akun pending; tersedia kirim ulang. Token tidak masuk log.
-
-`auth/usecase/session.go` memeriksa password terverifikasi dan status akun, mengunci akun, membersihkan slot kedaluwarsa, menghitung perangkat lain, lalu menyimpan hash access/refresh token. Argon2 dibatasi dua pekerjaan bersamaan agar penggunaan memori terbatas; penantian menghormati context cancellation.
-
-Handler memasang cookie refresh HttpOnly; UseCase tidak mengetahui Gin/cookie. Access token menjadi Bearer request berikutnya. Profil mengembalikan has_password dan nama provider, tanpa hash/sub provider. Middleware hanya meminta verifikasi identitas; otorisasi arena tetap pada UseCase.
-
-## 2. Google, lupa password dan sesi
-
-`auth/usecase/google.go` memakai interface verifier; implementasi berada pada `auth/service/google.go`. ID token diperiksa library Google, audience dari konfigurasi dan issuer yang diterima. Provider disimpan menggunakan sub. Email sama tidak otomatis mengaitkan akun. Akun baru perlu nomor telepon; email pihak ketiga yang tidak authoritative perlu verifikasi aplikasi.
-
-Forgot-password → token RESET_PASSWORD → email → reset sekali pakai → password baru dan semua sesi dicabut. Akun Google-only tidak diam-diam memperoleh password dari jalur reset lokal. Link Google memerlukan sesi akun lama yang sudah login.
-
-Refresh menggunakan compare-and-swap hash lama sehingga hanya satu rotasi berhasil. Frontend perlu menyerialkan refresh antar-request/tab. Logout dan pencabutan perangkat mematikan akses tanpa menunggu expiry token.
-
-## 3. Mengelola master
-
-`delivery/rest/crud/handler.go` menangani bentuk HTTP umum. Instance handler dipasang dengan resource tetap dari router, bukan nama tabel dari browser. Domain asset/competition/judging memeriksa field yang boleh berubah, scope aktor, ownership, fase dan penguncian.
-
-Peserta hanya mengelola owner/burung sendiri. Petugas dapat membuat owner manual dengan provenance arena dan pembuat; master manual tidak otomatis dikaitkan ke akun berdasarkan nama/nomor. Transfer owner hanya superadmin, dengan perubahan pemilik dan history dalam satu transaksi.
-
-## 4. Registrasi sampai peserta terkonfirmasi
-
-`competition/model/workflow.go` → `delivery/rest/competition/handler.go` → `competition/usecase/registration.go` dan `payment.go` → `competition/repository/workflow.go` → `db/queries/competition.sql`.
-
-Pendaftar memilih burung dan ronde. UseCase mengunci arena/ronde, memeriksa fase PREPARED serta tipe burung, mengambil tarif dari database dan menyimpan snapshot. Satu header menampung beberapa item; burung sama boleh ada pada ronde berbeda.
-
-Pembayaran merupakan percobaan terpisah; nominal wajib sama dengan total header. Operator memverifikasi pembayaran dan menetapkan gantangan seluruh item. Semua perubahan commit bersama, sehingga satu alokasi gagal tidak meninggalkan pembayaran VERIFIED atau peserta terkonfirmasi sebagian. Pembayaran yang sudah diajukan membekukan perubahan item; registrasi pending dapat dibatalkan manual.
-
-## 5. Juri menilai dan merevisi
-
-`judging/model/assessment.go` → `delivery/rest/judging/handler.go` → `judging/usecase/assessment.go` → `judging/repository/scoring.go` → `db/queries/judging.sql`.
-
-Urutan submit: lock ronde → periksa role/roster dan operation ID → fase JUDGING → peserta terkonfirmasi → seluruh kriteria → expected version → simpan assessment, skor dan history → simpan hasil operasi → commit.
-
-Satu versi meliputi seluruh kriteria seorang peserta yang dinilai seorang juri. Operation ID sama/payload sama mengembalikan snapshot hasil sebelumnya, termasuk setelah ronde ditutup, tanpa menulis nilai baru. Payload berbeda konflik. Revisi dengan expected version lama juga konflik.
-
-History menyimpan setiap nilai kriteria pada tiap versi. Juri hanya dapat membaca assessment/history miliknya. Daftar peserta memuat nama burung dan nomor gantangan untuk form penilaian, tanpa membuka kontak pendaftar/pemilik.
-
-## 6. Menutup ronde dan memilih pemenang
-
-`competition/usecase/round.go` memakai lock ronde yang sama dengan submit/revisi. Saat lock didapat, semua penilaian yang lebih dahulu commit terlihat dan penilaian baru harus menunggu.
-
-UseCase memeriksa semua nilai wajib, lalu membandingkan total skor secara exact. Karena seluruh peserta harus mempunyai jumlah nilai yang sama dengan bobot sama, perbandingan total ekuivalen dengan perbandingan rata-rata tanpa pembulatan. Operator hanya dapat memilih kandidat tertinggi; seri dipilih dari kandidat tersebut. Winner dan CLOSED di-commit bersama.
-
-Penilaian baru tidak diterima setelah CLOSED. Operator tetap mengatur fase secara manual; durasi 10/15 menit adalah default konfigurasi ronde, bukan timer yang otomatis memulai pertandingan. Ronde tidak memiliki hubungan bracket atau promosi peserta otomatis.
-
-## 7. Laporan dan materialized view
-
-`competition/usecase/reporting.go` memisahkan baca laporan dan pemeliharaan snapshot. `competition/worker/reports.go` memiliki goroutine/ticker/notifikasi; UseCase tidak membuat goroutine.
-
-Snapshot rekap peserta dan dashboard arena di-refresh bersamaan dengan metadata suksesnya dalam transaksi pemeliharaan masing-masing. Advisory lock mencegah refresh bertumpuk lintas instance. Pembacaan laporan menggabungkan metadata dan rows dalam satu SQL statement agar tidak mencampur generasi snapshot.
-
-Laporan boleh tertinggal; rekap aktif dan pemenang membaca view biasa. Kegagalan refresh mempertahankan snapshot sebelumnya. Tidak ada refresh per pengetikan/submission nilai. Worker berhenti sebelum pool ditutup.
-
-## Membaca perubahan berikutnya
-
-Pilih satu workflow dan lihat SQL bernama yang dipanggil repository. Perubahan hak akses, validasi lintas entitas dan transaksi masuk UseCase; perubahan JSON/header masuk delivery; perubahan query masuk SQL. Jangan menambahkan koordinasi repository-ke-repository.
-
-Integrasi engine, playback, penerimaan metadata media dan pengiriman video merupakan fase berikutnya. Tidak ada response sukses palsu untuk endpoint mesin yang belum dibuat.
+Lihat [kontrak API](API.md) dan [hasil verifikasi](VERIFIKASI-BACKEND.md). Kode domain lama yang tidak di-wire bukan referensi endpoint aktif.

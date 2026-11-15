@@ -1,91 +1,59 @@
-# Cloud-app: backend bisnis online
+# Kicau Mania Cloud — schema 010
 
-> **Perubahan database 15 November 2026:** skema lokal sudah mengikuti ERD melalui 008–010 dan query 13 flow sudah tersedia. Repository/UseCase/handler, bootstrap dan seed/Insomnia lama belum kompatibel; jangan menerapkan seed lama atau menganggap API bisnis siap sebelum adaptasi. Lihat [status database](db/README.md).
+API Go/Gin untuk alur lomba 1–12. Routing aktif memakai `internal/login` dan `internal/workflow`; SQL tetap berada di `db/queries`. PostgreSQL schema 010 diperlukan. Aplikasi tidak menjalankan migrasi, seed, atau reset saat startup. Modul lama masih tersimpan sebagai kode historis dan tidak dipasang pada router.
 
-Hubungan kedua aplikasi dijelaskan pada [panduan integrasi proyek](../docs/integration.md); indeks lintas aplikasi ada di [dokumentasi proyek](../docs/README.md).
+## Konfigurasi dan menjalankan
 
-Backend Go memakai **Gin**, pgx dan PostgreSQL. Tersedia autentikasi email/password serta Google, CRUD persiapan arena, registrasi/pembayaran, penilaian/revisi juri, dan pengesahan pemenang. Operasi penuh memerlukan migrasi database dan konfigurasi layanan terkait.
+Salin `.env.example`, lalu isi koneksi dan origin:
 
-Mulai dari [alur bisnis dan peta kode](docs/ALUR-BISNIS.md), [kontrak API](docs/API.md), lalu [panduan SQL/migrasi](db/README.md). Hasil pemeriksaan dan batas integrasi dicatat pada [verifikasi backend](docs/VERIFIKASI-BACKEND.md).
+```dotenv
+DATABASE_URL=postgres://cloud_service:URL_ENCODED_PASSWORD@127.0.0.1:5432/kicau_mania?sslmode=disable
+REDIS_URL=redis://127.0.0.1:6379/0
+FRONTEND_PUBLIC_URL=http://localhost:5173
+ALLOWED_ORIGINS=http://localhost:5173
+```
 
-## Menjalankan
-
-Dari `cloud-app`, dengan Go 1.25+:
+Gunakan PostgreSQL role layanan yang mewarisi `kicau_cloud_app`, bukan superuser. Untuk koneksi remote gunakan TLS PostgreSQL yang terverifikasi dan `rediss://` sesuai deployment. Docker Compose contoh menyediakan Redis pada jaringan internal tanpa port publik. Tidak ada fallback token ketika Redis gagal.
 
 ```powershell
-Copy-Item .env.example .env
-# Isi DATABASE_URL; terapkan migrasi secara manual sesuai db/README.md.
 go run ./cmd/api -env .env
 ```
 
-Default listener `127.0.0.1:8091`, untuk dipasang di belakang reverse proxy HTTPS VPS. Header forwarding hanya dipercaya dari `TRUSTED_PROXIES`. Tidak ada migrasi otomatis atau fallback database lokal.
+`/healthz` memeriksa proses; `/readyz` memeriksa PostgreSQL/schema/role dan Redis. Konfigurasi/koneksi belum tersedia menghasilkan 503. Refresh/logout memerlukan cookie backend dan Origin yang cocok tepat dengan `ALLOWED_ORIGINS`.
 
-`GET /healthz` menyatakan proses hidup. `GET /readyz` memeriksa koneksi, struktur read/workflow yang diperlukan, serta role sistem; keduanya juga menerima HEAD. Database belum dikonfigurasi atau migrasi belum lengkap menghasilkan readiness 503. Fitur yang belum tersedia karena konfigurasi Google/SMTP kosong menghasilkan 503, tanpa response sukses tiruan.
+## ADMIN pertama
 
-## Akun awal
-
-Role sistem disiapkan migrasi, tetapi tidak ada akun/password bawaan. Buat superadmin secara eksplisit menggunakan environment proses:
+Jika belum ada ADMIN global, isi `BOOTSTRAP_ADMIN_NAME`, `BOOTSTRAP_ADMIN_EMAIL`, `BOOTSTRAP_ADMIN_PHONE` dan `BOOTSTRAP_ADMIN_PASSWORD` pada environment proses, lalu jalankan:
 
 ```powershell
-$env:BOOTSTRAP_ADMIN_NAME = 'Nama admin'
-$env:BOOTSTRAP_ADMIN_EMAIL = 'email-admin-yang-Anda-miliki'
-$env:BOOTSTRAP_ADMIN_PHONE = '+62nomor-telepon'
-# Isi BOOTSTRAP_ADMIN_PASSWORD melalui mekanisme rahasia environment Anda.
+$env:BOOTSTRAP_ADMIN_PASSWORD = Read-Host 'Password ADMIN (minimal 12 karakter)' -MaskInput
 go run ./cmd/bootstrap-admin -env .env
+Remove-Item Env:BOOTSTRAP_ADMIN_PASSWORD
 ```
 
-Password tidak diterima melalui argumen CLI dan tidak dicetak. Password wajib 12â€“256 byte; nomor akun memakai format E.164. Bootstrap membuat akun terverifikasi dan menolak email/nomor yang sudah digunakan. Jangan menyimpan nilai rahasia bootstrap dalam source control.
+CLI membuat akun email terverifikasi dengan password Argon2id, role ADMIN, serta context history dalam transaksi. Bootstrap menolak bila ADMIN global sudah ada. ADMIN kemudian membuat arena; hak ADMIN arena diberikan otomatis kepada pembuatnya. Hak itu tidak membuka arena lain. Tidak ada akun demo atau seed otomatis.
 
-## Konfigurasi
+## Alur dan kontrak
 
-Environment proses mengungguli dotenv, termasuk nilai kosong.
+Lihat [API aktif](docs/API.md), [koleksi dan panduan Insomnia](docs/insomnia/README.md), [alur bisnis](docs/ALUR-BISNIS.md), [panduan database](db/README.md), dan [verifikasi](docs/VERIFIKASI-BACKEND.md). Swagger `/api/docs/` dibuat dari route yang benar-benar dipasang:
 
-| Env | Fungsi/default |
-| --- | --- |
-| DATABASE_URL | Koneksi privat PostgreSQL; kosong membuat readiness 503. |
-| DB_MAX_CONNS / DB_MIN_CONNS | 10 / 0. |
-| DB_CONNECT_TIMEOUT / DB_HEALTH_TIMEOUT | 5s / 2s. |
-| HTTP_ADDR | 127.0.0.1:8091. |
-| HTTP_REQUEST_TIMEOUT / SHUTDOWN_TIMEOUT | 15s / 10s. |
-| ALLOWED_ORIGINS | Origin browser eksplisit; default frontend dev. |
-| FRONTEND_PUBLIC_URL | Origin halaman verifikasi/reset; default https://dev.megaallstararena.com. |
-| TRUSTED_PROXIES | CIDR reverse proxy; default loopback IPv4/IPv6. |
-| GOOGLE_CLIENT_ID | Kosong menonaktifkan jalur Google; login password tetap terpisah. |
-| SMTP_HOST / SMTP_PORT / SMTP_FROM | Server, port, alamat pengirim; port default 587. |
-| SMTP_USER / SMTP_PASSWORD | Kredensial SMTP privat. |
-| SMTP_MODE | starttls atau tls. |
-| SMTP_ALLOW_INSECURE | false; true hanya diperbolehkan pada SMTP loopback development. |
-| MV_REFRESH_INTERVAL / MV_REFRESH_TIMEOUT | 60s / 2m. |
-| APP_ENV / SERVICE_NAME / LOG_DIR | Mode logging Zap, nama layanan, lokasi app.log. |
+```powershell
+go run ./cmd/openapi docs/generated/swagger.json
+```
 
-Untuk frontend pengembangan lokal, ubah **ALLOWED_ORIGINS dan FRONTEND_PUBLIC_URL** menjadi origin loopback HTTP yang sama, misalnya `http://localhost:3000`. Cookie refresh memakai HttpOnly, SameSite=Lax, path `/`, serta Secure dan prefix `__Host-` ketika frontend memakai HTTPS. Domain cookie tidak diperlebar ke seluruh subdomain.
+Access token opaque berlaku 15 menit; refresh berotasi atomik di Redis dan dibatasi umur sesi PostgreSQL maksimal 30 hari. SHA-256 token, TTL dan referensi sesi disimpan di Redis. Setiap autentikasi memeriksa pencabutan sesi dan status akun pada PostgreSQL. Maksimal tiga perangkat aktif, dan login ulang pada perangkat yang sama mengganti pasangan token. Password awal petugas hanya dapat ditetapkan ADMIN setelah role arena ditugaskan. Akun peserta baru tidak memiliki password/login otomatis. Ganti password mencabut semua sesi.
 
-## Batas arsitektur
+## Pemeriksaan
 
-Handler hanya parsing/sintaks, auth/context, pemanggilan UseCase, DTO dan response. Aturan bisnis serta koordinasi lintas domain berada pada UseCase melalui interface. Repository tidak memanggil repository lain. Goroutine pemeliharaan berada pada worker, bukan UseCase.
+```powershell
+go test ./...
+$env:KICAU_TEST_POSTGRES_URL='postgres://postgres@127.0.0.1:55439/postgres?sslmode=disable'
+$env:KICAU_TEST_REDIS_URL='redis://127.0.0.1:56379/15'
+# Opsional: uji service/Zod frontend langsung selama server tes hidup.
+$env:KICAU_TEST_FRONTEND_DIR='D:/ilham/workdir/sveltekit/kicau-mania-web'
+go test ./internal/app -run TestSchema010BusinessFlows -v
+```
 
-SQL berada pada `db/queries/*.sql`, dinamai dengan komentar `-- name:`, dan di-embed ke binary. Tidak ada duplikasi SQL bisnis di Go. GET bisnis memakai view; INSERT/UPDATE/DELETE langsung ke tabel sumber. Pembacaan internal untuk otorisasi, autentikasi dan locking memakai jalur terbatas. Response mutasi membaca view biasa dalam transaksi yang sama.
+Kedua URL pengujian harus menunjuk layanan khusus tes. Tes membuat database bernama unik `kicau_test_*`, memuat schema 010, menjalankan named SQL dan HTTP, lalu menghapus database tes tersebut. Tes tidak membaca `DATABASE_URL` atau `.env` operasional. Tanpa dua environment tes, integrasi dilewati dengan alasan eksplisit.
 
-Materialized view dipakai laporan administratif; rekap aktif dan keputusan pemenang membaca data terbaru. Worker melakukan refresh awal, setiap interval, serta setelah notifikasi commit pembayaran/pembatalan/penutupan. Snapshot dan metadata waktunya dibaca dalam satu statement.
-
-## Kontrak HTTP
-
-Envelope bersama: `{"success":true,"message":"...","data":...}` atau `{"success":false,"message":"...","errors":...}`. Field nil dihilangkan. Pagination: `data.items`, `data.next_cursor` bila ada, dan `data.has_more`; limit 1â€“100, cursor mengikuti ID. Response 204 tidak berisi body.
-
-Header bersama meliputi request ID, nosniff, no-store, dan CORS origin eksplisit. Gin recovery tidak mengirim detail panic; log hanya memakai pola route, bukan body, token atau URL mentah. Internal error memakai pesan aman; error encoding JSON ditangani sebelum header dikirim.
-
-## Batas integrasi dan verifikasi
-
-Belum ada frontend, payment gateway/refund, pengiriman video, maupun endpoint komunikasi engine aktif. Tombol fase ronde saat ini mengubah status bisnis tanpa memulai/menghentikan local-app. Kontrak media tetap tersedia di [ENGINE-CONTRACT.md](docs/ENGINE-CONTRACT.md), untuk fase integrasi selanjutnya. Metadata rekaman hanya dapat dibaca sesuai hak registrasi.
-
-Build dan pemeriksaan SQL/HTTP dilakukan pada PostgreSQL sementara dengan SMTP lokal serta verifier Google fixture. Suite tes Go tidak dijalankan otomatis. Google sign-in dan email produksi tetap memerlukan konfigurasi serta penerimaan dengan layanan sebenarnya.
-
-## Deployment VPS
-
-Pipeline GitHub Actions membangun image AMD64/ARM64, memublikasikan ke GHCR privat dan deploy melalui SSH saat push ke main. Migrasi tetap manual. Ikuti [runbook deployment](deployment/devops_runbook.md) untuk setup VPS, GitHub secrets, HTTPS, bootstrap dan rollback.
-
-API VPS dev sekarang memakai `https://dev.megaallstararena.com/api/v1/`, satu domain dengan frontend. Gateway memakai Nginx Docker dan renewal Certbot Docker; credential registry disimpan di `/opt`. Frontend yang ada masih demo dan belum otomatis terhubung ke backend oleh perpindahan gateway.
-
-Mulai belajar pengelolaan VPS dari [Belajar Deployment](deployment/BELAJAR-DEPLOYMENT.md): konsep, alur deploy kode, migrasi ketika data sudah ada, backup/restore, rollback dan diagnosis gangguan.
-
-Swagger UI tersedia pada `/api/docs` setelah aplikasi dijalankan/deploy. [Panduan API](docs/API.md#swagger-interaktif) menjelaskan login, Authorize `Bearer <token>` dan refresh cookie. Edit anotasi/DTO dekat handler lalu jalankan `go generate .` dari cloud-app. [Swagger JSON](docs/generated/swagger.json) adalah hasil otomatis, bukan file yang diedit manual. UI dan kontrak ikut binary Docker tanpa layanan tambahan.
+Tidak mencakup media recording cloud/ingest, email otomatis, Google login, pendaftaran mandiri, bracket/pemenang tersimpan, atau rollback history otomatis. Dashboard kamera tetap menggunakan local-app tersendiri.

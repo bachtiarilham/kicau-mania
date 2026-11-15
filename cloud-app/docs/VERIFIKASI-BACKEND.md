@@ -1,25 +1,16 @@
-# Catatan verifikasi backend bisnis
+# Verifikasi schema 010 — 15 November 2026
 
-Pemeriksaan dilakukan pada PostgreSQL 18 sementara dengan data sintetis, role database aplikasi terbatas, SMTP loopback, dan verifier Google fixture. Database aplikasi dan dump sumber tidak dimigrasikan otomatis. Suite tes Go tidak dijalankan.
+Pengujian memakai PostgreSQL 17.6 port 55439 dan Redis 5.0.14 port 56379 khusus pengujian, dengan schema akhir migrasi 010. Database operasional tidak dibaca, direset, atau dimigrasikan. Setiap suite membuat/menghapus database `kicau_test_*` sendiri. Deployment contoh tetap PostgreSQL 18 dan Redis 7.4; pengujian Docker versi deployment tidak dijalankan pada mesin ini karena daemon/WSL tidak tersedia.
 
-## Pemeriksaan yang sudah dilakukan
+`internal/app/integration_test.go` memuat dan PREPARE seluruh named SQL sebagai role `kicau_cloud_app`, menjalankan skenario SQL rollback, lalu menjalankan middleware/handler HTTP Gin dalam proses tes memakai grant role kicau_cloud_app. PostgreSQL dan Redis tetap layanan nyata. Suite ini lolos dua kali berturut-turut. Smoke test opsional tests/live-contract.mjs juga pernah lolos terhadap listener Go nyata; pengulangannya mengalami timeout/socket error localhost Windows yang intermiten, sehingga koneksi lintas proses tersebut belum dinyatakan stabil pada host ini. Skenario mencakup:
 
-- Build cloud-app, go vet, pemeriksaan arah dependency, dan kompilasi fixture/tes tanpa menjalankan suite.
-- Migrasi 001–007 up/down/penerapan ulang pada baseline kosong; statement SQL berparameter diparsing/prepared di bawah role aplikasi.
-- Role aplikasi tidak dapat menulis melalui view; role pemelihara dapat menjalankan REFRESH CONCURRENTLY serta memperbarui metadata yang diperlukan.
-- 122 pemeriksaan HTTP end-to-end: daftar/verifikasi akun, login password, role/penugasan, master milik sendiri/manual, registrasi multi-ronde, verifikasi pembayaran/allocation, penilaian/revisi, kelengkapan, pengesahan pemenang, perangkat, logout, rotasi refresh dan reset password.
-- Race operasi penilaian yang sama menghasilkan satu versi; dua revisi dengan versi awal sama menghasilkan satu keberhasilan dan satu konflik. Penutupan bersamaan revisi tidak membiarkan penilaian baru masuk setelah CLOSED.
-- Snapshot laporan tetap lama selama submit/revisi; rekap langsung segera melihat skor terbaru. Refresh setelah commit memperbarui laporan. Total pembayaran tidak berlipat karena item multi-ronde.
-- 20 pemeriksaan transport tambahan: HEAD health, 404/405/Allow, preflight, origin ditolak, JSON null/array ditolak, field scalar salah, batas varchar, normalisasi UUID dan perlindungan superadmin dari menonaktifkan/melepas role dirinya sendiri.
-- Google port fixture: akun baru, sub stabil, nomor wajib, konflik email, pengaitan eksplisit, verifikasi email tambahan, batas perangkat dan larangan reset lokal untuk akun Google-only.
-- Kegagalan transaksi refresh mempertahankan data snapshot dan metadata sebelumnya; advisory lock mencegah dua refresh aktif dan dilepas setelah transaksi selesai. Refresh berikutnya berhasil memulihkan snapshot.
+- Bootstrap, login gagal/berhasil, profil, hash token dan TTL Redis, refresh/reuse/concurrent refresh, logout, batas tiga perangkat, penggantian token pada perangkat sama, dan Redis gagal → 503.
+- Penolakan akses lintas arena dan OPERATOR memberi role/password atau mengubah akun berprivilege; perlindungan ADMIN terakhir.
+- Master no-op, expected_version stale, transfer owner no-op, soft delete dan larangan menulis history melalui role aplikasi.
+- Akun, event, ronde, burung, gantangan, tiket duplikat, spesies salah, edit sebelum/sesudah verifikasi, pembayaran tunai/transfer, bukti palsu/lebih besar/PNG valid, verifikasi/penolakan, pembatalan.
+- Diskualifikasi/pemulihan tanpa mengubah pembayaran, penolakan setelah CLOSED, roster wajib, juri tanpa tugas, kriteria terkunci.
+- Paket skor atomik (kegagalan kriteria terakhir membatalkan nilai sebelumnya), revisi desimal, penutupan tidak lengkap, dan submit bersamaan dengan penutupan.
 
-Fixture lokal berada pada direktori runtime yang diabaikan Git. Pemeriksaan arsitektur yang dapat dijalankan kemudian berada pada internal/delivery/architecture_test.go.
+Tes frontend fixture berada hanya di folder tests frontend; tidak ada mode mock aplikasi. Pemeriksaan browser desktop/mobile/keyboard belum dilakukan karena akses browser preview sebelumnya ditolak. Dashboard kamera dipertahankan, tetapi live ingest, perangkat kamera/mikrofon, deploy produksi, PostgreSQL 18/Redis 7.4 dalam Docker, serta unduh sertifikat penyedia eksternal belum diverifikasi end-to-end pada lingkungan pengguna.
 
-## Penerimaan yang masih perlu layanan sebenarnya
-
-- Google Client ID/origin frontend yang benar dan login Google melalui browser, termasuk pengaitan akun.
-- SMTP produksi, pengiriman email, serta halaman frontend yang membaca token fragment dan memanggil API.
-- Cookie HTTPS/CORS reverse proxy, penyimpanan access token frontend di memori dan koordinasi refresh antar-tab.
-- Beban pengguna/arena nyata dan pengukuran interval/waktu refresh laporan.
-- Integrasi engine, WHEP/playback, ingest metadata, upload/pengiriman video dan payment gateway/refund merupakan fase berikutnya; tidak disimulasikan sebagai fitur aktif.
+Perintah dan konfigurasi pengujian ada pada [README](../README.md). Hasil: go test ./... dengan integrasi PostgreSQL/Redis dan handler HTTP dalam proses, pnpm check, 31 tes pnpm test, dan pnpm build berhasil. Smoke test socket frontend-ke-Go bersifat opsional dan mempunyai batas verifikasi yang dijelaskan di atas.

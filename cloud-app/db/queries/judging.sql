@@ -35,7 +35,7 @@ SELECT to_jsonb(v) FROM cloud_read.v_round_judges v WHERE arena_id=$1::uuid AND 
 
 -- name: JudgeRoundList
 -- params: judge_user_id uuid, cursor uuid nullable, limit int
-SELECT to_jsonb(v) FROM cloud_read.v_rounds v WHERE EXISTS(SELECT FROM cloud_read.v_round_judges j WHERE j.round_id=v.id AND j.judge_user_id=$1::uuid) AND ($2::uuid IS NULL OR v.id>$2) ORDER BY v.id LIMIT $3::int;
+SELECT to_jsonb(v) FROM cloud_read.v_rounds v WHERE EXISTS(SELECT FROM cloud_read.v_round_judges j WHERE j.round_id=v.id AND j.judge_user_id=$1::uuid) AND EXISTS(SELECT FROM iam.arena_user_roles a JOIN iam.roles r ON r.id=a.role_id WHERE a.user_id=$1::uuid AND a.arena_id=v.arena_id AND r.name='JURI') AND ($2::uuid IS NULL OR v.id>$2) ORDER BY v.id LIMIT $3::int;
 
 -- name: ScoreList
 -- params: arena_id uuid, registration_id uuid, judge_user_id uuid

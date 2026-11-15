@@ -1,75 +1,67 @@
-// Package app constructs dependencies and closes workers before the database pool.
+// Package app wires the active schema-010 application; obsolete modules are not routed.
 package app
 
 import (
 	"context"
-
 	"github.com/jackc/pgx/v5/pgxpool"
-
 	"kicau.cloud/control/config"
-	assetRepo "kicau.cloud/control/internal/asset/repository"
-	assetUC "kicau.cloud/control/internal/asset/usecase"
-	authRepo "kicau.cloud/control/internal/auth/repository"
 	authService "kicau.cloud/control/internal/auth/service"
-	authUC "kicau.cloud/control/internal/auth/usecase"
-	competitionRepo "kicau.cloud/control/internal/competition/repository"
-	competitionUC "kicau.cloud/control/internal/competition/usecase"
-	competitionWorker "kicau.cloud/control/internal/competition/worker"
 	"kicau.cloud/control/internal/delivery"
 	"kicau.cloud/control/internal/delivery/rest"
-	assetHandler "kicau.cloud/control/internal/delivery/rest/asset"
-	authHandler "kicau.cloud/control/internal/delivery/rest/auth"
-	competitionHandler "kicau.cloud/control/internal/delivery/rest/competition"
-	iamHandler "kicau.cloud/control/internal/delivery/rest/iam"
-	judgingHandler "kicau.cloud/control/internal/delivery/rest/judging"
+	handler "kicau.cloud/control/internal/delivery/rest/workflow"
 	health "kicau.cloud/control/internal/health/usecase"
-	iamRepo "kicau.cloud/control/internal/iam/repository"
-	iamUC "kicau.cloud/control/internal/iam/usecase"
 	"kicau.cloud/control/internal/infra/postgres"
-	judgingRepo "kicau.cloud/control/internal/judging/repository"
-	judgingUC "kicau.cloud/control/internal/judging/usecase"
+	redisService "kicau.cloud/control/internal/login/service"
+	login "kicau.cloud/control/internal/login/usecase"
+	repo "kicau.cloud/control/internal/workflow/repository"
+	workflow "kicau.cloud/control/internal/workflow/usecase"
 )
 
 type Container struct {
-	Database    *pgxpool.Pool
-	Auth        *authUC.UseCase
-	IAM         *iamUC.UseCase
-	Assets      *assetUC.UseCase
-	Competition *competitionUC.UseCase
-	Judging     *judgingUC.UseCase
-	Reports     *competitionUC.Reports
-	Background  *competitionWorker.Worker
-	Handlers    delivery.Handlers
+	Database *pgxpool.Pool
+	Redis    *redisService.Store
+	Auth     *login.UseCase
+	Workflow *workflow.UseCase
+	Handlers delivery.Handlers
+}
+type readiness struct {
+	db    *postgres.Store
+	redis *redisService.Store
 }
 
+func (r readiness) Ping(c context.Context) error {
+	if e := r.db.Ping(c); e != nil {
+		return e
+	}
+	return r.redis.Ping(c)
+}
 func New(ctx context.Context, cfg config.Config) (*Container, error) {
 	c := &Container{}
 	if cfg.DatabaseURL != "" {
-		pool, e := postgres.Open(ctx, postgres.Options{URL: cfg.DatabaseURL, MaxConns: cfg.DBMaxConns, MinConns: cfg.DBMinConns, ConnectTimeout: cfg.DBConnectTimeout})
+		p, e := postgres.Open(ctx, postgres.Options{URL: cfg.DatabaseURL, MaxConns: cfg.DBMaxConns, MinConns: cfg.DBMinConns, ConnectTimeout: cfg.DBConnectTimeout})
 		if e != nil {
 			return nil, e
 		}
-		c.Database = pool
+		c.Database = p
 	}
 	db := &postgres.Store{Pool: c.Database}
-	authority := iamUC.New(iamRepo.New(db))
-	auth := authUC.New(authRepo.New(db), db, authService.Passwords{}, authService.Mailer{Options: authService.MailOptions{Host: cfg.SMTPHost, Port: cfg.SMTPPort, User: cfg.SMTPUser, Password: cfg.SMTPPassword, From: cfg.SMTPFrom, FrontendURL: cfg.FrontendURL, Mode: cfg.SMTPMode, AllowInsecure: cfg.SMTPAllowInsecure}}, authService.Google{ClientID: cfg.GoogleClientID}, authService.NewLimiter())
-	assets := assetUC.New(assetRepo.New(db), authority, db)
-	cr := competitionRepo.New(db)
-	background := competitionWorker.New()
-	competition := competitionUC.New(cr, authority, db, background)
-	judging := judgingUC.New(judgingRepo.New(db), authority, db)
-	reports := competitionUC.NewReports(cr, authority, db)
-	c.Auth, c.IAM, c.Assets, c.Competition, c.Judging, c.Reports, c.Background = auth, authority, assets, competition, judging, reports, background
-	c.Handlers = delivery.Handlers{Health: rest.NewHealthHandler(health.New(db, cfg.DBHealthTimeout)), Auth: authHandler.New(auth, authHandler.Options{CookieName: cfg.CookieName, Secure: cfg.CookieSecure, Origins: cfg.AllowedOrigins}), IAM: iamHandler.New(authority), Asset: assetHandler.New(assets), Competition: competitionHandler.New(competition, reports), Judging: judgingHandler.New(judging), Assets: assets, Catalog: competition, Criteria: judging, Verifier: auth}
-	if c.Database != nil {
-		background.Start(ctx, cfg.MVRefreshInterval, cfg.MVRefreshTimeout, reports.Refresh)
+	r, e := redisService.New(cfg.RedisURL)
+	if e != nil {
+		c.Close()
+		return nil, e
 	}
+	c.Redis = r
+	d := repo.New(db)
+	p := authService.Passwords{}
+	c.Auth = login.New(d, r, p, authService.NewLimiter())
+	c.Workflow = workflow.New(d, p)
+	h := &handler.Handler{UC: c.Workflow, Auth: c.Auth, CookieName: cfg.CookieName, Secure: cfg.CookieSecure, Origins: cfg.AllowedOrigins}
+	c.Handlers = delivery.Handlers{Health: rest.NewHealthHandler(health.New(readiness{db, r}, cfg.DBHealthTimeout)), Workflow: h, Verifier: c.Auth}
 	return c, nil
 }
 func (c *Container) Close() {
-	if c.Background != nil {
-		c.Background.Close()
+	if c.Redis != nil {
+		c.Redis.Close()
 	}
 	if c.Database != nil {
 		c.Database.Close()

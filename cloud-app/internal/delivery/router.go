@@ -12,24 +12,14 @@ import (
 	"kicau.cloud/control/internal/delivery/middleware"
 	"kicau.cloud/control/internal/delivery/rest"
 	"kicau.cloud/control/internal/delivery/rest/apidocs"
-	asset "kicau.cloud/control/internal/delivery/rest/asset"
-	auth "kicau.cloud/control/internal/delivery/rest/auth"
-	competition "kicau.cloud/control/internal/delivery/rest/competition"
-	"kicau.cloud/control/internal/delivery/rest/crud"
-	iam "kicau.cloud/control/internal/delivery/rest/iam"
-	judging "kicau.cloud/control/internal/delivery/rest/judging"
 	"kicau.cloud/control/internal/delivery/rest/response"
+	workflow "kicau.cloud/control/internal/delivery/rest/workflow"
 )
 
 type Handlers struct {
-	Health                    *rest.HealthHandler
-	Auth                      *auth.Handler
-	IAM                       *iam.Handler
-	Asset                     *asset.Handler
-	Competition               *competition.Handler
-	Judging                   *judging.Handler
-	Assets, Catalog, Criteria crud.UseCase
-	Verifier                  middleware.UserVerifier
+	Health   *rest.HealthHandler
+	Workflow *workflow.Handler
+	Verifier middleware.UserVerifier
 }
 type Options struct {
 	AllowedOrigins, TrustedProxies []string
@@ -49,23 +39,9 @@ func Router(opts Options, h Handlers) *gin.Engine {
 	r.GET("/readyz", h.Health.Ready)
 	r.HEAD("/readyz", h.Health.Ready)
 	apidocs.Routes(r)
-	h.Auth.Public(r.Group("/api/v1/auth"))
+	h.Workflow.Public(r.Group("/api/v1/auth"))
 	g := r.Group("/api/v1", middleware.RequireUser(h.Verifier))
-	h.Auth.Private(g.Group("/auth"))
-	h.IAM.Routes(g)
-	h.Asset.Routes(g)
-	h.Competition.Routes(g)
-	h.Judging.Routes(g)
-	for _, res := range []string{"arenas", "owners", "birds"} {
-		crud.Routes(g, "/"+res, res, h.Assets)
-	}
-	for _, res := range []string{"gantangan", "engines", "devices"} {
-		crud.Routes(g, "/arenas/:arena/"+res, res, h.Assets)
-	}
-	for _, res := range []string{"events", "categories", "rounds"} {
-		crud.Routes(g, "/arenas/:arena/"+res, res, h.Catalog)
-	}
-	crud.Routes(g, "/arenas/:arena/criteria", "score_criteria", h.Criteria)
+	h.Workflow.Routes(g)
 	r.NoRoute(func(c *gin.Context) { response.WriteError(c, apperror.ErrNotFound) })
 	r.NoMethod(func(c *gin.Context) {
 		methods := []string{}

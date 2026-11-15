@@ -9,7 +9,6 @@ import (
 
 	"kicau.cloud/control/config"
 	"kicau.cloud/control/internal/app"
-	"kicau.cloud/control/internal/auth/model"
 )
 
 func main() {
@@ -28,10 +27,10 @@ func main() {
 		os.Exit(1)
 	}
 	defer c.Close()
-	e = c.Auth.Bootstrap(ctx, model.Register{Name: os.Getenv("BOOTSTRAP_ADMIN_NAME"), Email: os.Getenv("BOOTSTRAP_ADMIN_EMAIL"), Phone: os.Getenv("BOOTSTRAP_ADMIN_PHONE"), Password: os.Getenv("BOOTSTRAP_ADMIN_PASSWORD")})
+	e = c.Workflow.Bootstrap(ctx, os.Getenv("BOOTSTRAP_ADMIN_NAME"), os.Getenv("BOOTSTRAP_ADMIN_EMAIL"), os.Getenv("BOOTSTRAP_ADMIN_PHONE"), os.Getenv("BOOTSTRAP_ADMIN_PASSWORD"))
 	if e != nil {
 		fmt.Fprintln(os.Stderr, "Bootstrap rejected; check schema, account uniqueness, and input")
 		os.Exit(1)
 	}
-	fmt.Println("Superadmin created")
+	fmt.Println("ADMIN created")
 }

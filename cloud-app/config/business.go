@@ -3,11 +3,8 @@ package config
 import (
 	"fmt"
 	"net"
-	"net/mail"
 	"net/url"
-	"strconv"
 	"strings"
-	"time"
 	_ "time/tzdata"
 )
 
@@ -29,7 +26,6 @@ func loadBusiness(c *Config) error {
 	if c.CookieSecure {
 		c.CookieName = "__Host-kicau_refresh"
 	}
-	c.GoogleClientID = strings.TrimSpace(env("GOOGLE_CLIENT_ID", ""))
 	for _, raw := range strings.Split(env("TRUSTED_PROXIES", "127.0.0.1/32,::1/128"), ",") {
 		v := strings.TrimSpace(raw)
 		if v == "" {
@@ -39,44 +35,6 @@ func loadBusiness(c *Config) error {
 			return fmt.Errorf("TRUSTED_PROXIES must contain CIDRs")
 		}
 		c.TrustedProxies = append(c.TrustedProxies, v)
-	}
-	c.SMTPHost = env("SMTP_HOST", "")
-	c.SMTPPort = env("SMTP_PORT", "587")
-	c.SMTPUser = env("SMTP_USER", "")
-	c.SMTPPassword = env("SMTP_PASSWORD", "")
-	c.SMTPFrom = env("SMTP_FROM", "")
-	c.SMTPMode = env("SMTP_MODE", "starttls")
-	if c.SMTPMode != "starttls" && c.SMTPMode != "tls" {
-		return fmt.Errorf("SMTP_MODE must be starttls or tls")
-	}
-	n, e := strconv.Atoi(c.SMTPPort)
-	if e != nil || n < 1 || n > 65535 {
-		return fmt.Errorf("Invalid SMTP_PORT")
-	}
-	if c.SMTPFrom != "" {
-		a, e := mail.ParseAddress(c.SMTPFrom)
-		if e != nil || a.Address != c.SMTPFrom {
-			return fmt.Errorf("SMTP_FROM must be an email address")
-		}
-	}
-	c.SMTPAllowInsecure, e = strconv.ParseBool(env("SMTP_ALLOW_INSECURE", "false"))
-	if e != nil {
-		return fmt.Errorf("Invalid SMTP_ALLOW_INSECURE")
-	}
-	if c.SMTPAllowInsecure {
-		ip := net.ParseIP(c.SMTPHost)
-		development := env("APP_ENV", "development")
-		if (c.SMTPHost != "localhost" && (ip == nil || !ip.IsLoopback())) || (development != "development" && development != "local") {
-			return fmt.Errorf("Insecure SMTP is allowed only for loopback development")
-		}
-	}
-	c.MVRefreshInterval, e = time.ParseDuration(env("MV_REFRESH_INTERVAL", "60s"))
-	if e != nil || c.MVRefreshInterval < time.Second || c.MVRefreshInterval > time.Hour {
-		return fmt.Errorf("MV_REFRESH_INTERVAL must be 1s..1h")
-	}
-	c.MVRefreshTimeout, e = time.ParseDuration(env("MV_REFRESH_TIMEOUT", "2m"))
-	if e != nil || c.MVRefreshTimeout < time.Second || c.MVRefreshTimeout > 10*time.Minute {
-		return fmt.Errorf("MV_REFRESH_TIMEOUT must be 1s..10m")
 	}
 	return nil
 }

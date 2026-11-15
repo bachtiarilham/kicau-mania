@@ -1,6 +1,6 @@
 # Integrasi local-app dan cloud-app
 
-> **Pembaruan database 15 November 2026:** PostgreSQL lokal telah menerima 008â€“010 (tiket tunggal, history master, versi dan soft delete). Query 13 flow bisnis tersedia, tetapi caller Go/auth/endpoint lama belum kompatibel; kesiapan API harus diperiksa kembali setelah adaptasi. Lihat [status database](../cloud-app/db/README.md) dan [panduan query](../cloud-app/db/queries/README.md). Perilaku media local-app tidak berubah.
+> **Integrasi schema 010 (15 November 2026):** alur bisnis 1–12 memakai API aktif baru dengan Redis/PostgreSQL; lihat [API schema 010](../cloud-app/docs/API.md) dan [verifikasi terkini](../cloud-app/docs/VERIFIKASI-BACKEND.md). Media cloud dilewati. Bagian panduan lama di bawah perlu dibaca sebagai konteks arsitektur; kontrak endpoint aktif mengikuti Swagger baru. Database operasional tidak direset.
 
 Status ditinjau dari source pada **11 November 2026**. Dokumen ini menjelaskan hubungan sistem, bukan bukti bahwa seluruh integrasi sudah aktif di VPS atau siap pada NVR arena. Untuk instalasi, gunakan [README local-app](../local-app/README.md) dan [README cloud-app](../cloud-app/README.md).
 

@@ -60,7 +60,11 @@ func Recover() gin.HandlerFunc {
 }
 func Limits(timeout time.Duration) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 2*1024*1024)
+		limit := int64(2 * 1024 * 1024)
+		if strings.HasSuffix(c.Request.URL.Path, "/proof") {
+			limit = 6 * 1024 * 1024
+		}
+		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, limit)
 		ctx, cancel := context.WithTimeout(c.Request.Context(), timeout)
 		defer cancel()
 		c.Request = c.Request.WithContext(ctx)

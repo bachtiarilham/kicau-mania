@@ -2,7 +2,7 @@
 
 **Status lokal 15 November 2026:** `localhost:5433/kicau_mania` sudah menerapkan migrasi **008â€“010** dan mengikuti [ERD terbaru](ERD.md). Migrasi 008 sebelumnya mereset data lama; migrasi 010 menambahkan history/version/soft delete tanpa reset data. Ada **22 tabel bisnis, 24 view baca dan dua materialized view**. Role bisnis sekarang `ADMIN`, `OPERATOR`, `JURI`, `PESERTA`.
 
-**Query untuk 13 flow bisnis sudah tersedia** pada [panduan query](queries/README.md). Repository/UseCase/handler, otorisasi role, bootstrap, seed/Insomnia dan dokumentasi endpoint lama belum diadaptasi ke kontrak SQL terbaru. Jangan menganggap login/API siap hanya karena SQL lolos pemeriksaan. Redis untuk token verifikasi/reset email juga belum dipasang atau diintegrasikan.
+**Integrasi aplikasi schema 010:** login Redis/PostgreSQL dan alur bisnis 1–12 kini menggunakan modul aktif `internal/login` dan `internal/workflow`. Media recording tidak dipasang. Tidak ada migrasi/reset otomatis; gunakan [API aktif](../docs/API.md) dan [verifikasi](../docs/VERIFIKASI-BACKEND.md). Seed/Insomnia lama bukan acuan kontrak baru.
 
 ## Skema yang berlaku
 
@@ -57,7 +57,7 @@ Soft delete akun menonaktifkan akun dan mencabut sesi PostgreSQL atomik. Soft de
 
 GET bisnis memakai `cloud_read.v_*`; INSERT/UPDATE/DELETE memakai tabel sumber. Auth internal, locking dan resolusi bukti/URL adalah pengecualian internal terbatas. List/detail umum tidak mengeluarkan hash, provider ID, BLOB bukti atau URL privat. `v_users`/`v_birds` menyertakan version/deleted_at untuk administrasi; query list biasa memfilter master terhapus, sementara tiket historis tetap memakai JOIN master yang sama.
 
-Lihat [queries/README.md](queries/README.md) untuk peta 13 flow, urutan transaksi, parameter dan query yang harus digabung. File `*.sql` memakai penanda nama, bukan PREPARE deployment; package Go meng-embed statement dan pgx mengikat `$1`, `$2`, dst. Query telah diganti untuk schema terkini; caller Go lama belum kompatibel dan tidak disediakan alias palsu.
+Lihat [queries/README.md](queries/README.md) untuk peta 13 flow, urutan transaksi, parameter dan query yang harus digabung. File `*.sql` memakai penanda nama, bukan PREPARE deployment; package Go meng-embed statement dan pgx mengikat `$1`, `$2`, dst. Query schema terkini dipakai caller baru; caller lama tidak dipasang pada router dan tidak diberi alias palsu.
 
 `v_round_score_summary` memakai rata-rata desimal terkini dari tiket CONFIRMED, pembayaran VERIFIED dan peserta ACTIVE. Count awal nol, average NULL, dan `is_complete` membutuhkan roster/kriteria tidak kosong serta semua nilai wajib. Diskualifikasi tidak menghapus skor tetapi mengeluarkan tiket dari rekap eligible.
 
