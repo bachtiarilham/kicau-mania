@@ -10,7 +10,7 @@ SPEC = json.loads((ROOT.parent / 'generated/swagger.json').read_text(encoding='u
 WORKSPACE = 'wrk_kicau_schema010'
 ENV = 'env_kicau_schema010'
 resources = [dict(_id=WORKSPACE, _type='workspace', parentId=None,
-                  name='Kicau Mania - Schema 010', scope='collection',
+                  name='Kicau Mania - VPS Dev - Schema 010', scope='collection',
                   description='API schema 010 plus skenario mock berurutan. Terapkan seed 010 secara eksplisit. Jangan Run All: katalog manual berisi mutasi/penghapusan nyata.')]
 variables = dict(base_url='https://dev.megaallstararena.com', frontend_origin='https://dev.megaallstararena.com',
                  email='', password='', access_token='', my_user_id='',
@@ -49,7 +49,7 @@ resources += [dict(_id=ENV, _type='environment', parentId=WORKSPACE, name='Base 
               dict(_id='jar_kicau_schema010', _type='cookie_jar', parentId=WORKSPACE,
                    name='Cookie Jar', cookies=[])]
 resources += [dict(_id='env_kicau_schema010_local',_type='environment',parentId=ENV,
-                   name='Localhost',data=dict(base_url='http://127.0.0.1:8091',frontend_origin='http://localhost:3000'),
+                   name='VPS Development',data=dict(base_url='https://dev.megaallstararena.com',frontend_origin='https://dev.megaallstararena.com'),
                    dataPropertyOrder=None,color=None,isPrivate=False,metaSortKey=1)]
 groups = {}
 

@@ -8,7 +8,7 @@
       "_id": "wrk_kicau_schema010",
       "_type": "workspace",
       "parentId": null,
-      "name": "Kicau Mania - Schema 010",
+      "name": "Kicau Mania - VPS Dev - Schema 010",
       "scope": "collection",
       "description": "API schema 010 plus skenario mock berurutan. Terapkan seed 010 secara eksplisit. Jangan Run All: katalog manual berisi mutasi/penghapusan nyata."
     },
@@ -98,10 +98,10 @@
       "_id": "env_kicau_schema010_local",
       "_type": "environment",
       "parentId": "env_kicau_schema010",
-      "name": "Localhost",
+      "name": "VPS Development",
       "data": {
-        "base_url": "http://127.0.0.1:8091",
-        "frontend_origin": "http://localhost:3000"
+        "base_url": "https://dev.megaallstararena.com",
+        "frontend_origin": "https://dev.megaallstararena.com"
       },
       "dataPropertyOrder": null,
       "color": null,

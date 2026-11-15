@@ -4,13 +4,13 @@ Import [cloud-app-mock.json](cloud-app-mock.json). Koleksi berisi **146 request*
 
 ## Import dan environment
 
-1. Di Insomnia pilih **Import → File**, lalu pilih `cloud-app-mock.json` yang terbaru. Pastikan workspace hasil import adalah **Kicau Mania - Schema 010** dan folder **00 Mock - jalankan berurutan setelah seed 010** muncul. Import ulang diperlukan jika sebelumnya memakai file lama; hindari memilih workspace lama atau duplikatnya.
-2. Pilih Base Environment untuk VPS: `base_url=https://dev.megaallstararena.com`, `frontend_origin=https://dev.megaallstararena.com`. Untuk backend lokal pilih child environment **Localhost** yang memakai `http://127.0.0.1:8091` dan origin `http://localhost:3000`.
+1. Di Insomnia pilih **Import → File**, lalu pilih `cloud-app-mock.json` yang terbaru. Pastikan workspace hasil import adalah **Kicau Mania - VPS Dev - Schema 010** dan folder **00 Mock - jalankan berurutan setelah seed 010** muncul. Import ulang diperlukan jika sebelumnya memakai file lama; hindari memilih workspace lama atau duplikatnya.
+2. Pilih **VPS Development** atau Base Environment. Keduanya memakai `base_url=https://dev.megaallstararena.com` dan `frontend_origin=https://dev.megaallstararena.com`. Koleksi ini hanya menyediakan target VPS; environment Localhost lama sudah diganti.
 3. **Jangan tambahkan `/api/v1` pada base_url.** Path tersebut sudah berada di request. `/healthz` dan `/readyz` memakai root domain.
-4. Seed schema 010 harus tersedia pada database tujuan. VPS dev sudah diisi pada 15 November 2026; database localhost perlu penerapan manual. Semua akun memakai password `KicauMock2026!`.
+4. Seed schema 010 harus tersedia pada database tujuan. VPS dev sudah diisi pada 15 November 2026; koleksi ini mengakses VPS, bukan database localhost. Semua akun memakai password `KicauMock2026!`.
 5. Biarkan cookie jar aktif. Jangan mengekspor koleksi yang sudah berisi token/cookie pengguna. Kredensial fixture hanya untuk pengembangan.
 
-Backend lokal memerlukan PostgreSQL schema 010 dan Redis. Untuk refresh/logout melalui HTTP localhost, konfigurasi `FRONTEND_PUBLIC_URL=http://localhost:3000` serta `ALLOWED_ORIGINS=http://localhost:3000` harus sesuai. HTTPS memakai refresh cookie Secure/HttpOnly.
+HTTPS memakai refresh cookie Secure/HttpOnly. Jika hasil import masih menampilkan Localhost atau URL lama, pilih workspace terbaru dan periksa override environment pribadi yang tersimpan di Insomnia.
 
 ## Jalankan folder 00 Mock
 
