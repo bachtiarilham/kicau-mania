@@ -11,7 +11,7 @@ WORKSPACE = 'wrk_kicau_schema010'
 ENV = 'env_kicau_schema010'
 resources = [dict(_id=WORKSPACE, _type='workspace', parentId=None,
                   name='Kicau Mania - Schema 010', scope='collection',
-                  description='API nyata schema 010. Baca README.md; tidak bergantung seed/mock lama. Jangan Run All: transisi, logout, dan penghapusan adalah tindakan nyata.')]
+                  description='API schema 010 plus skenario mock berurutan. Terapkan seed 010 secara eksplisit. Jangan Run All: katalog manual berisi mutasi/penghapusan nyata.')]
 variables = dict(base_url='https://dev.megaallstararena.com', frontend_origin='https://dev.megaallstararena.com',
                  email='', password='', access_token='', my_user_id='',
                  device_id='insomnia-kicau-admin-device', staff_device_id='insomnia-kicau-juri-device',
@@ -22,10 +22,35 @@ variables = dict(base_url='https://dev.megaallstararena.com', frontend_origin='h
                  award_id='', session_id='', user_version=1, bird_version=1,
                  cursor='', search='', history_after_version=0,
                  event_date='2026-11-15', new_password='')
+def fixture(group, number):
+    return f'6d6f636b-{group:04x}-4000-8000-{number:012d}'
+
+variables.update(email='admin@mock.kicau.test', password='KicauMock2026!',
+                 user_id=fixture(1,7), owner_id=fixture(1,2), new_owner_id=fixture(1,8),
+                 arena_id=fixture(2,1), other_arena_id=fixture(2,2), species_id=fixture(14,1),
+                 bird_id=fixture(9,1), event_id=fixture(4,1), category_id=fixture(5,1),
+                 round_id=fixture(6,1), gantangan_id=fixture(3,1), criterion_id=fixture(7,1),
+                 criterion_2_id=fixture(7,2), criterion_3_id=fixture(7,3),
+                 staff_email='juri.1@mock.kicau.test',staff_password='KicauMock2026!',
+                 staff_user_id=fixture(1,5), mock_registration_1_id='', mock_registration_2_id='')
+mock_roles = [
+    ('admin',1,'admin@mock.kicau.test','ADMIN'),
+    ('admin_a',2,'admin.a@mock.kicau.test','ADMIN'),
+    ('operator_a',3,'operator.a@mock.kicau.test','OPERATOR'),
+    ('operator_b',4,'operator.b@mock.kicau.test','OPERATOR'),
+    ('juri_1',5,'juri.1@mock.kicau.test','JURI'),
+    ('juri_2',6,'juri.2@mock.kicau.test','JURI'),
+    ('peserta_1',7,'peserta.1@mock.kicau.test','PESERTA'),
+    ('peserta_2',8,'peserta.2@mock.kicau.test','PESERTA')]
+for role,number,email,_ in mock_roles:
+    variables.update({f'mock_{role}_email':email,f'mock_{role}_id':fixture(1,number),f'token_{role}':''})
 resources += [dict(_id=ENV, _type='environment', parentId=WORKSPACE, name='Base Environment',
                    data=variables, dataPropertyOrder=None, color=None, isPrivate=False, metaSortKey=0),
               dict(_id='jar_kicau_schema010', _type='cookie_jar', parentId=WORKSPACE,
                    name='Cookie Jar', cookies=[])]
+resources += [dict(_id='env_kicau_schema010_local',_type='environment',parentId=ENV,
+                   name='Localhost',data=dict(base_url='http://127.0.0.1:8091',frontend_origin='http://localhost:3000'),
+                   dataPropertyOrder=None,color=None,isPrivate=False,metaSortKey=1)]
 groups = {}
 
 
@@ -83,7 +108,8 @@ def example(name):
                       organizer_name='Penyelenggara eksternal', rank=1,
                       awarded_at=ref('event_date'), certificate_url=None),
         'Scores': dict(scores=[dict(criteria_id=ref('criterion_id'), score_value='9.25'),
-                              dict(criteria_id=ref('criterion_2_id'), score_value='8.75')]),
+                              dict(criteria_id=ref('criterion_2_id'), score_value='8.75'),
+                              dict(criteria_id=ref('criterion_3_id'), score_value='8.50')]),
         'Password': dict(old_password=ref('password'), new_password=ref('new_password')),
         'Credentials': dict(password=ref('staff_password')),
         'Transition': dict(expected_status='PREPARED'),
@@ -201,6 +227,97 @@ for path in ['/healthz', '/readyz']:
     r = add(path, 'GET', {}, title='GET ' + path)
     r['parentId'] = folder('00 Health dan readiness')
     r['headers'] = [h for h in r['headers'] if h['name'] != 'Authorization']
+
+def mock_request(title, path, method='GET', values=None, payload=None, actor='admin',
+                 status=200, capture=None, login=None):
+    """Append one ordered scenario request, without overwriting catalogue variables."""
+    op = {} if path in ('/healthz','/readyz') else SPEC['paths'][path][method.lower()]
+    r = add(path, method, op, title=title, payload=payload, suffix='mock-'+title)
+    r['parentId'] = folder('00 Mock - jalankan berurutan setelah seed 010')
+    r['url'] = ref('base_url') + re.sub(r'\{(\w+)\}', lambda m: str((values or {})[m[1]]), path)
+    r['parameters'] = []
+    if any(p.get('name')=='arena_id' and p['in']=='query' for p in op.get('parameters',[])):
+        r['parameters'].append(dict(name='arena_id',value=fixture(2,1),disabled=False))
+    r['headers'] = [dict(name='Accept',value='application/json')]
+    if actor is not None:
+        r['headers'].append(dict(name='Authorization',value='Bearer '+ref('token_'+actor)))
+    if payload is not None:
+        r['headers'].append(dict(name='Content-Type',value='application/json'))
+    if login:
+        r['headers'].append(dict(name='Origin',value=ref('frontend_origin')))
+    # Keep request-specific overrides explicit rather than reusing generic body defaults.
+    if payload is not None:
+        r['body']=dict(mimeType='application/json',text=json.dumps(payload,indent=2))
+    else:r['body']={}
+    js = f"const expectedStatus = {status};\nconst code = insomnia.response.code;\n"
+    js += "insomnia.test('Expected HTTP '+expectedStatus, () => insomnia.expect(code).to.eql(expectedStatus));\n"
+    if login:
+        role,_,_,business_role=login
+        js += f"insomnia.environment.unset('token_{role}');\n"
+    js += "if (code === expectedStatus) {\n const body = insomnia.response.json();\n"
+    js += f" insomnia.test('Envelope', () => insomnia.expect(body.success).to.eql({'true' if status<400 else 'false'}));\n"
+    if status<400:
+        js += " if (body.success === true) {\n"
+        if login:
+            role,_,_,business_role=login
+            js += f"  const user=body.data?.user;\n  const identityOK=user?.id === insomnia.environment.get('mock_{role}_id') && user?.email === insomnia.environment.get('mock_{role}_email');\n"
+            js += f"  const roles=[...(Array.isArray(user?.roles)?user.roles:[]),...(Array.isArray(user?.arena_roles)?user.arena_roles.map(x=>x.role):[])];\n  const roleOK=roles.includes('{business_role}');\n"
+            js += "  const token=body.data?.access_token;\n  insomnia.test('Correct fixture identity and role', () => insomnia.expect(identityOK && roleOK && typeof token==='string' && token.length>0).to.eql(true));\n"
+            js += f"  if(identityOK && roleOK && typeof token==='string' && token.length>0) insomnia.environment.set('token_{role}',token);\n"
+            if role=='admin':js += "  if(identityOK && roleOK && typeof token==='string' && token.length>0) { insomnia.environment.set('access_token',token); insomnia.environment.set('my_user_id',user.id); }\n"
+        if capture:
+            js += f"  if (typeof body.data?.id==='string') insomnia.environment.set('{capture}',body.data.id);\n"
+        js += " }\n"
+    js += '}\n'
+    r['afterResponseScript']=js
+    r['description']='Skenario mock schema 010. Jalankan sesuai nomor setelah seed. Token terpisah per role; cookie refresh tetap satu jar. Expected HTTP '+str(status)+'.'
+    return r
+
+mock_request('01 Health','/healthz',actor=None)
+mock_request('02 Readiness','/readyz',actor=None)
+for i,role in enumerate(mock_roles,3):
+    key,_,_,_=role
+    mock_request(f'{i:02d} Login {key}','/api/v1/auth/login','POST',
+                 payload=dict(email=ref('mock_'+key+'_email'),password=ref('password'),device_id='insomnia-mock-'+key),actor=None,login=role)
+mock_request('11 Profil ADMIN','/api/v1/auth/me')
+mock_request('12 Daftar arena','/api/v1/arenas')
+mock_request('13 Tanpa token ditolak','/api/v1/auth/me',actor=None,status=401)
+mock_request('14 Operator A tidak boleh arena B','/api/v1/arenas/{arena}',values=dict(arena=fixture(2,2)),actor='operator_a',status=403)
+mock_request('15 Detail burung peserta 1','/api/v1/birds/{id}',values=dict(id=fixture(9,1)))
+mock_request('16 History master burung','/api/v1/birds/{id}/history',values=dict(id=fixture(9,1)))
+for num,participant,bird,gantangan in [(17,7,1,1),(18,8,3,2)]:
+    mock_request(f'{num:02d} Daftarkan peserta {num-16}','/api/v1/registrations','POST',
+                 payload=dict(arena_id=fixture(2,1),user_id=fixture(1,participant),round_id=fixture(6,1),
+                              bird_id=fixture(9,bird),gantangan_id=fixture(3,gantangan),entry_fee='50000.00',payment_method='CASH'),
+                 actor='operator_a',capture=f'mock_registration_{num-16}_id')
+for num,ticket in [(19,1),(20,2)]:
+    mock_request(f'{num:02d} Verifikasi pembayaran peserta {ticket}','/api/v1/registrations/{id}/verify','POST',
+                 values=dict(id=ref(f'mock_registration_{ticket}_id')),payload={},actor='operator_a')
+base='/api/v1/arenas/{arena}/rounds/{id}'
+rv=dict(arena=fixture(2,1),id=fixture(6,1))
+for num,judge in [(21,5),(22,6)]:
+    mock_request(f'{num:02d} Roster juri {judge-4}',base+'/judges/{judge}','POST',values={**rv,'judge':fixture(1,judge)},actor='operator_a')
+mock_request('23 Mulai ronde',base+'/start','POST',values=rv,payload=dict(expected_status='PREPARED'),actor='operator_a')
+mock_request('24 Mulai penjurian',base+'/begin-judging','POST',values=rv,payload=dict(expected_status='RUNNING'),actor='operator_a')
+mock_request('25 Tutup sebelum lengkap ditolak',base+'/close','POST',values=rv,payload=dict(expected_status='JUDGING'),actor='operator_a',status=409)
+for num,ticket,judge,score in [(26,1,'juri_1','8.50'),(27,1,'juri_2','8.00'),(28,2,'juri_1','7.00'),(29,2,'juri_2','7.00')]:
+    mock_request(f'{num:02d} Nilai peserta {ticket} oleh {judge}',base+'/scores/{ticket}','PUT',
+                 values={**rv,'ticket':ref(f'mock_registration_{ticket}_id')},actor=judge,
+                 payload=dict(scores=[dict(criteria_id=fixture(7,k),score_value=score) for k in [1,2,3]]))
+mock_request('30 Revisi nilai peserta 1',base+'/scores/{ticket}','PUT',values={**rv,'ticket':ref('mock_registration_1_id')},actor='juri_1',
+             payload=dict(scores=[dict(criteria_id=fixture(7,k),score_value=v) for k,v in [(1,'9.25'),(2,'8.50'),(3,'8.50')]]))
+mock_request('31 Rekap langsung',base+'/recap',values=rv,actor='operator_a')
+mock_request('32 Diskualifikasi peserta 2','/api/v1/registrations/{id}/disqualify','POST',
+             values=dict(id=ref('mock_registration_2_id')),payload=dict(reason='Mock pelanggaran ronde'),actor='operator_a')
+mock_request('33 Skor peserta diskualifikasi ditolak',base+'/scores/{ticket}','PUT',values={**rv,'ticket':ref('mock_registration_2_id')},actor='juri_1',status=409,
+             payload=dict(scores=[dict(criteria_id=fixture(7,k),score_value='8.00') for k in [1,2,3]]))
+mock_request('34 Aktifkan kembali peserta 2','/api/v1/registrations/{id}/requalify','POST',values=dict(id=ref('mock_registration_2_id')),payload={},actor='operator_a')
+mock_request('35 Peserta membaca tiket sendiri','/api/v1/registrations/{id}',values=dict(id=ref('mock_registration_1_id')),actor='peserta_1')
+mock_request('36 Peserta tidak boleh tiket orang lain','/api/v1/registrations/{id}',values=dict(id=ref('mock_registration_2_id')),actor='peserta_1',status=403)
+mock_request('37 Tutup ronde lengkap',base+'/close','POST',values=rv,payload=dict(expected_status='JUDGING'),actor='operator_a')
+mock_request('38 Revisi setelah CLOSED ditolak',base+'/scores/{ticket}','PUT',values={**rv,'ticket':ref('mock_registration_1_id')},actor='juri_1',status=409,
+             payload=dict(scores=[dict(criteria_id=fixture(7,k),score_value='9.00') for k in [1,2,3]]))
+mock_request('39 Rekap akhir',base+'/recap',values=rv,actor='operator_a')
 
 export = dict(_type='export', __export_format=4, __export_date='2026-11-15T00:00:00.000Z',
               __export_source='kicau-mania.schema010', resources=resources)

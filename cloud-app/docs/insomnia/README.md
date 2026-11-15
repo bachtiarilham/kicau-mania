@@ -1,52 +1,50 @@
-# Insomnia - schema 010
+# Koleksi Insomnia — schema 010
 
-Import [cloud-app-mock.json](cloud-app-mock.json) sebagai collection baru. Nama file lama dipertahankan agar tautannya tetap berlaku; isinya sudah diganti menjadi **Kicau Mania - Schema 010**, tanpa akun/password demo, ID seed tetap, endpoint legacy atau media cloud.
+Import [cloud-app-mock.json](cloud-app-mock.json). Koleksi berisi **146 request**: 39 langkah mock berurutan serta katalog endpoint untuk pengujian manual. Akun dan master fixture dijelaskan pada [panduan seed](../../db/seeds/README.md).
 
-Request mengubah API/database nyata. Jalankan satu per satu; jangan **Run All**, karena koleksi juga berisi transisi ronde, pencabutan sesi, logout dan penghapusan. Hapus workspace mock lama dari Insomnia bila tidak digunakan lagi; import baru tidak otomatis menghapus workspace lama.
+## Import dan environment
 
-## Persiapan
+1. Di Insomnia pilih **Import → File**, lalu pilih `cloud-app-mock.json` yang terbaru. Pastikan workspace hasil import adalah **Kicau Mania - Schema 010** dan folder **00 Mock - jalankan berurutan setelah seed 010** muncul. Import ulang diperlukan jika sebelumnya memakai file lama; hindari memilih workspace lama atau duplikatnya.
+2. Pilih Base Environment untuk VPS: `base_url=https://dev.megaallstararena.com`, `frontend_origin=https://dev.megaallstararena.com`. Untuk backend lokal pilih child environment **Localhost** yang memakai `http://127.0.0.1:8091` dan origin `http://localhost:3000`.
+3. **Jangan tambahkan `/api/v1` pada base_url.** Path tersebut sudah berada di request. `/healthz` dan `/readyz` memakai root domain.
+4. Seed schema 010 harus tersedia pada database tujuan. VPS dev sudah diisi pada 15 November 2026; database localhost perlu penerapan manual. Semua akun memakai password `KicauMock2026!`.
+5. Biarkan cookie jar aktif. Jangan mengekspor koleksi yang sudah berisi token/cookie pengguna. Kredensial fixture hanya untuk pengembangan.
 
-1. Backend memakai PostgreSQL schema 010 dan Redis. Jangan menjalankan ulang reset 008 atau seed lama untuk koleksi ini.
-2. Base Environment sudah memakai `base_url=https://dev.megaallstararena.com` dan `frontend_origin=https://dev.megaallstararena.com`. Request bisnis menambahkan `/api/v1`, sehingga alamat akhirnya `https://dev.megaallstararena.com/api/v1`. Jangan menambahkan `/api/v1` lagi pada `base_url`. Isi `email` dan `password` ADMIN yang sudah dibuat melalui CLI bootstrap.
-3. `frontend_origin` harus sama persis dengan origin yang diizinkan backend. Request auth mengirim header Origin tersebut. Cookie refresh HTTPS bernama `__Host-kicau_refresh` ditangani cookie jar secara otomatis.
-4. Biarkan cookie jar aktif. Login/refresh otomatis menerima refresh cookie HttpOnly. Jangan menyalin refresh token ke Bearer atau mencoba membaca JWT; access token bersifat opaque.
-5. Isi tanggal `event_date` serta kolom telepon kosong pada request pembuatan akun sesuai data pengujian. Simpan kredensial pada environment privat lokal jika tersedia; jangan mengekspor token/password/cookie yang sudah terisi.
+Backend lokal memerlukan PostgreSQL schema 010 dan Redis. Untuk refresh/logout melalui HTTP localhost, konfigurasi `FRONTEND_PUBLIC_URL=http://localhost:3000` serta `ALLOWED_ORIGINS=http://localhost:3000` harus sesuai. HTTPS memakai refresh cookie Secure/HttpOnly.
 
-## Urutan alur utama
+## Jalankan folder 00 Mock
 
-1. **Health/readiness**, kemudian **POST /auth/login**. Respons sukses menyimpan `access_token` dan `my_user_id`; request privat memakai token itu. Refresh memperbarui token yang sama, logout menghapusnya setelah sukses.
-2. **POST /arenas**, lalu **POST /users** untuk peserta. Gunakan request **Buat akun EO** untuk mengisi `owner_id`. ID hasil create disimpan otomatis; tidak perlu mengarang UUID atau memakai seed lama.
-3. Buat spesies, burung, event, kategori, gantangan dan ronde. Burung baru memakai pemilik peserta `user_id`; EO event memakai `owner_id`. Kode burung dibuat server. Ronde dibuat PREPARED; status tidak dikirim melalui edit konfigurasi.
-4. Buat kriteria pertama dan request **Buat kriteria kedua**, sebelum ronde dimulai. Keduanya mengisi `criterion_id` dan `criterion_2_id` yang dipakai contoh paket nilai.
-5. Buat akun petugas dengan `staff_email` dan `staff_phone`. Sebagai ADMIN, tugaskan `staff_role=JURI` pada arena, kemudian tetapkan password awal melalui `/staff/{user}/credentials` memakai `staff_password` minimal 12 karakter. Tambahkan petugas tersebut ke roster `/rounds/{id}/judges/{judge}`. Password awal tidak dapat digunakan untuk mereset password akun yang sudah memiliki password.
-6. Buat registrasi. Akun tersimpan dahulu; jika tiket gagal, gunakan kembali `user_id` tersebut. Satu tiket memuat user, arena, ronde, burung, gantangan, biaya dan metode bayar.
-7. Untuk CASH, panggil **verify** secara eksplisit. Untuk TRANSFER, ubah payment_method saat membuat tiket, pilih file pada request multipart **POST /registrations/{id}/proof**, lalu verify. Jangan menambahkan header Content-Type multipart secara manual; Insomnia membuat boundary. JPEG/PNG maksimal 5 MiB, dengan pemeriksaan signature. GET proof mengembalikan gambar, bukan envelope JSON.
-8. **start** (expected PREPARED), kemudian **begin-judging** (expected RUNNING). Kriteria arena terkunci setelah mulai. Roster/konfigurasi tidak dapat diubah lagi seperti saat PREPARED.
-9. Gunakan **Login JURI**. Login ini mengganti token dan refresh cookie aktif; panggil `/judge/rounds`, baca peserta eligible, lalu PUT paket skor. Contoh berisi dua kriteria; sesuaikan array agar mencakup **seluruh** kriteria arena tepat sekali. `score_value` dikirim sebagai string desimal. PUT yang sama digunakan untuk revisi.
-10. Login ADMIN kembali sebelum tindakan petugas, lihat recap, lalu **close** (expected JUDGING) setelah semua nilai lengkap. Tidak ada penyimpanan bracket atau pemenang.
+Jalankan request satu per satu menurut nomor **01–39**. Jangan menjalankan seluruh workspace dengan **Run All**, karena katalog manual juga memuat edit, pembatalan, pencabutan sesi, dan penghapusan.
 
-Satu cookie jar dan satu `access_token` berarti satu identitas aktif. Jangan mencampur token ADMIN dengan refresh cookie JURI secara manual. Untuk uji beberapa identitas bersamaan gunakan workspace/cookie jar terpisah.
+- 01–14: health/readiness, login delapan role, profil, serta penolakan tanpa token dan akses salah arena.
+- 15–22: baca burung/history, daftar dua peserta, verifikasi pembayaran CASH, dan tetapkan dua juri.
+- 23–31: mulai ronde dan penjurian, uji penutupan sebelum lengkap, isi tiga kriteria untuk kedua peserta dari kedua juri, revisi, lalu baca rekap.
+- 32–39: diskualifikasi/requalify, pembatasan pembacaan tiket, tutup ronde lengkap, dan tolak revisi setelah CLOSED.
 
-## Operasi tambahan
+After-response script menyimpan token terpisah: `token_admin`, `token_admin_a`, `token_operator_a`, `token_operator_b`, `token_juri_1`, `token_juri_2`, `token_peserta_1`, dan `token_peserta_2`. Login memeriksa ID, email, dan role sebelum menyimpan token. Tiket hasil registrasi disimpan ke `mock_registration_1_id`/`mock_registration_2_id`; tidak perlu menyalin UUID manual.
 
-- **Edit/arsip master:** user dan burung memakai `user_version`/`bird_version`; nilainya diperbarui dari respons sukses. GET detail dahulu sebelum edit. Respons 409 tidak menimpa variabel atau input. DELETE master adalah soft delete. History read-only tetap tersedia melalui ID master setelah diarsipkan; pagination memakai `history_after_version`.
-- **Pencarian:** aktifkan parameter `q` pada daftar user/burung, isi `search`. Parameter opsional seperti cursor, event, round, owner dan role awalnya dinonaktifkan; aktifkan sesuai kebutuhan. Pagination memakai `data.next_cursor` yang disalin ke `cursor`.
-- **Edit tiket:** PUT hanya sebelum confirmed/VERIFIED dan ketika ronde asal/tujuan masih PREPARED pada arena sama. Gunakan POST cancel untuk pembatalan; tidak ada DELETE registrasi.
-- **Diskualifikasi:** reason wajib. Requalify membatalkannya sebelum CLOSED/CANCELLED. Pembayaran tidak berubah. Cancel tiket/ronde adalah tindakan nyata; gunakan data yang memang hendak dibatalkan.
-- **Transfer burung:** isi `new_owner_id` akun aktif. Gunakan endpoint transfer khusus dengan versi terkini, bukan PATCH owner_id. Baca ownership/history untuk memeriksa hasilnya.
-- **Penghargaan:** request dasar membuat penghargaan eksternal; nama event wajib. Request internal memakai `registration_id` dan `arena_id`, dengan tiket burung confirmed/verified/ACTIVE. ID tiket tidak dapat dipindah saat edit. GET certificate mengembalikan URL setelah otorisasi; GET proof mengembalikan bytes.
-- **Profil/sesi:** GET sessions, salin ID sesi ke `session_id`, lalu revoke bila diperlukan. Ganti password mencabut semua sesi; login kembali dengan password baru dan perbarui environment lokal.
-- **Penghapusan/pencabutan:** dipisahkan di folder 99. Relasi dapat menyebabkan 409. ADMIN terakhir arena tidak dapat dicabut. Juri dengan ronde berjalan juga tidak dapat dicabut/dinonaktifkan.
+Request negatif mempunyai assertion statusnya sendiri, misalnya 401/403/409, sehingga respons penolakan yang benar tetap lulus. Jika script gagal, lihat **status HTTP dan body response** terlebih dahulu; variabel hasil tidak diperbarui saat respons tidak sesuai. Saat HTTP 429, tunggu sebelum mengulangi login; proxy membatasi burst request autentikasi. Untuk runner otomatis tambahkan jeda antar-request login, misalnya 12 detik.
 
-## Hasil yang diharapkan
+Skenario utama mengubah A1 menjadi CLOSED. Seed ulang tidak membukanya kembali. Gunakan database pengujian baru untuk mengulang siklus penuh; A2/B1 tidak dipakai oleh skenario ini.
 
-Request normal menguji HTTP 200 dan envelope success sebelum menyimpan ID/versi/token. Error 400/401/403/409/503 tetap terlihat sebagai kegagalan dan tidak mengisi hasil palsu. Saat melakukan pengujian negatif, sesuaikan assertion status pada salinan request. Contoh: akses arena tanpa penugasan -> 403; versi master stale -> 409; skor parsial -> 400 saat JUDGING; kriteria terkunci -> 409; Redis tidak tersedia -> 503. Readiness memerlukan PostgreSQL/schema dan Redis.
+## Katalog endpoint manual
 
-Koleksi divalidasi secara struktural terhadap Swagger aktif, termasuk cakupan method/path dan placeholder. Import UI Insomnia serta menjalankan seluruh request dengan akun/perangkat pengguna belum diverifikasi otomatis.
+Folder selain `00 Mock` menyediakan endpoint sesuai Swagger aktif. Login ADMIN mock juga mengisi `access_token` untuk katalog umum. Login generik memakai satu `access_token`; pastikan identitasnya sesuai sebelum operasi petugas atau juri. Periksa payload, versi master, dan ID tujuan sebelum mengirim mutasi.
 
-## Regenerasi
+- GET detail user/burung mengisi versi terbaru; edit dengan versi lama menghasilkan 409. History read-only tersedia melalui ID master.
+- Transfer burung memakai endpoint transfer dan `new_owner_id`, bukan perubahan owner langsung lewat edit umum.
+- Penilaian mengirim seluruh kriteria arena tepat sekali; contoh fixture berisi **tiga kriteria**, `score_value` berupa string desimal. PUT yang sama dipakai untuk revisi.
+- CASH diverifikasi eksplisit. Untuk TRANSFER, pilih file JPEG/PNG maksimal 5 MiB pada request proof. Jangan menentukan Content-Type multipart secara manual; Insomnia membuat boundary.
+- Penghargaan, CRUD master, pembuatan ronde/event, reset password, dan pencabutan sesi tersedia sebagai request manual; isi field yang belum sesuai kebutuhanmu.
+- Endpoint cloud media/engine yang belum dipasang tidak ditambahkan sebagai respons tiruan.
 
-Dari root repository:
+**Cookie jar tetap dipakai bersama**, walaupun Bearer mock dipisahkan per role. Jalankan refresh/logout segera setelah login akun yang hendak diuji. Access token bersifat opaque; refresh memakai cookie HttpOnly, bukan Bearer. Ganti password dapat mencabut seluruh sesi akun. Jangan menjalankannya di tengah skenario utama.
+
+## Validasi dan regenerasi
+
+Seluruh 146 script request diperiksa sintaksnya dan variabel environment-nya. Guard identitas login diuji dengan identitas benar/salah. Seluruh 39 langkah HTTP lolos terhadap image API aktif dengan database dan Redis sementara; seed ulang mempertahankan ronde CLOSED. Database sementara dibuang setelah pemeriksaan. Import UI Insomnia belum diverifikasi otomatis. Suite tes Go tidak dijalankan.
+
+Generator mengambil endpoint dari Swagger aktif. Dari root repo:
 
 ```powershell
 Push-Location cloud-app
@@ -55,4 +53,4 @@ Pop-Location
 python cloud-app/docs/insomnia/generate.py
 ```
 
-Kontrak lengkap: [API schema 010](../API.md). Konfigurasi layanan/ADMIN pertama: [README backend](../../README.md).
+Lihat [kontrak API](../API.md) dan [panduan backend](../../README.md). Swagger menjelaskan kontrak endpoint; folder mock menjelaskan urutan penggunaan fixture.

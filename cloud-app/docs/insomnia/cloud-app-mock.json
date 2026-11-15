@@ -10,7 +10,7 @@
       "parentId": null,
       "name": "Kicau Mania - Schema 010",
       "scope": "collection",
-      "description": "API nyata schema 010. Baca README.md; tidak bergantung seed/mock lama. Jangan Run All: transisi, logout, dan penghapusan adalah tindakan nyata."
+      "description": "API schema 010 plus skenario mock berurutan. Terapkan seed 010 secara eksplisit. Jangan Run All: katalog manual berisi mutasi/penghapusan nyata."
     },
     {
       "_id": "env_kicau_schema010",
@@ -20,30 +20,30 @@
       "data": {
         "base_url": "https://dev.megaallstararena.com",
         "frontend_origin": "https://dev.megaallstararena.com",
-        "email": "",
-        "password": "",
+        "email": "admin@mock.kicau.test",
+        "password": "KicauMock2026!",
         "access_token": "",
         "my_user_id": "",
         "device_id": "insomnia-kicau-admin-device",
         "staff_device_id": "insomnia-kicau-juri-device",
-        "staff_email": "",
+        "staff_email": "juri.1@mock.kicau.test",
         "staff_phone": "",
-        "staff_password": "",
-        "staff_user_id": "",
+        "staff_password": "KicauMock2026!",
+        "staff_user_id": "6d6f636b-0001-4000-8000-000000000005",
         "staff_role": "JURI",
-        "user_id": "",
-        "owner_id": "",
-        "new_owner_id": "",
-        "arena_id": "",
-        "other_arena_id": "",
-        "bird_id": "",
-        "species_id": "",
-        "event_id": "",
-        "category_id": "",
-        "round_id": "",
-        "gantangan_id": "",
-        "criterion_id": "",
-        "criterion_2_id": "",
+        "user_id": "6d6f636b-0001-4000-8000-000000000007",
+        "owner_id": "6d6f636b-0001-4000-8000-000000000002",
+        "new_owner_id": "6d6f636b-0001-4000-8000-000000000008",
+        "arena_id": "6d6f636b-0002-4000-8000-000000000001",
+        "other_arena_id": "6d6f636b-0002-4000-8000-000000000002",
+        "bird_id": "6d6f636b-0009-4000-8000-000000000001",
+        "species_id": "6d6f636b-000e-4000-8000-000000000001",
+        "event_id": "6d6f636b-0004-4000-8000-000000000001",
+        "category_id": "6d6f636b-0005-4000-8000-000000000001",
+        "round_id": "6d6f636b-0006-4000-8000-000000000001",
+        "gantangan_id": "6d6f636b-0003-4000-8000-000000000001",
+        "criterion_id": "6d6f636b-0007-4000-8000-000000000001",
+        "criterion_2_id": "6d6f636b-0007-4000-8000-000000000002",
         "registration_id": "",
         "award_id": "",
         "session_id": "",
@@ -53,7 +53,34 @@
         "search": "",
         "history_after_version": 0,
         "event_date": "2026-11-15",
-        "new_password": ""
+        "new_password": "",
+        "criterion_3_id": "6d6f636b-0007-4000-8000-000000000003",
+        "mock_registration_1_id": "",
+        "mock_registration_2_id": "",
+        "mock_admin_email": "admin@mock.kicau.test",
+        "mock_admin_id": "6d6f636b-0001-4000-8000-000000000001",
+        "token_admin": "",
+        "mock_admin_a_email": "admin.a@mock.kicau.test",
+        "mock_admin_a_id": "6d6f636b-0001-4000-8000-000000000002",
+        "token_admin_a": "",
+        "mock_operator_a_email": "operator.a@mock.kicau.test",
+        "mock_operator_a_id": "6d6f636b-0001-4000-8000-000000000003",
+        "token_operator_a": "",
+        "mock_operator_b_email": "operator.b@mock.kicau.test",
+        "mock_operator_b_id": "6d6f636b-0001-4000-8000-000000000004",
+        "token_operator_b": "",
+        "mock_juri_1_email": "juri.1@mock.kicau.test",
+        "mock_juri_1_id": "6d6f636b-0001-4000-8000-000000000005",
+        "token_juri_1": "",
+        "mock_juri_2_email": "juri.2@mock.kicau.test",
+        "mock_juri_2_id": "6d6f636b-0001-4000-8000-000000000006",
+        "token_juri_2": "",
+        "mock_peserta_1_email": "peserta.1@mock.kicau.test",
+        "mock_peserta_1_id": "6d6f636b-0001-4000-8000-000000000007",
+        "token_peserta_1": "",
+        "mock_peserta_2_email": "peserta.2@mock.kicau.test",
+        "mock_peserta_2_id": "6d6f636b-0001-4000-8000-000000000008",
+        "token_peserta_2": ""
       },
       "dataPropertyOrder": null,
       "color": null,
@@ -66,6 +93,20 @@
       "parentId": "wrk_kicau_schema010",
       "name": "Cookie Jar",
       "cookies": []
+    },
+    {
+      "_id": "env_kicau_schema010_local",
+      "_type": "environment",
+      "parentId": "env_kicau_schema010",
+      "name": "Localhost",
+      "data": {
+        "base_url": "http://127.0.0.1:8091",
+        "frontend_origin": "http://localhost:3000"
+      },
+      "dataPropertyOrder": null,
+      "color": null,
+      "isPrivate": false,
+      "metaSortKey": 1
     },
     {
       "_id": "fld_beb19885d24366a7202c",
@@ -104,7 +145,7 @@
       },
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 4,
+      "metaSortKey": 5,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -148,7 +189,7 @@
         }
       ],
       "authentication": {},
-      "metaSortKey": 5,
+      "metaSortKey": 6,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -192,7 +233,7 @@
         }
       ],
       "authentication": {},
-      "metaSortKey": 6,
+      "metaSortKey": 7,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -230,7 +271,7 @@
       },
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 7,
+      "metaSortKey": 8,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -268,7 +309,7 @@
       },
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 8,
+      "metaSortKey": 9,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -308,7 +349,7 @@
       "body": {},
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 10,
+      "metaSortKey": 11,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -355,7 +396,7 @@
       },
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 12,
+      "metaSortKey": 13,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -399,7 +440,7 @@
         }
       ],
       "authentication": {},
-      "metaSortKey": 13,
+      "metaSortKey": 14,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -430,7 +471,7 @@
       "body": {},
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 14,
+      "metaSortKey": 15,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -468,7 +509,7 @@
       },
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 15,
+      "metaSortKey": 16,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -506,7 +547,7 @@
       },
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 16,
+      "metaSortKey": 17,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -537,7 +578,7 @@
       "body": {},
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 17,
+      "metaSortKey": 18,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -584,7 +625,7 @@
       },
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 19,
+      "metaSortKey": 20,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -628,7 +669,7 @@
         }
       ],
       "authentication": {},
-      "metaSortKey": 20,
+      "metaSortKey": 21,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -659,7 +700,7 @@
       "body": {},
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 21,
+      "metaSortKey": 22,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -697,7 +738,7 @@
       },
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 22,
+      "metaSortKey": 23,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -735,7 +776,7 @@
       },
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 23,
+      "metaSortKey": 24,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -766,7 +807,7 @@
       "body": {},
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 24,
+      "metaSortKey": 25,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -813,7 +854,7 @@
       },
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 26,
+      "metaSortKey": 27,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -857,7 +898,7 @@
         }
       ],
       "authentication": {},
-      "metaSortKey": 27,
+      "metaSortKey": 28,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -888,7 +929,7 @@
       "body": {},
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 28,
+      "metaSortKey": 29,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -926,7 +967,7 @@
       },
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 29,
+      "metaSortKey": 30,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -964,7 +1005,7 @@
       },
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 30,
+      "metaSortKey": 31,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -995,7 +1036,7 @@
       "body": {},
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 31,
+      "metaSortKey": 32,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -1042,7 +1083,7 @@
       },
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 33,
+      "metaSortKey": 34,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -1086,7 +1127,7 @@
         }
       ],
       "authentication": {},
-      "metaSortKey": 34,
+      "metaSortKey": 35,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -1117,7 +1158,7 @@
       "body": {},
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 35,
+      "metaSortKey": 36,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -1155,7 +1196,7 @@
       },
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 36,
+      "metaSortKey": 37,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -1193,7 +1234,7 @@
       },
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 37,
+      "metaSortKey": 38,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -1224,7 +1265,7 @@
       "body": {},
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 38,
+      "metaSortKey": 39,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -1268,7 +1309,7 @@
         }
       ],
       "authentication": {},
-      "metaSortKey": 39,
+      "metaSortKey": 40,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -1315,7 +1356,7 @@
       },
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 41,
+      "metaSortKey": 42,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -1365,7 +1406,7 @@
         }
       ],
       "authentication": {},
-      "metaSortKey": 42,
+      "metaSortKey": 43,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -1396,7 +1437,7 @@
       "body": {},
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 43,
+      "metaSortKey": 44,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -1434,7 +1475,7 @@
       },
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 44,
+      "metaSortKey": 45,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -1472,7 +1513,7 @@
       },
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 45,
+      "metaSortKey": 46,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -1503,7 +1544,7 @@
       "body": {},
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 46,
+      "metaSortKey": 47,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -1541,7 +1582,7 @@
       },
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 47,
+      "metaSortKey": 48,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -1579,7 +1620,7 @@
       },
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 48,
+      "metaSortKey": 49,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -1617,7 +1658,7 @@
       },
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 49,
+      "metaSortKey": 50,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -1648,7 +1689,7 @@
       "body": {},
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 50,
+      "metaSortKey": 51,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -1686,7 +1727,7 @@
       },
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 51,
+      "metaSortKey": 52,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -1717,7 +1758,7 @@
       "body": {},
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 52,
+      "metaSortKey": 53,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -1748,7 +1789,7 @@
       "body": {},
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 53,
+      "metaSortKey": 54,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -1779,7 +1820,7 @@
       "body": {},
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 54,
+      "metaSortKey": 55,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -1819,7 +1860,7 @@
       "body": {},
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 56,
+      "metaSortKey": 57,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -1853,11 +1894,11 @@
       ],
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"scores\": [\n    {\n      \"criteria_id\": \"{{ _.criterion_id }}\",\n      \"score_value\": \"9.25\"\n    },\n    {\n      \"criteria_id\": \"{{ _.criterion_2_id }}\",\n      \"score_value\": \"8.75\"\n    }\n  ]\n}"
+        "text": "{\n  \"scores\": [\n    {\n      \"criteria_id\": \"{{ _.criterion_id }}\",\n      \"score_value\": \"9.25\"\n    },\n    {\n      \"criteria_id\": \"{{ _.criterion_2_id }}\",\n      \"score_value\": \"8.75\"\n    },\n    {\n      \"criteria_id\": \"{{ _.criterion_3_id }}\",\n      \"score_value\": \"8.50\"\n    }\n  ]\n}"
       },
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 57,
+      "metaSortKey": 58,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -1895,7 +1936,7 @@
       },
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 58,
+      "metaSortKey": 59,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -1948,7 +1989,7 @@
         }
       ],
       "authentication": {},
-      "metaSortKey": 60,
+      "metaSortKey": 61,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -1986,7 +2027,7 @@
       },
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 61,
+      "metaSortKey": 62,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -2024,7 +2065,7 @@
       },
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 62,
+      "metaSortKey": 63,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -2055,7 +2096,7 @@
       "body": {},
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 63,
+      "metaSortKey": 64,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -2102,7 +2143,7 @@
       },
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 65,
+      "metaSortKey": 66,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -2140,7 +2181,7 @@
       },
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 66,
+      "metaSortKey": 67,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -2178,7 +2219,7 @@
       },
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 67,
+      "metaSortKey": 68,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -2209,7 +2250,7 @@
       "body": {},
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 68,
+      "metaSortKey": 69,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -2247,7 +2288,7 @@
       },
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 69,
+      "metaSortKey": 70,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -2278,7 +2319,7 @@
       "body": {},
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 70,
+      "metaSortKey": 71,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -2316,7 +2357,7 @@
       },
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 71,
+      "metaSortKey": 72,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -2363,7 +2404,7 @@
       },
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 73,
+      "metaSortKey": 74,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -2407,7 +2448,7 @@
         }
       ],
       "authentication": {},
-      "metaSortKey": 74,
+      "metaSortKey": 75,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -2438,7 +2479,7 @@
       "body": {},
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 75,
+      "metaSortKey": 76,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -2476,7 +2517,7 @@
       },
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 76,
+      "metaSortKey": 77,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -2514,7 +2555,7 @@
       },
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 77,
+      "metaSortKey": 78,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -2545,7 +2586,7 @@
       "body": {},
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 78,
+      "metaSortKey": 79,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -2592,7 +2633,7 @@
       },
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 80,
+      "metaSortKey": 81,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -2648,7 +2689,7 @@
         }
       ],
       "authentication": {},
-      "metaSortKey": 81,
+      "metaSortKey": 82,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -2679,7 +2720,7 @@
       "body": {},
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 82,
+      "metaSortKey": 83,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -2717,7 +2758,7 @@
       },
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 83,
+      "metaSortKey": 84,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -2755,7 +2796,7 @@
       },
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 84,
+      "metaSortKey": 85,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -2793,7 +2834,7 @@
         }
       ],
       "authentication": {},
-      "metaSortKey": 85,
+      "metaSortKey": 86,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -2847,7 +2888,7 @@
         }
       ],
       "authentication": {},
-      "metaSortKey": 87,
+      "metaSortKey": 88,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -2878,7 +2919,7 @@
       "body": {},
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 88,
+      "metaSortKey": 89,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -2909,7 +2950,7 @@
       "body": {},
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 89,
+      "metaSortKey": 90,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -2954,7 +2995,7 @@
         }
       ],
       "authentication": {},
-      "metaSortKey": 90,
+      "metaSortKey": 91,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -2992,7 +3033,7 @@
         }
       ],
       "authentication": {},
-      "metaSortKey": 91,
+      "metaSortKey": 92,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -3023,7 +3064,7 @@
       "body": {},
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 92,
+      "metaSortKey": 93,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -3067,7 +3108,7 @@
         }
       ],
       "authentication": {},
-      "metaSortKey": 93,
+      "metaSortKey": 94,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -3098,7 +3139,7 @@
       "body": {},
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 94,
+      "metaSortKey": 95,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -3136,7 +3177,7 @@
       },
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 95,
+      "metaSortKey": 96,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -3180,7 +3221,7 @@
         }
       ],
       "authentication": {},
-      "metaSortKey": 96,
+      "metaSortKey": 97,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -3227,7 +3268,7 @@
       },
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 98,
+      "metaSortKey": 99,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -3295,7 +3336,7 @@
         }
       ],
       "authentication": {},
-      "metaSortKey": 99,
+      "metaSortKey": 100,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -3333,7 +3374,7 @@
         }
       ],
       "authentication": {},
-      "metaSortKey": 100,
+      "metaSortKey": 101,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -3378,7 +3419,7 @@
         }
       ],
       "authentication": {},
-      "metaSortKey": 101,
+      "metaSortKey": 102,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -3416,7 +3457,7 @@
       },
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 102,
+      "metaSortKey": 103,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -3461,7 +3502,7 @@
         }
       ],
       "authentication": {},
-      "metaSortKey": 103,
+      "metaSortKey": 104,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -3506,7 +3547,7 @@
         }
       ],
       "authentication": {},
-      "metaSortKey": 104,
+      "metaSortKey": 105,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -3555,7 +3596,7 @@
         }
       ],
       "authentication": {},
-      "metaSortKey": 105,
+      "metaSortKey": 106,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -3593,7 +3634,7 @@
         }
       ],
       "authentication": {},
-      "metaSortKey": 106,
+      "metaSortKey": 107,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -3638,7 +3679,7 @@
         }
       ],
       "authentication": {},
-      "metaSortKey": 107,
+      "metaSortKey": 108,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -3683,7 +3724,7 @@
         }
       ],
       "authentication": {},
-      "metaSortKey": 108,
+      "metaSortKey": 109,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -3728,7 +3769,7 @@
         }
       ],
       "authentication": {},
-      "metaSortKey": 109,
+      "metaSortKey": 110,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -3775,7 +3816,7 @@
       },
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 111,
+      "metaSortKey": 112,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -3837,7 +3878,7 @@
         }
       ],
       "authentication": {},
-      "metaSortKey": 112,
+      "metaSortKey": 113,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -3868,7 +3909,7 @@
       "body": {},
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 113,
+      "metaSortKey": 114,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -3906,7 +3947,7 @@
       },
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 114,
+      "metaSortKey": 115,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -3944,7 +3985,7 @@
       },
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 115,
+      "metaSortKey": 116,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -3982,7 +4023,7 @@
         }
       ],
       "authentication": {},
-      "metaSortKey": 116,
+      "metaSortKey": 117,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -4026,7 +4067,7 @@
         }
       ],
       "authentication": {},
-      "metaSortKey": 117,
+      "metaSortKey": 118,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -4064,7 +4105,7 @@
       },
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 118,
+      "metaSortKey": 119,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -4102,7 +4143,7 @@
       },
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 119,
+      "metaSortKey": 120,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -4140,7 +4181,7 @@
       },
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 120,
+      "metaSortKey": 121,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -4178,7 +4219,7 @@
       },
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 121,
+      "metaSortKey": 122,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -4223,7 +4264,7 @@
         }
       ],
       "authentication": {},
-      "metaSortKey": 122,
+      "metaSortKey": 123,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -4250,7 +4291,7 @@
       "body": {},
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 123,
+      "metaSortKey": 124,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -4286,7 +4327,7 @@
       "body": {},
       "parameters": [],
       "authentication": {},
-      "metaSortKey": 125,
+      "metaSortKey": 126,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -4295,6 +4336,1423 @@
       "settingFollowRedirects": "off",
       "preRequestScript": "",
       "afterResponseScript": "const ok = insomnia.response.code === 200;\ninsomnia.test('HTTP 200', () => insomnia.expect(insomnia.response.code).to.eql(200));\nif (ok) {\n const body = insomnia.response.json();\n insomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\n if (body.success === true) {\n }\n}\n"
+    },
+    {
+      "_id": "req_80197b400cbcdc570200835f",
+      "_type": "request",
+      "parentId": "fld_7f08abd37cc49a8f94fa",
+      "name": "01 Health",
+      "description": "Skenario mock schema 010. Jalankan sesuai nomor setelah seed. Token terpisah per role; cookie refresh tetap satu jar. Expected HTTP 200.",
+      "url": "{{ _.base_url }}/healthz",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 127,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const expectedStatus = 200;\nconst code = insomnia.response.code;\ninsomnia.test('Expected HTTP '+expectedStatus, () => insomnia.expect(code).to.eql(expectedStatus));\nif (code === expectedStatus) {\n const body = insomnia.response.json();\n insomnia.test('Envelope', () => insomnia.expect(body.success).to.eql(true));\n if (body.success === true) {\n }\n}\n"
+    },
+    {
+      "_id": "fld_7f08abd37cc49a8f94fa",
+      "_type": "request_group",
+      "parentId": "wrk_kicau_schema010",
+      "name": "00 Mock - jalankan berurutan setelah seed 010",
+      "description": "Lihat README untuk prasyarat dan urutan.",
+      "environment": {},
+      "metaSortKey": 0
+    },
+    {
+      "_id": "req_bc101fb84650dc021d5aa6a9",
+      "_type": "request",
+      "parentId": "fld_7f08abd37cc49a8f94fa",
+      "name": "02 Readiness",
+      "description": "Skenario mock schema 010. Jalankan sesuai nomor setelah seed. Token terpisah per role; cookie refresh tetap satu jar. Expected HTTP 200.",
+      "url": "{{ _.base_url }}/readyz",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 129,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const expectedStatus = 200;\nconst code = insomnia.response.code;\ninsomnia.test('Expected HTTP '+expectedStatus, () => insomnia.expect(code).to.eql(expectedStatus));\nif (code === expectedStatus) {\n const body = insomnia.response.json();\n insomnia.test('Envelope', () => insomnia.expect(body.success).to.eql(true));\n if (body.success === true) {\n }\n}\n"
+    },
+    {
+      "_id": "req_79cbf2eb7d8c0fdb9486cfbe",
+      "_type": "request",
+      "parentId": "fld_7f08abd37cc49a8f94fa",
+      "name": "03 Login admin",
+      "description": "Skenario mock schema 010. Jalankan sesuai nomor setelah seed. Token terpisah per role; cookie refresh tetap satu jar. Expected HTTP 200.",
+      "url": "{{ _.base_url }}/api/v1/auth/login",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Origin",
+          "value": "{{ _.frontend_origin }}"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"{{ _.mock_admin_email }}\",\n  \"password\": \"{{ _.password }}\",\n  \"device_id\": \"insomnia-mock-admin\"\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 130,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const expectedStatus = 200;\nconst code = insomnia.response.code;\ninsomnia.test('Expected HTTP '+expectedStatus, () => insomnia.expect(code).to.eql(expectedStatus));\ninsomnia.environment.unset('token_admin');\nif (code === expectedStatus) {\n const body = insomnia.response.json();\n insomnia.test('Envelope', () => insomnia.expect(body.success).to.eql(true));\n if (body.success === true) {\n  const user=body.data?.user;\n  const identityOK=user?.id === insomnia.environment.get('mock_admin_id') && user?.email === insomnia.environment.get('mock_admin_email');\n  const roles=[...(Array.isArray(user?.roles)?user.roles:[]),...(Array.isArray(user?.arena_roles)?user.arena_roles.map(x=>x.role):[])];\n  const roleOK=roles.includes('ADMIN');\n  const token=body.data?.access_token;\n  insomnia.test('Correct fixture identity and role', () => insomnia.expect(identityOK && roleOK && typeof token==='string' && token.length>0).to.eql(true));\n  if(identityOK && roleOK && typeof token==='string' && token.length>0) insomnia.environment.set('token_admin',token);\n  if(identityOK && roleOK && typeof token==='string' && token.length>0) { insomnia.environment.set('access_token',token); insomnia.environment.set('my_user_id',user.id); }\n }\n}\n"
+    },
+    {
+      "_id": "req_de298707444ecabc135e8f10",
+      "_type": "request",
+      "parentId": "fld_7f08abd37cc49a8f94fa",
+      "name": "04 Login admin_a",
+      "description": "Skenario mock schema 010. Jalankan sesuai nomor setelah seed. Token terpisah per role; cookie refresh tetap satu jar. Expected HTTP 200.",
+      "url": "{{ _.base_url }}/api/v1/auth/login",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Origin",
+          "value": "{{ _.frontend_origin }}"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"{{ _.mock_admin_a_email }}\",\n  \"password\": \"{{ _.password }}\",\n  \"device_id\": \"insomnia-mock-admin_a\"\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 131,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const expectedStatus = 200;\nconst code = insomnia.response.code;\ninsomnia.test('Expected HTTP '+expectedStatus, () => insomnia.expect(code).to.eql(expectedStatus));\ninsomnia.environment.unset('token_admin_a');\nif (code === expectedStatus) {\n const body = insomnia.response.json();\n insomnia.test('Envelope', () => insomnia.expect(body.success).to.eql(true));\n if (body.success === true) {\n  const user=body.data?.user;\n  const identityOK=user?.id === insomnia.environment.get('mock_admin_a_id') && user?.email === insomnia.environment.get('mock_admin_a_email');\n  const roles=[...(Array.isArray(user?.roles)?user.roles:[]),...(Array.isArray(user?.arena_roles)?user.arena_roles.map(x=>x.role):[])];\n  const roleOK=roles.includes('ADMIN');\n  const token=body.data?.access_token;\n  insomnia.test('Correct fixture identity and role', () => insomnia.expect(identityOK && roleOK && typeof token==='string' && token.length>0).to.eql(true));\n  if(identityOK && roleOK && typeof token==='string' && token.length>0) insomnia.environment.set('token_admin_a',token);\n }\n}\n"
+    },
+    {
+      "_id": "req_2e17a0d31621a235de978a55",
+      "_type": "request",
+      "parentId": "fld_7f08abd37cc49a8f94fa",
+      "name": "05 Login operator_a",
+      "description": "Skenario mock schema 010. Jalankan sesuai nomor setelah seed. Token terpisah per role; cookie refresh tetap satu jar. Expected HTTP 200.",
+      "url": "{{ _.base_url }}/api/v1/auth/login",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Origin",
+          "value": "{{ _.frontend_origin }}"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"{{ _.mock_operator_a_email }}\",\n  \"password\": \"{{ _.password }}\",\n  \"device_id\": \"insomnia-mock-operator_a\"\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 132,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const expectedStatus = 200;\nconst code = insomnia.response.code;\ninsomnia.test('Expected HTTP '+expectedStatus, () => insomnia.expect(code).to.eql(expectedStatus));\ninsomnia.environment.unset('token_operator_a');\nif (code === expectedStatus) {\n const body = insomnia.response.json();\n insomnia.test('Envelope', () => insomnia.expect(body.success).to.eql(true));\n if (body.success === true) {\n  const user=body.data?.user;\n  const identityOK=user?.id === insomnia.environment.get('mock_operator_a_id') && user?.email === insomnia.environment.get('mock_operator_a_email');\n  const roles=[...(Array.isArray(user?.roles)?user.roles:[]),...(Array.isArray(user?.arena_roles)?user.arena_roles.map(x=>x.role):[])];\n  const roleOK=roles.includes('OPERATOR');\n  const token=body.data?.access_token;\n  insomnia.test('Correct fixture identity and role', () => insomnia.expect(identityOK && roleOK && typeof token==='string' && token.length>0).to.eql(true));\n  if(identityOK && roleOK && typeof token==='string' && token.length>0) insomnia.environment.set('token_operator_a',token);\n }\n}\n"
+    },
+    {
+      "_id": "req_a12cfdc5fa3d5b4563dd11ba",
+      "_type": "request",
+      "parentId": "fld_7f08abd37cc49a8f94fa",
+      "name": "06 Login operator_b",
+      "description": "Skenario mock schema 010. Jalankan sesuai nomor setelah seed. Token terpisah per role; cookie refresh tetap satu jar. Expected HTTP 200.",
+      "url": "{{ _.base_url }}/api/v1/auth/login",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Origin",
+          "value": "{{ _.frontend_origin }}"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"{{ _.mock_operator_b_email }}\",\n  \"password\": \"{{ _.password }}\",\n  \"device_id\": \"insomnia-mock-operator_b\"\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 133,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const expectedStatus = 200;\nconst code = insomnia.response.code;\ninsomnia.test('Expected HTTP '+expectedStatus, () => insomnia.expect(code).to.eql(expectedStatus));\ninsomnia.environment.unset('token_operator_b');\nif (code === expectedStatus) {\n const body = insomnia.response.json();\n insomnia.test('Envelope', () => insomnia.expect(body.success).to.eql(true));\n if (body.success === true) {\n  const user=body.data?.user;\n  const identityOK=user?.id === insomnia.environment.get('mock_operator_b_id') && user?.email === insomnia.environment.get('mock_operator_b_email');\n  const roles=[...(Array.isArray(user?.roles)?user.roles:[]),...(Array.isArray(user?.arena_roles)?user.arena_roles.map(x=>x.role):[])];\n  const roleOK=roles.includes('OPERATOR');\n  const token=body.data?.access_token;\n  insomnia.test('Correct fixture identity and role', () => insomnia.expect(identityOK && roleOK && typeof token==='string' && token.length>0).to.eql(true));\n  if(identityOK && roleOK && typeof token==='string' && token.length>0) insomnia.environment.set('token_operator_b',token);\n }\n}\n"
+    },
+    {
+      "_id": "req_abcb1e3217b9dec486b90d97",
+      "_type": "request",
+      "parentId": "fld_7f08abd37cc49a8f94fa",
+      "name": "07 Login juri_1",
+      "description": "Skenario mock schema 010. Jalankan sesuai nomor setelah seed. Token terpisah per role; cookie refresh tetap satu jar. Expected HTTP 200.",
+      "url": "{{ _.base_url }}/api/v1/auth/login",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Origin",
+          "value": "{{ _.frontend_origin }}"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"{{ _.mock_juri_1_email }}\",\n  \"password\": \"{{ _.password }}\",\n  \"device_id\": \"insomnia-mock-juri_1\"\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 134,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const expectedStatus = 200;\nconst code = insomnia.response.code;\ninsomnia.test('Expected HTTP '+expectedStatus, () => insomnia.expect(code).to.eql(expectedStatus));\ninsomnia.environment.unset('token_juri_1');\nif (code === expectedStatus) {\n const body = insomnia.response.json();\n insomnia.test('Envelope', () => insomnia.expect(body.success).to.eql(true));\n if (body.success === true) {\n  const user=body.data?.user;\n  const identityOK=user?.id === insomnia.environment.get('mock_juri_1_id') && user?.email === insomnia.environment.get('mock_juri_1_email');\n  const roles=[...(Array.isArray(user?.roles)?user.roles:[]),...(Array.isArray(user?.arena_roles)?user.arena_roles.map(x=>x.role):[])];\n  const roleOK=roles.includes('JURI');\n  const token=body.data?.access_token;\n  insomnia.test('Correct fixture identity and role', () => insomnia.expect(identityOK && roleOK && typeof token==='string' && token.length>0).to.eql(true));\n  if(identityOK && roleOK && typeof token==='string' && token.length>0) insomnia.environment.set('token_juri_1',token);\n }\n}\n"
+    },
+    {
+      "_id": "req_0c224f82544edc510de3a069",
+      "_type": "request",
+      "parentId": "fld_7f08abd37cc49a8f94fa",
+      "name": "08 Login juri_2",
+      "description": "Skenario mock schema 010. Jalankan sesuai nomor setelah seed. Token terpisah per role; cookie refresh tetap satu jar. Expected HTTP 200.",
+      "url": "{{ _.base_url }}/api/v1/auth/login",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Origin",
+          "value": "{{ _.frontend_origin }}"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"{{ _.mock_juri_2_email }}\",\n  \"password\": \"{{ _.password }}\",\n  \"device_id\": \"insomnia-mock-juri_2\"\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 135,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const expectedStatus = 200;\nconst code = insomnia.response.code;\ninsomnia.test('Expected HTTP '+expectedStatus, () => insomnia.expect(code).to.eql(expectedStatus));\ninsomnia.environment.unset('token_juri_2');\nif (code === expectedStatus) {\n const body = insomnia.response.json();\n insomnia.test('Envelope', () => insomnia.expect(body.success).to.eql(true));\n if (body.success === true) {\n  const user=body.data?.user;\n  const identityOK=user?.id === insomnia.environment.get('mock_juri_2_id') && user?.email === insomnia.environment.get('mock_juri_2_email');\n  const roles=[...(Array.isArray(user?.roles)?user.roles:[]),...(Array.isArray(user?.arena_roles)?user.arena_roles.map(x=>x.role):[])];\n  const roleOK=roles.includes('JURI');\n  const token=body.data?.access_token;\n  insomnia.test('Correct fixture identity and role', () => insomnia.expect(identityOK && roleOK && typeof token==='string' && token.length>0).to.eql(true));\n  if(identityOK && roleOK && typeof token==='string' && token.length>0) insomnia.environment.set('token_juri_2',token);\n }\n}\n"
+    },
+    {
+      "_id": "req_258ddf33a51b4d1b09e65b6c",
+      "_type": "request",
+      "parentId": "fld_7f08abd37cc49a8f94fa",
+      "name": "09 Login peserta_1",
+      "description": "Skenario mock schema 010. Jalankan sesuai nomor setelah seed. Token terpisah per role; cookie refresh tetap satu jar. Expected HTTP 200.",
+      "url": "{{ _.base_url }}/api/v1/auth/login",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Origin",
+          "value": "{{ _.frontend_origin }}"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"{{ _.mock_peserta_1_email }}\",\n  \"password\": \"{{ _.password }}\",\n  \"device_id\": \"insomnia-mock-peserta_1\"\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 136,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const expectedStatus = 200;\nconst code = insomnia.response.code;\ninsomnia.test('Expected HTTP '+expectedStatus, () => insomnia.expect(code).to.eql(expectedStatus));\ninsomnia.environment.unset('token_peserta_1');\nif (code === expectedStatus) {\n const body = insomnia.response.json();\n insomnia.test('Envelope', () => insomnia.expect(body.success).to.eql(true));\n if (body.success === true) {\n  const user=body.data?.user;\n  const identityOK=user?.id === insomnia.environment.get('mock_peserta_1_id') && user?.email === insomnia.environment.get('mock_peserta_1_email');\n  const roles=[...(Array.isArray(user?.roles)?user.roles:[]),...(Array.isArray(user?.arena_roles)?user.arena_roles.map(x=>x.role):[])];\n  const roleOK=roles.includes('PESERTA');\n  const token=body.data?.access_token;\n  insomnia.test('Correct fixture identity and role', () => insomnia.expect(identityOK && roleOK && typeof token==='string' && token.length>0).to.eql(true));\n  if(identityOK && roleOK && typeof token==='string' && token.length>0) insomnia.environment.set('token_peserta_1',token);\n }\n}\n"
+    },
+    {
+      "_id": "req_da8439a2182b11ed61cc160a",
+      "_type": "request",
+      "parentId": "fld_7f08abd37cc49a8f94fa",
+      "name": "10 Login peserta_2",
+      "description": "Skenario mock schema 010. Jalankan sesuai nomor setelah seed. Token terpisah per role; cookie refresh tetap satu jar. Expected HTTP 200.",
+      "url": "{{ _.base_url }}/api/v1/auth/login",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Origin",
+          "value": "{{ _.frontend_origin }}"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"{{ _.mock_peserta_2_email }}\",\n  \"password\": \"{{ _.password }}\",\n  \"device_id\": \"insomnia-mock-peserta_2\"\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 137,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const expectedStatus = 200;\nconst code = insomnia.response.code;\ninsomnia.test('Expected HTTP '+expectedStatus, () => insomnia.expect(code).to.eql(expectedStatus));\ninsomnia.environment.unset('token_peserta_2');\nif (code === expectedStatus) {\n const body = insomnia.response.json();\n insomnia.test('Envelope', () => insomnia.expect(body.success).to.eql(true));\n if (body.success === true) {\n  const user=body.data?.user;\n  const identityOK=user?.id === insomnia.environment.get('mock_peserta_2_id') && user?.email === insomnia.environment.get('mock_peserta_2_email');\n  const roles=[...(Array.isArray(user?.roles)?user.roles:[]),...(Array.isArray(user?.arena_roles)?user.arena_roles.map(x=>x.role):[])];\n  const roleOK=roles.includes('PESERTA');\n  const token=body.data?.access_token;\n  insomnia.test('Correct fixture identity and role', () => insomnia.expect(identityOK && roleOK && typeof token==='string' && token.length>0).to.eql(true));\n  if(identityOK && roleOK && typeof token==='string' && token.length>0) insomnia.environment.set('token_peserta_2',token);\n }\n}\n"
+    },
+    {
+      "_id": "req_97dd74d3d4850322e552489d",
+      "_type": "request",
+      "parentId": "fld_7f08abd37cc49a8f94fa",
+      "name": "11 Profil ADMIN",
+      "description": "Skenario mock schema 010. Jalankan sesuai nomor setelah seed. Token terpisah per role; cookie refresh tetap satu jar. Expected HTTP 200.",
+      "url": "{{ _.base_url }}/api/v1/auth/me",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_admin }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 138,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const expectedStatus = 200;\nconst code = insomnia.response.code;\ninsomnia.test('Expected HTTP '+expectedStatus, () => insomnia.expect(code).to.eql(expectedStatus));\nif (code === expectedStatus) {\n const body = insomnia.response.json();\n insomnia.test('Envelope', () => insomnia.expect(body.success).to.eql(true));\n if (body.success === true) {\n }\n}\n"
+    },
+    {
+      "_id": "req_3364730e91ed308fc460cecf",
+      "_type": "request",
+      "parentId": "fld_7f08abd37cc49a8f94fa",
+      "name": "12 Daftar arena",
+      "description": "Skenario mock schema 010. Jalankan sesuai nomor setelah seed. Token terpisah per role; cookie refresh tetap satu jar. Expected HTTP 200.",
+      "url": "{{ _.base_url }}/api/v1/arenas",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_admin }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 139,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const expectedStatus = 200;\nconst code = insomnia.response.code;\ninsomnia.test('Expected HTTP '+expectedStatus, () => insomnia.expect(code).to.eql(expectedStatus));\nif (code === expectedStatus) {\n const body = insomnia.response.json();\n insomnia.test('Envelope', () => insomnia.expect(body.success).to.eql(true));\n if (body.success === true) {\n }\n}\n"
+    },
+    {
+      "_id": "req_8fa7667920a31223cc9598ab",
+      "_type": "request",
+      "parentId": "fld_7f08abd37cc49a8f94fa",
+      "name": "13 Tanpa token ditolak",
+      "description": "Skenario mock schema 010. Jalankan sesuai nomor setelah seed. Token terpisah per role; cookie refresh tetap satu jar. Expected HTTP 401.",
+      "url": "{{ _.base_url }}/api/v1/auth/me",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 140,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const expectedStatus = 401;\nconst code = insomnia.response.code;\ninsomnia.test('Expected HTTP '+expectedStatus, () => insomnia.expect(code).to.eql(expectedStatus));\nif (code === expectedStatus) {\n const body = insomnia.response.json();\n insomnia.test('Envelope', () => insomnia.expect(body.success).to.eql(false));\n}\n"
+    },
+    {
+      "_id": "req_15ebd00992d6d20a34743a85",
+      "_type": "request",
+      "parentId": "fld_7f08abd37cc49a8f94fa",
+      "name": "14 Operator A tidak boleh arena B",
+      "description": "Skenario mock schema 010. Jalankan sesuai nomor setelah seed. Token terpisah per role; cookie refresh tetap satu jar. Expected HTTP 403.",
+      "url": "{{ _.base_url }}/api/v1/arenas/6d6f636b-0002-4000-8000-000000000002",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_operator_a }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 141,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const expectedStatus = 403;\nconst code = insomnia.response.code;\ninsomnia.test('Expected HTTP '+expectedStatus, () => insomnia.expect(code).to.eql(expectedStatus));\nif (code === expectedStatus) {\n const body = insomnia.response.json();\n insomnia.test('Envelope', () => insomnia.expect(body.success).to.eql(false));\n}\n"
+    },
+    {
+      "_id": "req_1e739c9a117258d17947b91c",
+      "_type": "request",
+      "parentId": "fld_7f08abd37cc49a8f94fa",
+      "name": "15 Detail burung peserta 1",
+      "description": "Skenario mock schema 010. Jalankan sesuai nomor setelah seed. Token terpisah per role; cookie refresh tetap satu jar. Expected HTTP 200.",
+      "url": "{{ _.base_url }}/api/v1/birds/6d6f636b-0009-4000-8000-000000000001",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_admin }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 142,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const expectedStatus = 200;\nconst code = insomnia.response.code;\ninsomnia.test('Expected HTTP '+expectedStatus, () => insomnia.expect(code).to.eql(expectedStatus));\nif (code === expectedStatus) {\n const body = insomnia.response.json();\n insomnia.test('Envelope', () => insomnia.expect(body.success).to.eql(true));\n if (body.success === true) {\n }\n}\n"
+    },
+    {
+      "_id": "req_a43e8de898d054cffadfcdac",
+      "_type": "request",
+      "parentId": "fld_7f08abd37cc49a8f94fa",
+      "name": "16 History master burung",
+      "description": "Skenario mock schema 010. Jalankan sesuai nomor setelah seed. Token terpisah per role; cookie refresh tetap satu jar. Expected HTTP 200.",
+      "url": "{{ _.base_url }}/api/v1/birds/6d6f636b-0009-4000-8000-000000000001/history",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_admin }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 143,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const expectedStatus = 200;\nconst code = insomnia.response.code;\ninsomnia.test('Expected HTTP '+expectedStatus, () => insomnia.expect(code).to.eql(expectedStatus));\nif (code === expectedStatus) {\n const body = insomnia.response.json();\n insomnia.test('Envelope', () => insomnia.expect(body.success).to.eql(true));\n if (body.success === true) {\n }\n}\n"
+    },
+    {
+      "_id": "req_c140f31498ede1d73d0cd22d",
+      "_type": "request",
+      "parentId": "fld_7f08abd37cc49a8f94fa",
+      "name": "17 Daftarkan peserta 1",
+      "description": "Skenario mock schema 010. Jalankan sesuai nomor setelah seed. Token terpisah per role; cookie refresh tetap satu jar. Expected HTTP 200.",
+      "url": "{{ _.base_url }}/api/v1/registrations",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_operator_a }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"arena_id\": \"6d6f636b-0002-4000-8000-000000000001\",\n  \"user_id\": \"6d6f636b-0001-4000-8000-000000000007\",\n  \"round_id\": \"6d6f636b-0006-4000-8000-000000000001\",\n  \"bird_id\": \"6d6f636b-0009-4000-8000-000000000001\",\n  \"gantangan_id\": \"6d6f636b-0003-4000-8000-000000000001\",\n  \"entry_fee\": \"50000.00\",\n  \"payment_method\": \"CASH\"\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 144,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const expectedStatus = 200;\nconst code = insomnia.response.code;\ninsomnia.test('Expected HTTP '+expectedStatus, () => insomnia.expect(code).to.eql(expectedStatus));\nif (code === expectedStatus) {\n const body = insomnia.response.json();\n insomnia.test('Envelope', () => insomnia.expect(body.success).to.eql(true));\n if (body.success === true) {\n  if (typeof body.data?.id==='string') insomnia.environment.set('mock_registration_1_id',body.data.id);\n }\n}\n"
+    },
+    {
+      "_id": "req_c1938d920c26acac6804054c",
+      "_type": "request",
+      "parentId": "fld_7f08abd37cc49a8f94fa",
+      "name": "18 Daftarkan peserta 2",
+      "description": "Skenario mock schema 010. Jalankan sesuai nomor setelah seed. Token terpisah per role; cookie refresh tetap satu jar. Expected HTTP 200.",
+      "url": "{{ _.base_url }}/api/v1/registrations",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_operator_a }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"arena_id\": \"6d6f636b-0002-4000-8000-000000000001\",\n  \"user_id\": \"6d6f636b-0001-4000-8000-000000000008\",\n  \"round_id\": \"6d6f636b-0006-4000-8000-000000000001\",\n  \"bird_id\": \"6d6f636b-0009-4000-8000-000000000003\",\n  \"gantangan_id\": \"6d6f636b-0003-4000-8000-000000000002\",\n  \"entry_fee\": \"50000.00\",\n  \"payment_method\": \"CASH\"\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 145,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const expectedStatus = 200;\nconst code = insomnia.response.code;\ninsomnia.test('Expected HTTP '+expectedStatus, () => insomnia.expect(code).to.eql(expectedStatus));\nif (code === expectedStatus) {\n const body = insomnia.response.json();\n insomnia.test('Envelope', () => insomnia.expect(body.success).to.eql(true));\n if (body.success === true) {\n  if (typeof body.data?.id==='string') insomnia.environment.set('mock_registration_2_id',body.data.id);\n }\n}\n"
+    },
+    {
+      "_id": "req_ab35ece48c0325b9e71b718a",
+      "_type": "request",
+      "parentId": "fld_7f08abd37cc49a8f94fa",
+      "name": "19 Verifikasi pembayaran peserta 1",
+      "description": "Skenario mock schema 010. Jalankan sesuai nomor setelah seed. Token terpisah per role; cookie refresh tetap satu jar. Expected HTTP 200.",
+      "url": "{{ _.base_url }}/api/v1/registrations/{{ _.mock_registration_1_id }}/verify",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_operator_a }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{}"
+      },
+      "parameters": [
+        {
+          "name": "arena_id",
+          "value": "6d6f636b-0002-4000-8000-000000000001",
+          "disabled": false
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 146,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const expectedStatus = 200;\nconst code = insomnia.response.code;\ninsomnia.test('Expected HTTP '+expectedStatus, () => insomnia.expect(code).to.eql(expectedStatus));\nif (code === expectedStatus) {\n const body = insomnia.response.json();\n insomnia.test('Envelope', () => insomnia.expect(body.success).to.eql(true));\n if (body.success === true) {\n }\n}\n"
+    },
+    {
+      "_id": "req_272ed2efbc36a2a97bc55902",
+      "_type": "request",
+      "parentId": "fld_7f08abd37cc49a8f94fa",
+      "name": "20 Verifikasi pembayaran peserta 2",
+      "description": "Skenario mock schema 010. Jalankan sesuai nomor setelah seed. Token terpisah per role; cookie refresh tetap satu jar. Expected HTTP 200.",
+      "url": "{{ _.base_url }}/api/v1/registrations/{{ _.mock_registration_2_id }}/verify",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_operator_a }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{}"
+      },
+      "parameters": [
+        {
+          "name": "arena_id",
+          "value": "6d6f636b-0002-4000-8000-000000000001",
+          "disabled": false
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 147,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const expectedStatus = 200;\nconst code = insomnia.response.code;\ninsomnia.test('Expected HTTP '+expectedStatus, () => insomnia.expect(code).to.eql(expectedStatus));\nif (code === expectedStatus) {\n const body = insomnia.response.json();\n insomnia.test('Envelope', () => insomnia.expect(body.success).to.eql(true));\n if (body.success === true) {\n }\n}\n"
+    },
+    {
+      "_id": "req_72812a0a7695c1058f4ceb83",
+      "_type": "request",
+      "parentId": "fld_7f08abd37cc49a8f94fa",
+      "name": "21 Roster juri 1",
+      "description": "Skenario mock schema 010. Jalankan sesuai nomor setelah seed. Token terpisah per role; cookie refresh tetap satu jar. Expected HTTP 200.",
+      "url": "{{ _.base_url }}/api/v1/arenas/6d6f636b-0002-4000-8000-000000000001/rounds/6d6f636b-0006-4000-8000-000000000001/judges/6d6f636b-0001-4000-8000-000000000005",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_operator_a }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 148,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const expectedStatus = 200;\nconst code = insomnia.response.code;\ninsomnia.test('Expected HTTP '+expectedStatus, () => insomnia.expect(code).to.eql(expectedStatus));\nif (code === expectedStatus) {\n const body = insomnia.response.json();\n insomnia.test('Envelope', () => insomnia.expect(body.success).to.eql(true));\n if (body.success === true) {\n }\n}\n"
+    },
+    {
+      "_id": "req_3fe905e09c8b9a7a41f2c59b",
+      "_type": "request",
+      "parentId": "fld_7f08abd37cc49a8f94fa",
+      "name": "22 Roster juri 2",
+      "description": "Skenario mock schema 010. Jalankan sesuai nomor setelah seed. Token terpisah per role; cookie refresh tetap satu jar. Expected HTTP 200.",
+      "url": "{{ _.base_url }}/api/v1/arenas/6d6f636b-0002-4000-8000-000000000001/rounds/6d6f636b-0006-4000-8000-000000000001/judges/6d6f636b-0001-4000-8000-000000000006",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_operator_a }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 149,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const expectedStatus = 200;\nconst code = insomnia.response.code;\ninsomnia.test('Expected HTTP '+expectedStatus, () => insomnia.expect(code).to.eql(expectedStatus));\nif (code === expectedStatus) {\n const body = insomnia.response.json();\n insomnia.test('Envelope', () => insomnia.expect(body.success).to.eql(true));\n if (body.success === true) {\n }\n}\n"
+    },
+    {
+      "_id": "req_d375b88f1883f9bb4d3f1ad5",
+      "_type": "request",
+      "parentId": "fld_7f08abd37cc49a8f94fa",
+      "name": "23 Mulai ronde",
+      "description": "Skenario mock schema 010. Jalankan sesuai nomor setelah seed. Token terpisah per role; cookie refresh tetap satu jar. Expected HTTP 200.",
+      "url": "{{ _.base_url }}/api/v1/arenas/6d6f636b-0002-4000-8000-000000000001/rounds/6d6f636b-0006-4000-8000-000000000001/start",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_operator_a }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"expected_status\": \"PREPARED\"\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 150,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const expectedStatus = 200;\nconst code = insomnia.response.code;\ninsomnia.test('Expected HTTP '+expectedStatus, () => insomnia.expect(code).to.eql(expectedStatus));\nif (code === expectedStatus) {\n const body = insomnia.response.json();\n insomnia.test('Envelope', () => insomnia.expect(body.success).to.eql(true));\n if (body.success === true) {\n }\n}\n"
+    },
+    {
+      "_id": "req_72ef7916a2344278f89e080d",
+      "_type": "request",
+      "parentId": "fld_7f08abd37cc49a8f94fa",
+      "name": "24 Mulai penjurian",
+      "description": "Skenario mock schema 010. Jalankan sesuai nomor setelah seed. Token terpisah per role; cookie refresh tetap satu jar. Expected HTTP 200.",
+      "url": "{{ _.base_url }}/api/v1/arenas/6d6f636b-0002-4000-8000-000000000001/rounds/6d6f636b-0006-4000-8000-000000000001/begin-judging",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_operator_a }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"expected_status\": \"RUNNING\"\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 151,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const expectedStatus = 200;\nconst code = insomnia.response.code;\ninsomnia.test('Expected HTTP '+expectedStatus, () => insomnia.expect(code).to.eql(expectedStatus));\nif (code === expectedStatus) {\n const body = insomnia.response.json();\n insomnia.test('Envelope', () => insomnia.expect(body.success).to.eql(true));\n if (body.success === true) {\n }\n}\n"
+    },
+    {
+      "_id": "req_b720041e9e2b629d2630bb0b",
+      "_type": "request",
+      "parentId": "fld_7f08abd37cc49a8f94fa",
+      "name": "25 Tutup sebelum lengkap ditolak",
+      "description": "Skenario mock schema 010. Jalankan sesuai nomor setelah seed. Token terpisah per role; cookie refresh tetap satu jar. Expected HTTP 409.",
+      "url": "{{ _.base_url }}/api/v1/arenas/6d6f636b-0002-4000-8000-000000000001/rounds/6d6f636b-0006-4000-8000-000000000001/close",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_operator_a }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"expected_status\": \"JUDGING\"\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 152,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const expectedStatus = 409;\nconst code = insomnia.response.code;\ninsomnia.test('Expected HTTP '+expectedStatus, () => insomnia.expect(code).to.eql(expectedStatus));\nif (code === expectedStatus) {\n const body = insomnia.response.json();\n insomnia.test('Envelope', () => insomnia.expect(body.success).to.eql(false));\n}\n"
+    },
+    {
+      "_id": "req_8c46bd57962b30d577c19720",
+      "_type": "request",
+      "parentId": "fld_7f08abd37cc49a8f94fa",
+      "name": "26 Nilai peserta 1 oleh juri_1",
+      "description": "Skenario mock schema 010. Jalankan sesuai nomor setelah seed. Token terpisah per role; cookie refresh tetap satu jar. Expected HTTP 200.",
+      "url": "{{ _.base_url }}/api/v1/arenas/6d6f636b-0002-4000-8000-000000000001/rounds/6d6f636b-0006-4000-8000-000000000001/scores/{{ _.mock_registration_1_id }}",
+      "method": "PUT",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_juri_1 }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"scores\": [\n    {\n      \"criteria_id\": \"6d6f636b-0007-4000-8000-000000000001\",\n      \"score_value\": \"8.50\"\n    },\n    {\n      \"criteria_id\": \"6d6f636b-0007-4000-8000-000000000002\",\n      \"score_value\": \"8.50\"\n    },\n    {\n      \"criteria_id\": \"6d6f636b-0007-4000-8000-000000000003\",\n      \"score_value\": \"8.50\"\n    }\n  ]\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 153,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const expectedStatus = 200;\nconst code = insomnia.response.code;\ninsomnia.test('Expected HTTP '+expectedStatus, () => insomnia.expect(code).to.eql(expectedStatus));\nif (code === expectedStatus) {\n const body = insomnia.response.json();\n insomnia.test('Envelope', () => insomnia.expect(body.success).to.eql(true));\n if (body.success === true) {\n }\n}\n"
+    },
+    {
+      "_id": "req_1d4e1ea7f351c1ad5a1a1a27",
+      "_type": "request",
+      "parentId": "fld_7f08abd37cc49a8f94fa",
+      "name": "27 Nilai peserta 1 oleh juri_2",
+      "description": "Skenario mock schema 010. Jalankan sesuai nomor setelah seed. Token terpisah per role; cookie refresh tetap satu jar. Expected HTTP 200.",
+      "url": "{{ _.base_url }}/api/v1/arenas/6d6f636b-0002-4000-8000-000000000001/rounds/6d6f636b-0006-4000-8000-000000000001/scores/{{ _.mock_registration_1_id }}",
+      "method": "PUT",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_juri_2 }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"scores\": [\n    {\n      \"criteria_id\": \"6d6f636b-0007-4000-8000-000000000001\",\n      \"score_value\": \"8.00\"\n    },\n    {\n      \"criteria_id\": \"6d6f636b-0007-4000-8000-000000000002\",\n      \"score_value\": \"8.00\"\n    },\n    {\n      \"criteria_id\": \"6d6f636b-0007-4000-8000-000000000003\",\n      \"score_value\": \"8.00\"\n    }\n  ]\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 154,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const expectedStatus = 200;\nconst code = insomnia.response.code;\ninsomnia.test('Expected HTTP '+expectedStatus, () => insomnia.expect(code).to.eql(expectedStatus));\nif (code === expectedStatus) {\n const body = insomnia.response.json();\n insomnia.test('Envelope', () => insomnia.expect(body.success).to.eql(true));\n if (body.success === true) {\n }\n}\n"
+    },
+    {
+      "_id": "req_ea468132e5091866c0975dbd",
+      "_type": "request",
+      "parentId": "fld_7f08abd37cc49a8f94fa",
+      "name": "28 Nilai peserta 2 oleh juri_1",
+      "description": "Skenario mock schema 010. Jalankan sesuai nomor setelah seed. Token terpisah per role; cookie refresh tetap satu jar. Expected HTTP 200.",
+      "url": "{{ _.base_url }}/api/v1/arenas/6d6f636b-0002-4000-8000-000000000001/rounds/6d6f636b-0006-4000-8000-000000000001/scores/{{ _.mock_registration_2_id }}",
+      "method": "PUT",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_juri_1 }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"scores\": [\n    {\n      \"criteria_id\": \"6d6f636b-0007-4000-8000-000000000001\",\n      \"score_value\": \"7.00\"\n    },\n    {\n      \"criteria_id\": \"6d6f636b-0007-4000-8000-000000000002\",\n      \"score_value\": \"7.00\"\n    },\n    {\n      \"criteria_id\": \"6d6f636b-0007-4000-8000-000000000003\",\n      \"score_value\": \"7.00\"\n    }\n  ]\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 155,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const expectedStatus = 200;\nconst code = insomnia.response.code;\ninsomnia.test('Expected HTTP '+expectedStatus, () => insomnia.expect(code).to.eql(expectedStatus));\nif (code === expectedStatus) {\n const body = insomnia.response.json();\n insomnia.test('Envelope', () => insomnia.expect(body.success).to.eql(true));\n if (body.success === true) {\n }\n}\n"
+    },
+    {
+      "_id": "req_2fa312c04f85460e6b4de4be",
+      "_type": "request",
+      "parentId": "fld_7f08abd37cc49a8f94fa",
+      "name": "29 Nilai peserta 2 oleh juri_2",
+      "description": "Skenario mock schema 010. Jalankan sesuai nomor setelah seed. Token terpisah per role; cookie refresh tetap satu jar. Expected HTTP 200.",
+      "url": "{{ _.base_url }}/api/v1/arenas/6d6f636b-0002-4000-8000-000000000001/rounds/6d6f636b-0006-4000-8000-000000000001/scores/{{ _.mock_registration_2_id }}",
+      "method": "PUT",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_juri_2 }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"scores\": [\n    {\n      \"criteria_id\": \"6d6f636b-0007-4000-8000-000000000001\",\n      \"score_value\": \"7.00\"\n    },\n    {\n      \"criteria_id\": \"6d6f636b-0007-4000-8000-000000000002\",\n      \"score_value\": \"7.00\"\n    },\n    {\n      \"criteria_id\": \"6d6f636b-0007-4000-8000-000000000003\",\n      \"score_value\": \"7.00\"\n    }\n  ]\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 156,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const expectedStatus = 200;\nconst code = insomnia.response.code;\ninsomnia.test('Expected HTTP '+expectedStatus, () => insomnia.expect(code).to.eql(expectedStatus));\nif (code === expectedStatus) {\n const body = insomnia.response.json();\n insomnia.test('Envelope', () => insomnia.expect(body.success).to.eql(true));\n if (body.success === true) {\n }\n}\n"
+    },
+    {
+      "_id": "req_452d5325dcb93dbcca768406",
+      "_type": "request",
+      "parentId": "fld_7f08abd37cc49a8f94fa",
+      "name": "30 Revisi nilai peserta 1",
+      "description": "Skenario mock schema 010. Jalankan sesuai nomor setelah seed. Token terpisah per role; cookie refresh tetap satu jar. Expected HTTP 200.",
+      "url": "{{ _.base_url }}/api/v1/arenas/6d6f636b-0002-4000-8000-000000000001/rounds/6d6f636b-0006-4000-8000-000000000001/scores/{{ _.mock_registration_1_id }}",
+      "method": "PUT",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_juri_1 }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"scores\": [\n    {\n      \"criteria_id\": \"6d6f636b-0007-4000-8000-000000000001\",\n      \"score_value\": \"9.25\"\n    },\n    {\n      \"criteria_id\": \"6d6f636b-0007-4000-8000-000000000002\",\n      \"score_value\": \"8.50\"\n    },\n    {\n      \"criteria_id\": \"6d6f636b-0007-4000-8000-000000000003\",\n      \"score_value\": \"8.50\"\n    }\n  ]\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 157,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const expectedStatus = 200;\nconst code = insomnia.response.code;\ninsomnia.test('Expected HTTP '+expectedStatus, () => insomnia.expect(code).to.eql(expectedStatus));\nif (code === expectedStatus) {\n const body = insomnia.response.json();\n insomnia.test('Envelope', () => insomnia.expect(body.success).to.eql(true));\n if (body.success === true) {\n }\n}\n"
+    },
+    {
+      "_id": "req_823d28cf4e9ddc29853be705",
+      "_type": "request",
+      "parentId": "fld_7f08abd37cc49a8f94fa",
+      "name": "31 Rekap langsung",
+      "description": "Skenario mock schema 010. Jalankan sesuai nomor setelah seed. Token terpisah per role; cookie refresh tetap satu jar. Expected HTTP 200.",
+      "url": "{{ _.base_url }}/api/v1/arenas/6d6f636b-0002-4000-8000-000000000001/rounds/6d6f636b-0006-4000-8000-000000000001/recap",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_operator_a }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 158,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const expectedStatus = 200;\nconst code = insomnia.response.code;\ninsomnia.test('Expected HTTP '+expectedStatus, () => insomnia.expect(code).to.eql(expectedStatus));\nif (code === expectedStatus) {\n const body = insomnia.response.json();\n insomnia.test('Envelope', () => insomnia.expect(body.success).to.eql(true));\n if (body.success === true) {\n }\n}\n"
+    },
+    {
+      "_id": "req_9b219b5c348e374b2a01b3a9",
+      "_type": "request",
+      "parentId": "fld_7f08abd37cc49a8f94fa",
+      "name": "32 Diskualifikasi peserta 2",
+      "description": "Skenario mock schema 010. Jalankan sesuai nomor setelah seed. Token terpisah per role; cookie refresh tetap satu jar. Expected HTTP 200.",
+      "url": "{{ _.base_url }}/api/v1/registrations/{{ _.mock_registration_2_id }}/disqualify",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_operator_a }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"reason\": \"Mock pelanggaran ronde\"\n}"
+      },
+      "parameters": [
+        {
+          "name": "arena_id",
+          "value": "6d6f636b-0002-4000-8000-000000000001",
+          "disabled": false
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 159,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const expectedStatus = 200;\nconst code = insomnia.response.code;\ninsomnia.test('Expected HTTP '+expectedStatus, () => insomnia.expect(code).to.eql(expectedStatus));\nif (code === expectedStatus) {\n const body = insomnia.response.json();\n insomnia.test('Envelope', () => insomnia.expect(body.success).to.eql(true));\n if (body.success === true) {\n }\n}\n"
+    },
+    {
+      "_id": "req_7e7770acfd6cc84acad0d825",
+      "_type": "request",
+      "parentId": "fld_7f08abd37cc49a8f94fa",
+      "name": "33 Skor peserta diskualifikasi ditolak",
+      "description": "Skenario mock schema 010. Jalankan sesuai nomor setelah seed. Token terpisah per role; cookie refresh tetap satu jar. Expected HTTP 409.",
+      "url": "{{ _.base_url }}/api/v1/arenas/6d6f636b-0002-4000-8000-000000000001/rounds/6d6f636b-0006-4000-8000-000000000001/scores/{{ _.mock_registration_2_id }}",
+      "method": "PUT",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_juri_1 }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"scores\": [\n    {\n      \"criteria_id\": \"6d6f636b-0007-4000-8000-000000000001\",\n      \"score_value\": \"8.00\"\n    },\n    {\n      \"criteria_id\": \"6d6f636b-0007-4000-8000-000000000002\",\n      \"score_value\": \"8.00\"\n    },\n    {\n      \"criteria_id\": \"6d6f636b-0007-4000-8000-000000000003\",\n      \"score_value\": \"8.00\"\n    }\n  ]\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 160,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const expectedStatus = 409;\nconst code = insomnia.response.code;\ninsomnia.test('Expected HTTP '+expectedStatus, () => insomnia.expect(code).to.eql(expectedStatus));\nif (code === expectedStatus) {\n const body = insomnia.response.json();\n insomnia.test('Envelope', () => insomnia.expect(body.success).to.eql(false));\n}\n"
+    },
+    {
+      "_id": "req_918f7b1a6b7374a40dc9e281",
+      "_type": "request",
+      "parentId": "fld_7f08abd37cc49a8f94fa",
+      "name": "34 Aktifkan kembali peserta 2",
+      "description": "Skenario mock schema 010. Jalankan sesuai nomor setelah seed. Token terpisah per role; cookie refresh tetap satu jar. Expected HTTP 200.",
+      "url": "{{ _.base_url }}/api/v1/registrations/{{ _.mock_registration_2_id }}/requalify",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_operator_a }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{}"
+      },
+      "parameters": [
+        {
+          "name": "arena_id",
+          "value": "6d6f636b-0002-4000-8000-000000000001",
+          "disabled": false
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 161,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const expectedStatus = 200;\nconst code = insomnia.response.code;\ninsomnia.test('Expected HTTP '+expectedStatus, () => insomnia.expect(code).to.eql(expectedStatus));\nif (code === expectedStatus) {\n const body = insomnia.response.json();\n insomnia.test('Envelope', () => insomnia.expect(body.success).to.eql(true));\n if (body.success === true) {\n }\n}\n"
+    },
+    {
+      "_id": "req_86a43b248551d6186e2923c4",
+      "_type": "request",
+      "parentId": "fld_7f08abd37cc49a8f94fa",
+      "name": "35 Peserta membaca tiket sendiri",
+      "description": "Skenario mock schema 010. Jalankan sesuai nomor setelah seed. Token terpisah per role; cookie refresh tetap satu jar. Expected HTTP 200.",
+      "url": "{{ _.base_url }}/api/v1/registrations/{{ _.mock_registration_1_id }}",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_peserta_1 }}"
+        }
+      ],
+      "body": {},
+      "parameters": [
+        {
+          "name": "arena_id",
+          "value": "6d6f636b-0002-4000-8000-000000000001",
+          "disabled": false
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 162,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const expectedStatus = 200;\nconst code = insomnia.response.code;\ninsomnia.test('Expected HTTP '+expectedStatus, () => insomnia.expect(code).to.eql(expectedStatus));\nif (code === expectedStatus) {\n const body = insomnia.response.json();\n insomnia.test('Envelope', () => insomnia.expect(body.success).to.eql(true));\n if (body.success === true) {\n }\n}\n"
+    },
+    {
+      "_id": "req_642bc649a825889713acda46",
+      "_type": "request",
+      "parentId": "fld_7f08abd37cc49a8f94fa",
+      "name": "36 Peserta tidak boleh tiket orang lain",
+      "description": "Skenario mock schema 010. Jalankan sesuai nomor setelah seed. Token terpisah per role; cookie refresh tetap satu jar. Expected HTTP 403.",
+      "url": "{{ _.base_url }}/api/v1/registrations/{{ _.mock_registration_2_id }}",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_peserta_1 }}"
+        }
+      ],
+      "body": {},
+      "parameters": [
+        {
+          "name": "arena_id",
+          "value": "6d6f636b-0002-4000-8000-000000000001",
+          "disabled": false
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 163,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const expectedStatus = 403;\nconst code = insomnia.response.code;\ninsomnia.test('Expected HTTP '+expectedStatus, () => insomnia.expect(code).to.eql(expectedStatus));\nif (code === expectedStatus) {\n const body = insomnia.response.json();\n insomnia.test('Envelope', () => insomnia.expect(body.success).to.eql(false));\n}\n"
+    },
+    {
+      "_id": "req_baf20b6c7ecb582e49539d17",
+      "_type": "request",
+      "parentId": "fld_7f08abd37cc49a8f94fa",
+      "name": "37 Tutup ronde lengkap",
+      "description": "Skenario mock schema 010. Jalankan sesuai nomor setelah seed. Token terpisah per role; cookie refresh tetap satu jar. Expected HTTP 200.",
+      "url": "{{ _.base_url }}/api/v1/arenas/6d6f636b-0002-4000-8000-000000000001/rounds/6d6f636b-0006-4000-8000-000000000001/close",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_operator_a }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"expected_status\": \"JUDGING\"\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 164,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const expectedStatus = 200;\nconst code = insomnia.response.code;\ninsomnia.test('Expected HTTP '+expectedStatus, () => insomnia.expect(code).to.eql(expectedStatus));\nif (code === expectedStatus) {\n const body = insomnia.response.json();\n insomnia.test('Envelope', () => insomnia.expect(body.success).to.eql(true));\n if (body.success === true) {\n }\n}\n"
+    },
+    {
+      "_id": "req_fa53444befb50b718c8236ed",
+      "_type": "request",
+      "parentId": "fld_7f08abd37cc49a8f94fa",
+      "name": "38 Revisi setelah CLOSED ditolak",
+      "description": "Skenario mock schema 010. Jalankan sesuai nomor setelah seed. Token terpisah per role; cookie refresh tetap satu jar. Expected HTTP 409.",
+      "url": "{{ _.base_url }}/api/v1/arenas/6d6f636b-0002-4000-8000-000000000001/rounds/6d6f636b-0006-4000-8000-000000000001/scores/{{ _.mock_registration_1_id }}",
+      "method": "PUT",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_juri_1 }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"scores\": [\n    {\n      \"criteria_id\": \"6d6f636b-0007-4000-8000-000000000001\",\n      \"score_value\": \"9.00\"\n    },\n    {\n      \"criteria_id\": \"6d6f636b-0007-4000-8000-000000000002\",\n      \"score_value\": \"9.00\"\n    },\n    {\n      \"criteria_id\": \"6d6f636b-0007-4000-8000-000000000003\",\n      \"score_value\": \"9.00\"\n    }\n  ]\n}"
+      },
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 165,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const expectedStatus = 409;\nconst code = insomnia.response.code;\ninsomnia.test('Expected HTTP '+expectedStatus, () => insomnia.expect(code).to.eql(expectedStatus));\nif (code === expectedStatus) {\n const body = insomnia.response.json();\n insomnia.test('Envelope', () => insomnia.expect(body.success).to.eql(false));\n}\n"
+    },
+    {
+      "_id": "req_d7ad6bf9a002fafa087503a7",
+      "_type": "request",
+      "parentId": "fld_7f08abd37cc49a8f94fa",
+      "name": "39 Rekap akhir",
+      "description": "Skenario mock schema 010. Jalankan sesuai nomor setelah seed. Token terpisah per role; cookie refresh tetap satu jar. Expected HTTP 200.",
+      "url": "{{ _.base_url }}/api/v1/arenas/6d6f636b-0002-4000-8000-000000000001/rounds/6d6f636b-0006-4000-8000-000000000001/recap",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token_operator_a }}"
+        }
+      ],
+      "body": {},
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 166,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "off",
+      "preRequestScript": "",
+      "afterResponseScript": "const expectedStatus = 200;\nconst code = insomnia.response.code;\ninsomnia.test('Expected HTTP '+expectedStatus, () => insomnia.expect(code).to.eql(expectedStatus));\nif (code === expectedStatus) {\n const body = insomnia.response.json();\n insomnia.test('Envelope', () => insomnia.expect(body.success).to.eql(true));\n if (body.success === true) {\n }\n}\n"
     }
   ]
 }
