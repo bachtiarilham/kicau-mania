@@ -41,7 +41,7 @@ GitHub main → verify → image GHCR → SSH → pull digest → readiness HTTP
   app.env                         # DATABASE_URL dan konfigurasi aplikasi
   database.env                    # Kredensial admin PostgreSQL saja
   config/docker/config.json       # Login GHCR; hanya disimpan di VPS
-  data/{postgres18,backups}/
+  data/{postgres18,redis,backups}/
   incoming/<commit>/
   releases/<commit>-<time>-<pid>/   # Snapshot Compose, digest dan app.env
   state/{current,deploy.lock,deployments.log,migrations.log}
@@ -53,6 +53,15 @@ File konfigurasi dan credential VPS disimpan di /opt. Perubahan di luar /opt mem
 Apache tidak diperlukan untuk melayani domain sekarang. Jangan menyalakannya bersamaan dengan Nginx Docker karena port 80/443 sudah dipakai. PostgreSQL 17 lama beserta direktori /opt/apps/kicau-mania/data/postgres dan Dockerfile Go 1.22 yang tidak digunakan telah dibersihkan; data PostgreSQL 18 dipertahankan.
 
 ## Setup dan pemeliharaan gateway
+
+Schema 010 memerlukan PostgreSQL dan Redis untuk readiness. Acceptance CI membuat
+stack terisolasi, menyalakan `postgres redis`, lalu menerapkan migrasi sampai 010.
+Deploy aplikasi memastikan service Redis sehat sebelum menjalankan app dengan
+`--no-deps`; PostgreSQL tidak dibuat ulang, direset, atau dimigrasikan oleh deploy.
+Jika app.env versi lama belum memiliki REDIS_URL, snapshot release mendapat
+`REDIS_URL=redis://redis:6379/0`; konfigurasi eksplisit yang sudah ada dipertahankan.
+Readiness gagal akan mencetak status service dan log aplikasi sebelum rollback.
+Acceptance juga memeriksa Redis mati menghasilkan 503 dan pulih setelah restart.
 
 Stack gateway memiliki service nginx, certbot-renew dan certbot-tool (profile tools). Compose memount sertifikat dan frontend dari /opt. Tidak ada Docker socket pada Certbot. Certbot memeriksa renewal setiap 12 jam; sesudah renewal menulis marker, Nginx memeriksanya tiap 60 detik dan reload setelah nginx -t berhasil.
 

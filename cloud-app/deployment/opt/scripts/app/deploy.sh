@@ -26,6 +26,11 @@ release="$APP_DIR/releases/${COMMIT}-$(date -u +%Y%m%dT%H%M%S)-$$"
 mkdir -m 700 "$release"
 cp "$BUNDLE/stack/docker-compose.yml" "$release/docker-compose.yml"
 cp "$APP_DIR/app.env" "$release/app.env"
+# Releases predating schema 010 do not yet define Redis. Add the bundled-service
+# default only to this release snapshot; preserve any explicitly configured URL.
+if ! grep -Eq '^[[:space:]]*REDIS_URL[[:space:]]*=' "$release/app.env"; then
+  printf '\nREDIS_URL=redis://redis:6379/0\n' >> "$release/app.env"
+fi
 printf 'APP_IMAGE=%s\nAPP_ENV_FILE=%s\n' "$IMAGE" "$release/app.env" > "$release/image.env"
 printf '%s\n' "$COMMIT" > "$release/COMMIT"
 compose() {
@@ -49,6 +54,9 @@ failure() {
   trap - ERR INT TERM
   set +e
   record failed
+  echo 'Deployment diagnostics: service status and application logs (no environment dump)' >&2
+  compose "$release" ps --all >&2
+  docker logs --tail 80 "$APP_CONTAINER" >&2
   if (( switched )); then
     if [[ -n $previous && -f $previous/image.env ]]; then
       echo 'Deployment failed; restoring previous image and application configuration'
@@ -65,6 +73,9 @@ trap failure ERR INT TERM
 compose "$release" config --quiet
 compose "$release" pull app
 record starting
+# --no-deps on the app deliberately leaves PostgreSQL untouched. Start/wait for
+# its newly required Redis service explicitly, including upgrades from old stacks.
+compose "$release" up -d --no-deps --wait --wait-timeout "$READY_TIMEOUT" redis
 switched=1
 compose "$release" up -d --no-deps --pull never app
 ready

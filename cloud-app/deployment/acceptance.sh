@@ -9,9 +9,14 @@ export REAL_DOCKER CHECK_IMAGE
 work=$(mktemp -d)
 name="kicau-check-$$"
 export APP_DIR="$work/stack" APP_CONTAINER="${name}-app" DB_CONTAINER="${name}-db" STACK_PROJECT="$name"
-export GATEWAY_NETWORK="${name}-gateway" DEPLOY_READY_TIMEOUT=12
+export GATEWAY_NETWORK="${name}-gateway" DEPLOY_READY_TIMEOUT=30
 mkdir -p "$APP_DIR/data/backups" "$APP_DIR/data/postgres18" "$work/bin" "$work/bundle"
 cleanup() {
+  # Include Redis and future services belonging to this isolated Compose project.
+  if [[ -f $APP_DIR/docker-compose.yml && -f $APP_DIR/.env ]]; then
+    "$REAL_DOCKER" compose --project-name "$name" --project-directory "$APP_DIR" \
+      --env-file "$APP_DIR/.env" -f "$APP_DIR/docker-compose.yml" down --remove-orphans --timeout 5 >/dev/null 2>&1 || true
+  fi
   "$REAL_DOCKER" rm -f "$APP_CONTAINER" "$DB_CONTAINER" "${name}-proxy" >/dev/null 2>&1 || true
   "$REAL_DOCKER" network rm "${name}_internal_net" "$GATEWAY_NETWORK" >/dev/null 2>&1 || true
   "$REAL_DOCKER" image rm "${name}-bad:fixture" >/dev/null 2>&1 || true
@@ -21,8 +26,17 @@ cleanup() {
 }
 on_exit() {
   local status=$?
-  if (( status )) && [[ -f $work/migrations.log ]]; then tail -n 40 "$work/migrations.log" >&2; fi
+  if (( status )); then
+    echo 'Acceptance failed: service status and application logs follow (not environment values).' >&2
+    if [[ -f $APP_DIR/docker-compose.yml && -f $APP_DIR/.env ]]; then
+      "$REAL_DOCKER" compose --project-name "$name" --project-directory "$APP_DIR" \
+        --env-file "$APP_DIR/.env" -f "$APP_DIR/docker-compose.yml" ps --all >&2 || true
+    fi
+    "$REAL_DOCKER" logs --tail 80 "$APP_CONTAINER" >&2 || true
+    if [[ -f $work/migrations.log ]]; then tail -n 20 "$work/migrations.log" >&2; fi
+  fi
   cleanup
+  return "$status"
 }
 trap on_exit EXIT
 bash "$ROOT/cloud-app/deployment/package.sh" "$(printf '%040d' 1)" "$work/bundle.tgz" >/dev/null
@@ -33,7 +47,7 @@ printf 'APP_IMAGE=%s\nAPP_CONTAINER=%s\nDB_CONTAINER=%s\nGATEWAY_NETWORK=%s\nDB_
 printf 'POSTGRES_DB=kicau_mania\nPOSTGRES_USER=postgres\nPOSTGRES_PASSWORD=fixture-admin-only\n' > "$APP_DIR/database.env"
 sed -i 's|^DATABASE_URL=.*|DATABASE_URL=postgres://cloud_fixture:fixture-service-only@postgres:5432/kicau_mania?sslmode=disable|' "$APP_DIR/app.env"
 "$REAL_DOCKER" network create "$GATEWAY_NETWORK" >/dev/null
-"$REAL_DOCKER" compose --project-name "$name" --project-directory "$APP_DIR" --env-file "$APP_DIR/.env" -f "$APP_DIR/docker-compose.yml" up -d --wait postgres
+"$REAL_DOCKER" compose --project-name "$name" --project-directory "$APP_DIR" --env-file "$APP_DIR/.env" -f "$APP_DIR/docker-compose.yml" up -d --wait postgres redis
 bash "$work/bundle/scripts/db/initialize-db.sh" "$work/bundle" > "$work/migrations.log" 2>&1
 KICAU_DB_PASSWORD=fixture-service-only bash "$work/bundle/scripts/db/grant-access.sh" cloud_fixture app
 # Exercise SQL quoting without placing a real credential in any process argument.
@@ -92,6 +106,13 @@ export BOOTSTRAP_ADMIN_NAME='Fixture admin' BOOTSTRAP_ADMIN_EMAIL='admin@cicd.fi
 "$REAL_DOCKER" exec -e BOOTSTRAP_ADMIN_NAME -e BOOTSTRAP_ADMIN_EMAIL -e BOOTSTRAP_ADMIN_PHONE -e BOOTSTRAP_ADMIN_PASSWORD "$APP_CONTAINER" /usr/local/bin/bootstrap-admin
 unset BOOTSTRAP_ADMIN_PASSWORD
 [[ $("$REAL_DOCKER" exec "$DB_CONTAINER" psql -X -U postgres -d kicau_mania -Atc 'SELECT count(*) FROM iam.users') == 1 ]]
+# Schema-010 readiness requires Redis as well as PostgreSQL. A Redis outage must
+# fail readiness and recover after the same persistent service is started again.
+"$REAL_DOCKER" compose --project-name "$name" --project-directory "$APP_DIR" --env-file "$APP_DIR/.env" -f "$APP_DIR/docker-compose.yml" stop redis
+[[ $(curl --silent --show-error --max-time 10 -o /dev/null -w '%{http_code}' "$PUBLIC_API_URL/readyz") == 503 ]]
+"$REAL_DOCKER" compose --project-name "$name" --project-directory "$APP_DIR" --env-file "$APP_DIR/.env" -f "$APP_DIR/docker-compose.yml" up -d --wait redis
+for _ in {1..30}; do if curl -fsS --max-time 5 "$PUBLIC_API_URL/readyz" -o /dev/null 2>/dev/null; then break; fi; sleep 1; done
+curl -fsS --max-time 5 "$PUBLIC_API_URL/readyz" -o /dev/null
 # The failed release also carries broken configuration; rollback must use the old snapshot.
 sed -i 's|^DATABASE_URL=.*|DATABASE_URL=postgres://invalid:fixture@postgres:5432/kicau_mania?sslmode=disable|' "$APP_DIR/app.env"
 printf '%s\n' "$second" > "$work/bundle/COMMIT"
@@ -119,4 +140,4 @@ bash "$work/bundle/scripts/db/restore-db.sh" "$snapshot" --replace
 for _ in {1..30}; do if curl -fsS "$PUBLIC_API_URL/readyz" -o /dev/null 2>/dev/null; then break; fi; sleep 1; done
 curl -fsS "$PUBLIC_API_URL/readyz" -o /dev/null
 [[ $("$REAL_DOCKER" exec "$APP_CONTAINER" id -u) == 10001 ]]
-echo 'Acceptance passed: migrations, restricted roles/password quoting, bootstrap, readiness, sequential deploys, failed image rollback, PostgreSQL persistence, and snapshot restore'
+echo 'Acceptance passed: schema 010, restricted roles/password quoting, bootstrap, PostgreSQL/Redis readiness and recovery, sequential deploys, failed image rollback, PostgreSQL persistence, and snapshot restore'

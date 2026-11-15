@@ -50,7 +50,7 @@ jobs:
           tags: kicau-cloud-check:${{ github.sha }}
           cache-from: type=gha,scope=cloud-check
           cache-to: type=gha,mode=max,scope=cloud-check
-      - name: Exercise deployment and database persistence
+      - name: Exercise schema 010 deployment and PostgreSQL/Redis readiness
         env:
           CHECK_IMAGE: kicau-cloud-check:${{ github.sha }}
         run: bash cloud-app/deployment/acceptance.sh
