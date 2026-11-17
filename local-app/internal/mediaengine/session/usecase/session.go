@@ -173,11 +173,8 @@ func (u *UseCase) StartSession(ctx context.Context, req model.StartRequest) (mod
 		if u.active != nil && u.active.session.ID == req.ID && (old.State == "STARTING" || old.State == "RUNNING" || old.State == "DEGRADED") && string(a) == string(b) {
 			return clone(u.active.session), nil
 		}
-		if u.active == nil && model.Terminal(old.State) {
-			_ = os.Remove(filepath.Join(u.opts.DataDir, "media-sessions", req.ID+".json"))
-		} else {
-			return model.Session{}, apperror.ErrConflict
-		}
+		// Session identity is immutable: recordings and cloud mappings retain it.
+		return model.Session{}, apperror.ErrConflict
 	}
 	if !errors.Is(err, apperror.ErrNotFound) && err != nil {
 		return model.Session{}, err
@@ -191,7 +188,7 @@ func (u *UseCase) StartSession(ctx context.Context, req model.StartRequest) (mod
 	}
 	for _, r := range all {
 		if r.RoundID == req.ID {
-			_ = os.Remove(filepath.Join(u.opts.DataDir, "queue", r.ID+".json"))
+			return model.Session{}, apperror.ErrConflict
 		}
 	}
 	// Copy caller slices before persisting or using them in asynchronous work.
@@ -208,7 +205,7 @@ func (u *UseCase) StartSession(ctx context.Context, req model.StartRequest) (mod
 	jobCtx, cancel := context.WithCancel(u.worker.Context())
 	r := &run{session: s, ctx: jobCtx, cancel: cancel, pipelinesDone: make(chan struct{}), done: make(chan struct{}), records: map[string]recording.Recording{}}
 	for _, ch := range s.ChannelsState {
-		rec := recording.Recording{ID: ch.RecordingID, RoundID: req.ID, ChannelID: ch.ID, State: "RECORDING", File: filepath.Join(u.opts.DataDir, "recordings", ch.RecordingID+".mp4"), Key: "rounds/" + req.ID + "/" + ch.ID + "/" + ch.RecordingID + ".mp4", StartedAt: s.StartedAt}
+		rec := recording.Recording{ID: ch.RecordingID, RoundID: req.ID, ChannelID: ch.ID, State: "RECORDING", File: filepath.Join(u.opts.DataDir, "recordings", ch.RecordingID+".mkv"), Key: "rounds/" + req.ID + "/" + ch.ID + "/" + ch.RecordingID + ".mkv", StartedAt: s.StartedAt}
 		if err := u.recordings.Save(ctx, rec); err != nil {
 			u.abortLocked(r)
 			return model.Session{}, err

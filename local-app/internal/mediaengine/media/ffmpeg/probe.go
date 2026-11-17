@@ -1,10 +1,8 @@
 package ffmpeg
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
-	"io"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -79,7 +77,7 @@ func (f Inspector) Probe(ctx context.Context, source string) (model.Probe, error
 	if result.VideoCodec == "" {
 		return result, &model.Failure{Code: "NO_VIDEO", Message: "Tidak ada paket video pada profil ini"}
 	}
-	return result, nil
+	return result, model.ValidateMedia(result)
 }
 func (f Inspector) Check(ctx context.Context) []model.Diagnostic {
 	results := []model.Diagnostic{}
@@ -89,21 +87,6 @@ func (f Inspector) Check(ctx context.Context) []model.Diagnostic {
 			code, message = "BINARY_MISSING", v.name+" tidak ditemukan"
 		}
 		results = append(results, model.Diagnostic{Component: v.name, Code: code, Message: message})
-	}
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-	cmd := exec.CommandContext(ctx, f.Binary, "-hide_banner", "-encoders")
-	var out boundedOutput
-	cmd.Stdout = &out
-	cmd.Stderr = io.Discard
-	if cmd.Run() == nil {
-		for _, name := range []string{"libx264", "libopus", " aac "} {
-			code, message := "OK", "Encoder "+strings.TrimSpace(name)+" tersedia"
-			if !bytes.Contains(out.Bytes(), []byte(name)) {
-				code, message = "ENCODER_MISSING", "Encoder "+strings.TrimSpace(name)+" tidak tersedia pada build FFmpeg ini"
-			}
-			results = append(results, model.Diagnostic{Component: strings.TrimSpace(name), Code: code, Message: message})
-		}
 	}
 	return results
 }

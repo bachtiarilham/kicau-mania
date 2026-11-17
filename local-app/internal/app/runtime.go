@@ -6,6 +6,8 @@ import (
 	"encoding/hex"
 	"errors"
 	"go.uber.org/zap"
+	cloudMedia "kicau.local/edge/internal/cloudmedia/service"
+	desktopDelivery "kicau.local/edge/internal/delivery/rest/desktop"
 	"net"
 	"net/http"
 	"path/filepath"
@@ -82,22 +84,21 @@ func NewCoordinator(ctx context.Context, c config.Config) (*Coordinator, error) 
 		initial.LANCIDR = networks[0].CIDR
 	}
 	for _, ch := range c.Channels {
-		mode := ch.LiveMode
-		if mode == "" {
-			mode = "copy"
-		}
 		initial.Channels = append(initial.Channels, model.Channel{
-			ID:       ch.ID,
-			IP:       ch.IP,
-			MAC:      ch.MAC,
-			Source:   ch.Source,
-			LiveMode: mode,
+			ID:     ch.ID,
+			IP:     ch.IP,
+			MAC:    ch.MAC,
+			Source: ch.Source,
 		})
 	}
 	u := setupUC.New(initialSettings{m.settings, initial}, onvif.Client{}, ffmpeg.Inspector{Binary: c.FFmpeg, ProbeBinary: c.FFprobe, MediaBinary: c.MediaMTX}, m, m.jobs)
 	m.setup = setupDelivery.New(u, c.LocalControlToken)
 	m.setupFlow = u
-	m.shell = delivery.Router(c, delivery.Handlers{Setup: m.setup})
+	bridge, e := cloudMedia.New(filepath.Join(c.DataDir, "cloud-media"))
+	if e != nil {
+		return nil, e
+	}
+	m.shell = delivery.Router(c, delivery.Handlers{Setup: m.setup, Desktop: &desktopDelivery.Handler{Cloud: bridge}})
 	return m, nil
 }
 
@@ -181,14 +182,8 @@ func (m *Coordinator) Status(ctx context.Context) model.RuntimeStatus {
 		}
 	}
 	if r != nil {
-		converted := false
-		for _, v := range c.Channels {
-			if v.LiveMode == "transcode" {
-				converted = true
-			}
-		}
-		if converted || len(c.Channels) >= 24 {
-			status.CapacityNotice = "Uji 24 live dan jumlah viewer pada mini PC tujuan; konversi H.265 memakai CPU. Kapasitas belum dinyatakan terverifikasi otomatis."
+		if len(c.Channels) >= 24 {
+			status.CapacityNotice = "Kapasitas 24 channel perlu diuji pada komputer arena; live memakai codec sumber tanpa konversi."
 		}
 		status.Ready = r.container.Engine.Status().Ready
 		if !status.Ready && status.ErrorCode == "" {
@@ -202,13 +197,14 @@ func (m *Coordinator) Status(ctx context.Context) model.RuntimeStatus {
 		}
 		sort.Strings(status.Targets)
 		for _, v := range c.Channels {
-			ch := model.ViewChannel{ID: v.ID, LiveMode: v.LiveMode, LiveVideoCodec: "h264"}
+			ch := model.ViewChannel{ID: v.ID}
 			if v.Probe != nil {
 				ch.HasAudio = v.Probe.HasAudio
 				if ch.HasAudio {
-					ch.LiveAudioCodec = "opus"
+					ch.LiveAudioCodec = v.Probe.AudioCodec
 				}
 				ch.VideoCodec = v.Probe.VideoCodec
+				ch.LiveVideoCodec = v.Probe.VideoCodec
 				ch.Width = v.Probe.Width
 				ch.Height = v.Probe.Height
 			}
@@ -287,9 +283,7 @@ func (m *Coordinator) launch(s model.Configuration) (*engineRuntime, error) {
 		return nil, &model.Failure{Code: "NETWORK_UNAVAILABLE", Message: "Interface LAN tersimpan tidak tersedia; pilih kembali interface jika alamat PC berubah"}
 	}
 	c := m.base
-	c.WebRTCBase = m.apiOrigin(s.LANIP)
 	c.LANServerIP = s.LANIP
-	c.ICEHosts = []string{s.LANIP}
 	c.ReadCIDRs = []string{"127.0.0.1/32", "::1/128", s.LANCIDR}
 	c.Channels = []config.Channel{}
 	_, port, _ := net.SplitHostPort(c.Listen)
@@ -301,7 +295,7 @@ func (m *Coordinator) launch(s model.Configuration) (*engineRuntime, error) {
 			return nil, apperror.ErrInvalid
 		}
 		audio := v.Probe.HasAudio
-		c.Channels = append(c.Channels, config.Channel{ID: v.ID, Source: v.Source, LiveMode: v.LiveMode, HasAudio: &audio})
+		c.Channels = append(c.Channels, config.Channel{ID: v.ID, Source: v.Source, HasAudio: &audio})
 	}
 	r, e := startRuntime(m.ctx, c)
 	if e != nil {

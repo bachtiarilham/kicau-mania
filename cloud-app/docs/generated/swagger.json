@@ -172,6 +172,137 @@
       },
       "type": "object"
     },
+    "MediaIngestion": {
+      "properties": {
+        "engine_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "mappings": {
+          "items": {
+            "$ref": "#/definitions/MediaMapping"
+          },
+          "maxItems": 24,
+          "minItems": 1,
+          "type": "array"
+        },
+        "round_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "session_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "engine_id",
+        "session_id",
+        "round_id",
+        "mappings"
+      ],
+      "type": "object"
+    },
+    "MediaMapping": {
+      "properties": {
+        "channel_id": {
+          "type": "string"
+        },
+        "gantangan_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "registration_id": {
+          "format": "uuid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "channel_id",
+        "registration_id",
+        "gantangan_id"
+      ],
+      "type": "object"
+    },
+    "MediaPair": {
+      "properties": {
+        "arena_id": {
+          "format": "uuid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "arena_id"
+      ],
+      "type": "object"
+    },
+    "MediaPart": {
+      "properties": {
+        "number": {
+          "maximum": 10000,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "sha256": {
+          "description": "Base64 SHA-256 of this part; signed and verified by object storage.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "number",
+        "sha256"
+      ],
+      "type": "object"
+    },
+    "MediaUpload": {
+      "properties": {
+        "channel_id": {
+          "type": "string"
+        },
+        "container": {
+          "default": "mp4",
+          "description": "New desktop recordings use mkv; mp4 retained for existing recordings.",
+          "enum": [
+            "mkv",
+            "mp4"
+          ],
+          "type": "string"
+        },
+        "ended_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "recording_id": {
+          "type": "string"
+        },
+        "session_id": {
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "type": "string"
+        },
+        "size_bytes": {
+          "format": "int64",
+          "maximum": 167772160000,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "started_at": {
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "channel_id",
+        "recording_id",
+        "size_bytes",
+        "sha256",
+        "started_at",
+        "ended_at"
+      ],
+      "type": "object"
+    },
     "Participant": {
       "additionalProperties": false,
       "properties": {
@@ -340,9 +471,9 @@
     }
   },
   "info": {
-    "description": "Active schema-010 routes. Opaque access tokens: 15 minutes; rotating refresh cookie: maximum 30 days. ADMIN/OPERATOR arena assignments, JURI round roster, PESERTA own reads. No self registration, Google/SMTP, legacy resources or media recording routes. Master writes require expected_version; history is append-only. CRUD and workflow actions commit before success. Lists use {items,next_cursor,has_more}.",
+    "description": "Active schema-011 routes. Opaque access tokens: 15 minutes; rotating refresh cookie: maximum 30 days. ADMIN/OPERATOR arena assignments, JURI round roster, PESERTA own reads. No self registration, Google/SMTP, legacy resources ; desktop media uses scoped engine credentials and private object storage. Master writes require expected_version; history is append-only. CRUD and workflow actions commit before success. Lists use {items,next_cursor,has_more}.",
     "title": "Kicau Mania Cloud API",
-    "version": "010"
+    "version": "011"
   },
   "paths": {
     "/api/v1/arenas": {
@@ -7131,6 +7262,332 @@
         ]
       }
     },
+    "/api/v1/engine/media/uploads": {
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "request",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/MediaUpload"
+            }
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success after commit",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "400": {
+            "description": "Invalid fields or business values",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "401": {
+            "description": "Invalid or revoked session",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "403": {
+            "description": "Role/arena/roster access denied",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "409": {
+            "description": "Version, relationship or workflow conflict",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "429": {
+            "description": "Login attempt limit",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "503": {
+            "description": "PostgreSQL/schema/Redis unavailable",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          }
+        },
+        "security": [
+          {
+            "EngineAuth": []
+          }
+        ],
+        "summary": "POST /api/v1/engine/media/uploads",
+        "tags": [
+          "engine"
+        ]
+      }
+    },
+    "/api/v1/engine/media/uploads/{id}": {
+      "get": {
+        "parameters": [
+          {
+            "format": "uuid",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success after commit",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "400": {
+            "description": "Invalid fields or business values",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "401": {
+            "description": "Invalid or revoked session",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "403": {
+            "description": "Role/arena/roster access denied",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "409": {
+            "description": "Version, relationship or workflow conflict",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "429": {
+            "description": "Login attempt limit",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "503": {
+            "description": "PostgreSQL/schema/Redis unavailable",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          }
+        },
+        "security": [
+          {
+            "EngineAuth": []
+          }
+        ],
+        "summary": "GET /api/v1/engine/media/uploads/{id}",
+        "tags": [
+          "engine"
+        ]
+      }
+    },
+    "/api/v1/engine/media/uploads/{id}/complete": {
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "format": "uuid",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "body",
+            "name": "request",
+            "required": true,
+            "schema": {
+              "type": "object"
+            }
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success after commit",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "400": {
+            "description": "Invalid fields or business values",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "401": {
+            "description": "Invalid or revoked session",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "403": {
+            "description": "Role/arena/roster access denied",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "409": {
+            "description": "Version, relationship or workflow conflict",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "429": {
+            "description": "Login attempt limit",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "503": {
+            "description": "PostgreSQL/schema/Redis unavailable",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          }
+        },
+        "security": [
+          {
+            "EngineAuth": []
+          }
+        ],
+        "summary": "POST /api/v1/engine/media/uploads/{id}/complete",
+        "tags": [
+          "engine"
+        ]
+      }
+    },
+    "/api/v1/engine/media/uploads/{id}/parts": {
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "format": "uuid",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "body",
+            "name": "request",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/MediaPart"
+            }
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success after commit",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "400": {
+            "description": "Invalid fields or business values",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "401": {
+            "description": "Invalid or revoked session",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "403": {
+            "description": "Role/arena/roster access denied",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "409": {
+            "description": "Version, relationship or workflow conflict",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "429": {
+            "description": "Login attempt limit",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "503": {
+            "description": "PostgreSQL/schema/Redis unavailable",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          }
+        },
+        "security": [
+          {
+            "EngineAuth": []
+          }
+        ],
+        "summary": "POST /api/v1/engine/media/uploads/{id}/parts",
+        "tags": [
+          "engine"
+        ]
+      }
+    },
     "/api/v1/judge/rounds": {
       "get": {
         "parameters": [
@@ -7208,6 +7665,498 @@
         "summary": "GET /api/v1/judge/rounds",
         "tags": [
           "judge"
+        ]
+      }
+    },
+    "/api/v1/media/engines/{engine_id}": {
+      "delete": {
+        "parameters": [
+          {
+            "format": "uuid",
+            "in": "path",
+            "name": "engine_id",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success after commit",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "400": {
+            "description": "Invalid fields or business values",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "401": {
+            "description": "Invalid or revoked session",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "403": {
+            "description": "Role/arena/roster access denied",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "409": {
+            "description": "Version, relationship or workflow conflict",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "429": {
+            "description": "Login attempt limit",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "503": {
+            "description": "PostgreSQL/schema/Redis unavailable",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "DELETE /api/v1/media/engines/{engine_id}",
+        "tags": [
+          "media"
+        ]
+      },
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "format": "uuid",
+            "in": "path",
+            "name": "engine_id",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "body",
+            "name": "request",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/MediaPair"
+            }
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success after commit",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "400": {
+            "description": "Invalid fields or business values",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "401": {
+            "description": "Invalid or revoked session",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "403": {
+            "description": "Role/arena/roster access denied",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "409": {
+            "description": "Version, relationship or workflow conflict",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "429": {
+            "description": "Login attempt limit",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "503": {
+            "description": "PostgreSQL/schema/Redis unavailable",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "POST /api/v1/media/engines/{engine_id}",
+        "tags": [
+          "media"
+        ]
+      }
+    },
+    "/api/v1/media/ingestions": {
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "request",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/MediaIngestion"
+            }
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success after commit",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "400": {
+            "description": "Invalid fields or business values",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "401": {
+            "description": "Invalid or revoked session",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "403": {
+            "description": "Role/arena/roster access denied",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "409": {
+            "description": "Version, relationship or workflow conflict",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "429": {
+            "description": "Login attempt limit",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "503": {
+            "description": "PostgreSQL/schema/Redis unavailable",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "POST /api/v1/media/ingestions",
+        "tags": [
+          "media"
+        ]
+      }
+    },
+    "/api/v1/media/recordings": {
+      "get": {
+        "parameters": [
+          {
+            "in": "query",
+            "name": "cursor",
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "maximum": 100,
+            "minimum": 1,
+            "name": "limit",
+            "type": "integer"
+          },
+          {
+            "in": "query",
+            "name": "arena_id",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "name": "round_id",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "name": "session_id",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "name": "channel_id",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success after commit",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "400": {
+            "description": "Invalid fields or business values",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "401": {
+            "description": "Invalid or revoked session",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "403": {
+            "description": "Role/arena/roster access denied",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "409": {
+            "description": "Version, relationship or workflow conflict",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "429": {
+            "description": "Login attempt limit",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "503": {
+            "description": "PostgreSQL/schema/Redis unavailable",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "GET /api/v1/media/recordings",
+        "tags": [
+          "media"
+        ]
+      }
+    },
+    "/api/v1/media/recordings/{id}": {
+      "get": {
+        "parameters": [
+          {
+            "format": "uuid",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success after commit",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "400": {
+            "description": "Invalid fields or business values",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "401": {
+            "description": "Invalid or revoked session",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "403": {
+            "description": "Role/arena/roster access denied",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "409": {
+            "description": "Version, relationship or workflow conflict",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "429": {
+            "description": "Login attempt limit",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "503": {
+            "description": "PostgreSQL/schema/Redis unavailable",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "GET /api/v1/media/recordings/{id}",
+        "tags": [
+          "media"
+        ]
+      }
+    },
+    "/api/v1/media/recordings/{id}/download": {
+      "get": {
+        "parameters": [
+          {
+            "format": "uuid",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success after commit",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "400": {
+            "description": "Invalid fields or business values",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "401": {
+            "description": "Invalid or revoked session",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "403": {
+            "description": "Role/arena/roster access denied",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "409": {
+            "description": "Version, relationship or workflow conflict",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "429": {
+            "description": "Login attempt limit",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "503": {
+            "description": "PostgreSQL/schema/Redis unavailable",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "GET /api/v1/media/recordings/{id}/download",
+        "tags": [
+          "media"
         ]
       }
     },
@@ -8875,6 +9824,12 @@
   "securityDefinitions": {
     "BearerAuth": {
       "description": "Bearer \u003copaque access token\u003e",
+      "in": "header",
+      "name": "Authorization",
+      "type": "apiKey"
+    },
+    "EngineAuth": {
+      "description": "Bearer \u003cpaired media-engine credential\u003e; never a user access token.",
       "in": "header",
       "name": "Authorization",
       "type": "apiKey"

@@ -22,42 +22,38 @@ type Config struct {
 	AccessMode        string
 	LocalControlToken string
 	// Aplikasi
-	Listen                    string
-	Token                     string
-	DataDir                   string
-	RuntimeDir                string
-	Origins                   []string
-	ArenaID                   string
-	EngineID                  string
-	CloudCommandsURL          string
-	CloudHeartbeatURL         string
-	CloudMediaUpdatesURL      string
-	CloudPlaybackAuthorizeURL string
-	HeartbeatInterval         time.Duration
-	HeartbeatTimeout          time.Duration
-	CloudToken                string
-	FrontendOrigin            string
-	LocalPublicURL            string
-	LANServerIP               string
-	DNSAddress                string
-	DNSUpstreams              []string
+	Listen               string
+	Token                string
+	DataDir              string
+	RuntimeDir           string
+	Origins              []string
+	ArenaID              string
+	EngineID             string
+	CloudCommandsURL     string
+	CloudHeartbeatURL    string
+	CloudMediaUpdatesURL string
+	HeartbeatInterval    time.Duration
+	HeartbeatTimeout     time.Duration
+	CloudToken           string
+	FrontendOrigin       string
+	LocalPublicURL       string
+	LANServerIP          string
+	DNSAddress           string
+	DNSUpstreams         []string
 
 	// Media / NVR
-	FFmpeg         string
-	FFprobe        string
-	MediaMTX       string
-	MediaConfig    string
-	RTSPListen     string
-	RTSPBase       string
-	WebRTCListen   string
-	WebRTCLocalUDP string
-	WebRTCBase     string
-	ICEHosts       []string
-	ReadCIDRs      []string
-	Channels       []Channel
-	Destinations   map[string]string
-	NVRIP          string
-	NVRMAC         string
+	FFmpeg      string
+	FFprobe     string
+	MediaMTX    string
+	MediaConfig string
+	RTSPListen  string
+	RTSPBase    string
+
+	ReadCIDRs    []string
+	Channels     []Channel
+	Destinations map[string]string
+	NVRIP        string
+	NVRMAC       string
 
 	// Audio
 	SampleRate int
@@ -80,12 +76,12 @@ type Config struct {
 }
 
 type Channel struct {
-	ID       string `json:"id"`
-	IP       string `json:"ip,omitempty"`
-	MAC      string `json:"mac,omitempty"`
-	Source   string `json:"source"`
-	LiveMode string `json:"live_mode,omitempty"`
-	HasAudio *bool  `json:"has_audio,omitempty"`
+	ID     string `json:"id"`
+	IP     string `json:"ip,omitempty"`
+	MAC    string `json:"mac,omitempty"`
+	Source string `json:"source"`
+
+	HasAudio *bool `json:"has_audio,omitempty"`
 }
 
 func Load(path string) (Config, error) {
@@ -140,42 +136,37 @@ func Load(path string) (Config, error) {
 	cfg := Config{
 		AccessMode: getEnv("ENGINE_ACCESS_MODE", "cloud"),
 		// Aplikasi
-		Listen:                    getEnv("HTTP_ADDR", "127.0.0.1:8090"),
-		Token:                     getEnv("API_TOKEN", ""),
-		DataDir:                   dataDir,
-		RuntimeDir:                runtimeDir,
-		Origins:                   strings.Split(getEnv("ALLOWED_ORIGINS", "http://localhost:3000"), ","),
-		ArenaID:                   getEnv("ARENA_ID", "arena01"),
-		EngineID:                  getEnv("ENGINE_ID", "engine01"),
-		CloudCommandsURL:          getEnv("CLOUD_COMMANDS_URL", ""),
-		CloudHeartbeatURL:         getEnv("CLOUD_HEARTBEAT_URL", ""),
-		CloudMediaUpdatesURL:      getEnv("CLOUD_MEDIA_UPDATES_URL", ""),
-		CloudPlaybackAuthorizeURL: getEnv("CLOUD_PLAYBACK_AUTHORIZE_URL", ""),
-		HeartbeatInterval:         heartbeatInterval,
-		HeartbeatTimeout:          heartbeatTimeout,
-		CloudToken:                getEnv("CLOUD_ENGINE_TOKEN", ""),
-		FrontendOrigin:            strings.TrimRight(getEnv("FRONTEND_ORIGIN", ""), "/"),
-		LocalPublicURL:            strings.TrimRight(getEnv("LOCAL_PUBLIC_URL", ""), "/"),
-		LANServerIP:               getEnv("LAN_SERVER_IP", ""),
-		DNSAddress:                getEnv("DNS_LISTEN_ADDR", ""),
-		DNSUpstreams:              strings.Split(getEnv("DNS_UPSTREAMS", "1.1.1.1:53,8.8.8.8:53"), ","),
+		Listen:               getEnv("HTTP_ADDR", "127.0.0.1:8090"),
+		Token:                getEnv("API_TOKEN", ""),
+		DataDir:              dataDir,
+		RuntimeDir:           runtimeDir,
+		Origins:              strings.Split(getEnv("ALLOWED_ORIGINS", "http://localhost:3000"), ","),
+		ArenaID:              getEnv("ARENA_ID", "arena01"),
+		EngineID:             getEnv("ENGINE_ID", "engine01"),
+		CloudCommandsURL:     getEnv("CLOUD_COMMANDS_URL", ""),
+		CloudHeartbeatURL:    getEnv("CLOUD_HEARTBEAT_URL", ""),
+		CloudMediaUpdatesURL: getEnv("CLOUD_MEDIA_UPDATES_URL", ""),
+		HeartbeatInterval:    heartbeatInterval,
+		HeartbeatTimeout:     heartbeatTimeout,
+		CloudToken:           getEnv("CLOUD_ENGINE_TOKEN", ""),
+		FrontendOrigin:       strings.TrimRight(getEnv("FRONTEND_ORIGIN", ""), "/"),
+		LocalPublicURL:       strings.TrimRight(getEnv("LOCAL_PUBLIC_URL", ""), "/"),
+		LANServerIP:          getEnv("LAN_SERVER_IP", ""),
+		DNSAddress:           getEnv("DNS_LISTEN_ADDR", ""),
+		DNSUpstreams:         strings.Split(getEnv("DNS_UPSTREAMS", "1.1.1.1:53,8.8.8.8:53"), ","),
 
 		// Media / NVR
-		FFmpeg:         getEnv("FFMPEG_BIN", "ffmpeg"),
-		FFprobe:        getEnv("FFPROBE_BIN", "ffprobe"),
-		MediaMTX:       getEnv("MEDIAMTX_BIN", "mediamtx"),
-		MediaConfig:    filepath.Join(runtimeDir, "mediamtx.yml"),
-		RTSPListen:     getEnv("RTSP_ADDR", "127.0.0.1:8554"),
-		RTSPBase:       getEnv("RTSP_BASE_URL", "rtsp://127.0.0.1:8554"),
-		WebRTCListen:   getEnv("WEBRTC_ADDR", "127.0.0.1:8889"),
-		WebRTCLocalUDP: getEnv("WEBRTC_LOCAL_UDP_ADDR", ":8189"),
-		WebRTCBase:     getEnv("WEBRTC_PUBLIC_URL", "http://127.0.0.1:8090"),
-		ICEHosts:       strings.Split(getEnv("WEBRTC_HOSTS", "127.0.0.1"), ","),
-		ReadCIDRs:      strings.Split(getEnv("MEDIA_READ_CIDRS", "127.0.0.1/32,::1/128"), ","),
-		Channels:       channels,
-		Destinations:   destinations,
-		NVRIP:          getEnv("NVR_IP", "192.168.1.123"),
-		NVRMAC:         getEnv("NVR_MAC", "B8:86:87:C0:C3:AF"),
+		FFmpeg:       getEnv("FFMPEG_BIN", "ffmpeg"),
+		FFprobe:      getEnv("FFPROBE_BIN", "ffprobe"),
+		MediaMTX:     getEnv("MEDIAMTX_BIN", "mediamtx"),
+		MediaConfig:  filepath.Join(runtimeDir, "mediamtx.yml"),
+		RTSPListen:   getEnv("RTSP_ADDR", "127.0.0.1:8554"),
+		RTSPBase:     getEnv("RTSP_BASE_URL", "rtsp://127.0.0.1:8554"),
+		ReadCIDRs:    strings.Split(getEnv("MEDIA_READ_CIDRS", "127.0.0.1/32,::1/128"), ","),
+		Channels:     channels,
+		Destinations: destinations,
+		NVRIP:        getEnv("NVR_IP", "192.168.1.123"),
+		NVRMAC:       getEnv("NVR_MAC", "B8:86:87:C0:C3:AF"),
 
 		// Audio
 		SampleRate: 16000,
@@ -204,7 +195,6 @@ func Load(path string) (Config, error) {
 		cfg.Token = hex.EncodeToString(secret[:])
 	}
 	if cfg.LocalPublicURL != "" {
-		cfg.WebRTCBase = cfg.LocalPublicURL
 		cfg.Origins = append([]string{cfg.LocalPublicURL}, cfg.Origins...)
 	}
 	if cfg.FrontendOrigin != "" {
@@ -223,10 +213,10 @@ func validate(c Config) error {
 	if c.HeartbeatInterval < time.Second || c.HeartbeatTimeout <= c.HeartbeatInterval || c.HeartbeatTimeout > 5*time.Minute {
 		return fmt.Errorf("heartbeat timeout must exceed interval and be at most 5m")
 	}
-	for _, address := range []string{c.WebRTCListen, c.RTSPListen} {
+	for _, address := range []string{c.RTSPListen} {
 		host, _, err := net.SplitHostPort(address)
 		if err != nil || net.ParseIP(host) == nil || !net.ParseIP(host).IsLoopback() {
-			return fmt.Errorf("RTSP_ADDR and WEBRTC_ADDR must bind loopback")
+			return fmt.Errorf("RTSP_ADDR must bind loopback")
 		}
 	}
 
@@ -242,7 +232,7 @@ func validate(c Config) error {
 			return fmt.Errorf("public URLs must be HTTP(S) origins without a path")
 		}
 	}
-	for _, endpoint := range []string{c.CloudCommandsURL, c.CloudHeartbeatURL, c.CloudMediaUpdatesURL, c.CloudPlaybackAuthorizeURL} {
+	for _, endpoint := range []string{c.CloudCommandsURL, c.CloudHeartbeatURL, c.CloudMediaUpdatesURL} {
 		if endpoint == "" {
 			continue
 		}
@@ -289,9 +279,6 @@ func validate(c Config) error {
 	}
 	seen := map[string]bool{}
 	for _, ch := range c.Channels {
-		if ch.LiveMode != "" && ch.LiveMode != "copy" && ch.LiveMode != "transcode" {
-			return fmt.Errorf("invalid live mode for channel %s", ch.ID)
-		}
 		if !ValidID(ch.ID) || seen[ch.ID] {
 			return fmt.Errorf("invalid or duplicate channel ID")
 		}
@@ -300,13 +287,8 @@ func validate(c Config) error {
 			return fmt.Errorf("channel %s requires a full RTSP URL", ch.ID)
 		}
 	}
-	if !validURL(c.RTSPBase, "rtsp") || !validURL(c.WebRTCBase, "http", "https") {
+	if !validURL(c.RTSPBase, "rtsp") {
 		return fmt.Errorf("invalid media base URL")
-	}
-	_, udpPort, err := net.SplitHostPort(c.WebRTCLocalUDP)
-	port, portErr := strconv.Atoi(udpPort)
-	if err != nil || portErr != nil || port < 1 || port > 65535 {
-		return fmt.Errorf("WEBRTC_LOCAL_UDP_ADDR requires host:port with port 1..65535")
 	}
 	for _, s := range c.ReadCIDRs {
 		if _, _, err := net.ParseCIDR(strings.TrimSpace(s)); err != nil {

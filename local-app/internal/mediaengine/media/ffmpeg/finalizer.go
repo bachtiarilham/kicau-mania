@@ -26,7 +26,7 @@ func (b *boundedOutput) Write(p []byte) (int, error) {
 	return b.Buffer.Write(p)
 }
 func (f Finalizer) signature(ctx context.Context, path string) (string, error) {
-	cmd := exec.CommandContext(ctx, f.Probe, "-v", "error", "-count_packets", "-show_data", "-show_entries", "stream=codec_type,codec_name,width,height,pix_fmt,profile,level,sample_rate,channels,channel_layout,extradata,nb_read_packets:format=duration", "-of", "json", path)
+	cmd := exec.CommandContext(ctx, f.Probe, "-v", "error", "-count_packets", "-show_data", "-show_entries", "stream=codec_type,codec_name,width,height,pix_fmt,profile,level,sample_rate,channels,channel_layout,extradata,nb_read_packets:format=duration,format_name", "-of", "json", path)
 	var out boundedOutput
 	cmd.Stdout = &out
 	cmd.Stderr = io.Discard
@@ -37,10 +37,14 @@ func (f Finalizer) signature(ctx context.Context, path string) (string, error) {
 		Streams []map[string]any `json:"streams"`
 		Format  struct {
 			Duration string `json:"duration"`
+			Name     string `json:"format_name"`
 		} `json:"format"`
 	}
 	if json.Unmarshal(out.Bytes(), &data) != nil {
 		return "", media.FinalizationError("invalid recording probe")
+	}
+	if !strings.Contains(data.Format.Name, "matroska") {
+		return "", media.FinalizationError("recording must contain Matroska media")
 	}
 	d, err := strconv.ParseFloat(data.Format.Duration, 64)
 	if err != nil || d <= 0 || math.IsNaN(d) || math.IsInf(d, 0) {
@@ -59,8 +63,8 @@ func (f Finalizer) signature(ctx context.Context, path string) (string, error) {
 		delete(s, "nb_read_packets")
 		streams[k] = s
 	}
-	if streams["video"] == nil {
-		return "", media.FinalizationError("recording requires video")
+	if streams["video"] == nil || streams["video"]["codec_name"] != "hevc" {
+		return "", media.FinalizationError("recording requires HEVC video")
 	}
 	b, _ := json.Marshal(streams)
 	return string(b), nil
@@ -76,6 +80,9 @@ func (f Finalizer) remux(ctx context.Context, args ...string) error {
 	return nil
 }
 func (f Finalizer) Finalize(ctx context.Context, parts []string, output string) error {
+	if !strings.EqualFold(filepath.Ext(output), ".mkv") {
+		return media.FinalizationError("only MKV recordings are supported")
+	}
 	if _, err := os.Stat(output); err == nil {
 		_, err = f.signature(ctx, output)
 		return err
@@ -85,6 +92,8 @@ func (f Finalizer) Finalize(ctx context.Context, parts []string, output string) 
 	if len(parts) == 0 {
 		return media.FinalizationError("no recording segments")
 	}
+	ext := ".mkv"
+	mux := []string{"-f", "matroska"}
 	var signature string
 	valid := []string{}
 	for _, part := range parts {
@@ -92,16 +101,16 @@ func (f Finalizer) Finalize(ctx context.Context, parts []string, output string) 
 		// preserving the original even when FFmpeg exits on a truncated tail.
 		file := part
 		if strings.HasSuffix(part, ".partial") {
-			file = part + ".salvage.mp4"
+			file = part + ".salvage" + ext
 			if _, err := f.signature(ctx, file); err != nil {
-				tmp, err := os.CreateTemp(filepath.Dir(output), ".salvage-*.mp4")
+				tmp, err := os.CreateTemp(filepath.Dir(output), ".salvage-*"+ext)
 				if err != nil {
 					return media.FinalizationError("cannot prepare salvage")
 				}
 				name := tmp.Name()
 				tmp.Close()
 				os.Remove(name)
-				_ = f.remux(ctx, "-i", part, "-map", "0:v:0", "-map", "0:a:0?", "-c", "copy", "-movflags", "+frag_keyframe+empty_moov+default_base_moof", "-f", "mp4", "-n", name)
+				_ = f.remux(ctx, append(append([]string{"-i", part, "-map", "0:v:0", "-map", "0:a:0?", "-c", "copy"}, mux...), "-n", name)...)
 				if _, err := f.signature(ctx, name); err != nil {
 					os.Remove(name)
 					return media.FinalizationError("recording segment cannot be recovered")
@@ -146,7 +155,7 @@ func (f Finalizer) Finalize(ctx context.Context, parts []string, output string) 
 	if list.Close() != nil {
 		return media.FinalizationError("cannot close recording list")
 	}
-	tmp, err := os.CreateTemp(filepath.Dir(output), ".final-*.mp4")
+	tmp, err := os.CreateTemp(filepath.Dir(output), ".final-*"+ext)
 	if err != nil {
 		return media.FinalizationError("cannot prepare final recording")
 	}
@@ -154,7 +163,7 @@ func (f Finalizer) Finalize(ctx context.Context, parts []string, output string) 
 	tmp.Close()
 	os.Remove(name)
 	defer os.Remove(name)
-	if err := f.remux(ctx, "-f", "concat", "-safe", "0", "-i", list.Name(), "-map", "0:v:0", "-map", "0:a:0?", "-c", "copy", "-movflags", "+frag_keyframe+empty_moov+default_base_moof", "-f", "mp4", "-n", name); err != nil {
+	if err := f.remux(ctx, append(append([]string{"-f", "concat", "-safe", "0", "-i", list.Name(), "-map", "0:v:0", "-map", "0:a:0?", "-c", "copy"}, mux...), "-n", name)...); err != nil {
 		return err
 	}
 	if _, err := f.signature(ctx, name); err != nil {

@@ -24,7 +24,7 @@ func main() {
 	}
 }
 func run() error {
-	source := flag.String("source", ".env.webcam", "source application configuration")
+	source := flag.String("source", ".env.portable.example", "source application configuration")
 	settings := flag.String("settings", ".env.lan", "canonical LAN configuration")
 	proxy := flag.Bool("serve-proxy", false, "run the provisioned Caddy binary with DNS-01")
 	paths := flag.Bool("paths", false, "render configuration and print only generated paths as JSON")
@@ -115,10 +115,6 @@ func run() error {
 	app["HTTP_ADDR"] = "127.0.0.1:8090"
 	app["RTSP_ADDR"] = "127.0.0.1:8554"
 	app["RTSP_BASE_URL"] = "rtsp://127.0.0.1:8554"
-	app["WEBRTC_ADDR"] = "127.0.0.1:8889"
-	app["WEBRTC_LOCAL_UDP_ADDR"] = ":8189"
-	app["WEBRTC_PUBLIC_URL"] = values["LOCAL_PUBLIC_URL"]
-	app["WEBRTC_HOSTS"] = ip.String() + ",127.0.0.1"
 	app["MEDIA_READ_CIDRS"] = "127.0.0.1/32,::1/128," + values["LAN_READ_CIDR"]
 	app["DNS_LISTEN_ADDR"] = net.JoinHostPort(ip.String(), "53")
 	app["ALLOWED_ORIGINS"] = values["FRONTEND_ORIGIN"] + "," + values["LOCAL_PUBLIC_URL"]

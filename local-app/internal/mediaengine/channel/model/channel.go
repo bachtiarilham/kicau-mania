@@ -8,5 +8,5 @@ type Channel struct {
 // PlaybackChannel adds public playback information without exposing source credentials.
 type PlaybackChannel struct {
 	ID   string
-	WHEP string
+	RTSP string
 }

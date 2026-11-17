@@ -1,6 +1,6 @@
-# Kicau Mania Cloud — schema 010
+# Kicau Mania Cloud — schema 011
 
-API Go/Gin untuk alur lomba 1–12. Routing aktif memakai `internal/login` dan `internal/workflow`; SQL tetap berada di `db/queries`. PostgreSQL schema 010 diperlukan. Aplikasi tidak menjalankan migrasi, seed, atau reset saat startup. Modul lama masih tersimpan sebagai kode historis dan tidak dipasang pada router.
+API Go/Gin untuk alur lomba 1–12. Routing aktif memakai `internal/login`, `internal/workflow`, dan `internal/media`; SQL tetap berada di `db/queries`. PostgreSQL schema 011 diperlukan. Aplikasi tidak menjalankan migrasi, seed, atau reset saat startup. Modul lama masih tersimpan sebagai kode historis dan tidak dipasang pada router.
 
 ## Konfigurasi dan menjalankan
 
@@ -54,6 +54,11 @@ $env:KICAU_TEST_FRONTEND_DIR='D:/ilham/workdir/sveltekit/kicau-mania-web'
 go test ./internal/app -run TestSchema010BusinessFlows -v
 ```
 
-Kedua URL pengujian harus menunjuk layanan khusus tes. Tes membuat database bernama unik `kicau_test_*`, memuat schema 010, menjalankan named SQL dan HTTP, lalu menghapus database tes tersebut. Tes tidak membaca `DATABASE_URL` atau `.env` operasional. Tanpa dua environment tes, integrasi dilewati dengan alasan eksplisit.
+Kedua URL pengujian harus menunjuk layanan khusus tes. Tes membuat database bernama unik `kicau_test_*`, memuat schema 011, menjalankan named SQL dan HTTP, lalu menghapus database tes tersebut. Tes tidak membaca `DATABASE_URL` atau `.env` operasional. Tanpa dua environment tes, integrasi dilewati dengan alasan eksplisit.
 
 Tidak mencakup media recording cloud/ingest, email otomatis, Google login, pendaftaran mandiri, bracket/pemenang tersimpan, atau rollback history otomatis. Dashboard kamera tetap menggunakan local-app tersendiri.
+
+
+## Media desktop
+
+Desktop baru berada pada [wails/kicau-mania-desktop](../D:/ilham/workdir/wails/kicau-mania-desktop/README.md). Migrasi 011 menambah pairing engine, mapping sesi/tiket dan aset rekaman multipart tanpa menimpa tabel lama atau mereset data. Terapkan satu file migrasi ini secara eksplisit mengikuti prosedur deployment sebelum menjalankan release baru. Konfigurasi MEDIA_S3_* hanya berada di cloud. Lihat [kontrak media](../wails/kicau-mania-desktop/docs/cloud-media-contract.md) untuk endpoint pengguna dan credential engine yang berbeda.

@@ -69,7 +69,7 @@ const docTemplate = `{
                 "tags": [
                     "Channels"
                 ],
-                "summary": "Daftar channel dan alamat WHEP/audio",
+                "summary": "Daftar channel dan alamat RTSP/audio",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -147,6 +147,194 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/desktop/cloud": {
+            "get": {
+                "security": [
+                    {
+                        "LocalControl": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Desktop media"
+                ],
+                "summary": "Status pairing engine",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "LocalControl": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Desktop media"
+                ],
+                "summary": "Simpan pairing engine",
+                "parameters": [
+                    {
+                        "description": "Payload engine",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.Pairing"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/desktop/mappings": {
+            "post": {
+                "security": [
+                    {
+                        "LocalControl": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Desktop media"
+                ],
+                "summary": "Simpan mapping yang sudah dikonfirmasi cloud",
+                "parameters": [
+                    {
+                        "description": "Payload engine",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.Ingestion"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/response.Response"
                         }
@@ -404,6 +592,66 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/media/sessions/current": {
+            "get": {
+                "security": [
+                    {
+                        "LocalControl": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Media sessions"
+                ],
+                "summary": "Baca status sesi media yang sedang aktif atau terakhir",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.Session"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/media/sessions/reset": {
+            "post": {
+                "security": [
+                    {
+                        "LocalControl": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Media sessions"
+                ],
+                "summary": "Reset riwayat sesi media dan manifest",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/media/sessions/{id}": {
             "get": {
                 "security": [
@@ -644,216 +892,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/playback/{channel}/whep": {
-            "post": {
-                "security": [
-                    {
-                        "PlaybackTicket": []
-                    }
-                ],
-                "description": "Kirim SDP offer dari RTCPeerConnection; response SDP answer, bukan JSON. Mode LAN: tanpa tiket, subnet pembaca saja. Mode cloud: Authorization Bearer tiket playback cloud (bukan API_TOKEN). Harus ada sesi media aktif untuk channel. Location menunjuk resource WHEP lanjutan pada gateway lokal. Swagger tidak membuat SDP/ICE atau memutar video.",
-                "consumes": [
-                    "application/sdp"
-                ],
-                "produces": [
-                    "application/sdp"
-                ],
-                "tags": [
-                    "WHEP"
-                ],
-                "summary": "Buka sesi playback WebRTC melalui WHEP",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "ID channel",
-                        "name": "channel",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "SDP offer dari browser, maksimal 128 KiB",
-                        "name": "offer",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "SDP answer",
-                        "schema": {
-                            "type": "string"
-                        },
-                        "headers": {
-                            "ETag": {
-                                "type": "string",
-                                "description": "ETag sesi upstream"
-                            },
-                            "Location": {
-                                "type": "string",
-                                "description": "Resource gateway untuk PATCH/DELETE"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Request ditolak; error dapat berupa JSON, text atau tanpa body sesuai gateway/upstream"
-                    },
-                    "401": {
-                        "description": "Request ditolak; error dapat berupa JSON, text atau tanpa body sesuai gateway/upstream"
-                    },
-                    "403": {
-                        "description": "Request ditolak; error dapat berupa JSON, text atau tanpa body sesuai gateway/upstream"
-                    },
-                    "404": {
-                        "description": "Request ditolak; error dapat berupa JSON, text atau tanpa body sesuai gateway/upstream"
-                    },
-                    "409": {
-                        "description": "Request ditolak; error dapat berupa JSON, text atau tanpa body sesuai gateway/upstream"
-                    },
-                    "413": {
-                        "description": "Request ditolak; error dapat berupa JSON, text atau tanpa body sesuai gateway/upstream"
-                    },
-                    "415": {
-                        "description": "Request ditolak; error dapat berupa JSON, text atau tanpa body sesuai gateway/upstream"
-                    },
-                    "502": {
-                        "description": "Request ditolak; error dapat berupa JSON, text atau tanpa body sesuai gateway/upstream"
-                    },
-                    "503": {
-                        "description": "Request ditolak; error dapat berupa JSON, text atau tanpa body sesuai gateway/upstream"
-                    }
-                }
-            }
-        },
-        "/api/v1/playback/{channel}/whep/{session}": {
-            "delete": {
-                "description": "Gunakan URL Location dari POST. Menutup viewer ini saja; bukan Stop sesi media engine. Mode LAN tetap dibatasi subnet pembaca. Gunakan status upstream, bukan envelope REST.",
-                "tags": [
-                    "WHEP"
-                ],
-                "summary": "Tutup satu koneksi playback WHEP",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "ID channel",
-                        "name": "channel",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "UUID resource dari Location",
-                        "name": "session",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Sesi ditutup oleh upstream"
-                    },
-                    "204": {
-                        "description": "Sesi ditutup, tanpa body"
-                    },
-                    "400": {
-                        "description": "Status gateway/upstream, dapat tanpa body JSON"
-                    },
-                    "403": {
-                        "description": "Status gateway/upstream, dapat tanpa body JSON"
-                    },
-                    "404": {
-                        "description": "Status gateway/upstream, dapat tanpa body JSON"
-                    },
-                    "502": {
-                        "description": "Status gateway/upstream, dapat tanpa body JSON"
-                    },
-                    "503": {
-                        "description": "Status gateway/upstream, dapat tanpa body JSON"
-                    }
-                }
-            },
-            "patch": {
-                "description": "Gunakan URL Location dan ETag dari POST. Diteruskan ke MediaMTX; dukungan PATCH/status mengikuti upstream. Tidak menerbitkan tiket atau sesi baru. Mode LAN tetap dibatasi subnet pembaca. Path sesi adalah capability; jangan dibagikan.",
-                "consumes": [
-                    "application/trickle-ice-sdpfrag"
-                ],
-                "tags": [
-                    "WHEP"
-                ],
-                "summary": "Teruskan kandidat ICE pada sesi WHEP",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "ID channel",
-                        "name": "channel",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "UUID resource dari Location",
-                        "name": "session",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "ETag sesi, jika diminta upstream",
-                        "name": "If-Match",
-                        "in": "header"
-                    },
-                    {
-                        "description": "SDP fragment, maksimal 128 KiB",
-                        "name": "fragment",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "Update diterima upstream, tanpa envelope JSON"
-                    },
-                    "400": {
-                        "description": "Status gateway/upstream, dapat tanpa body JSON"
-                    },
-                    "403": {
-                        "description": "Status gateway/upstream, dapat tanpa body JSON"
-                    },
-                    "404": {
-                        "description": "Status gateway/upstream, dapat tanpa body JSON"
-                    },
-                    "405": {
-                        "description": "Status gateway/upstream, dapat tanpa body JSON"
-                    },
-                    "412": {
-                        "description": "Status gateway/upstream, dapat tanpa body JSON"
-                    },
-                    "413": {
-                        "description": "Status gateway/upstream, dapat tanpa body JSON"
-                    },
-                    "415": {
-                        "description": "Status gateway/upstream, dapat tanpa body JSON"
-                    },
-                    "422": {
-                        "description": "Status gateway/upstream, dapat tanpa body JSON"
-                    },
-                    "501": {
-                        "description": "Status gateway/upstream, dapat tanpa body JSON"
-                    },
-                    "502": {
-                        "description": "Status gateway/upstream, dapat tanpa body JSON"
-                    },
-                    "503": {
-                        "description": "Status gateway/upstream, dapat tanpa body JSON"
-                    }
-                }
-            }
-        },
         "/api/v1/recordings": {
             "get": {
                 "security": [
@@ -922,6 +960,201 @@ const docTemplate = `{
                     },
                     "403": {
                         "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/recordings/{id}/file": {
+            "get": {
+                "security": [
+                    {
+                        "LocalControl": []
+                    }
+                ],
+                "produces": [
+                    "video/x-matroska"
+                ],
+                "tags": [
+                    "Desktop media"
+                ],
+                "summary": "Baca rekaman MKV terotorisasi",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID recording",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "206": {
+                        "description": "Partial Content",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/recordings/{id}/retry": {
+            "post": {
+                "security": [
+                    {
+                        "LocalControl": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Desktop media"
+                ],
+                "summary": "Coba ulang upload MKV",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID recording",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/recordings/{id}/upload": {
+            "get": {
+                "security": [
+                    {
+                        "LocalControl": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Desktop media"
+                ],
+                "summary": "Status upload MKV",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID recording",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
                         "schema": {
                             "$ref": "#/definitions/response.Response"
                         }
@@ -1173,7 +1406,7 @@ const docTemplate = `{
                         "LocalControl": []
                     }
                 ],
-                "description": "Mode lan dan localhost dengan X-Local-Control. action=discover memakai ip interface; profiles memakai endpoint/username/password; probe memakai channel; apply memakai configuration (LAN IP/CIDR dan 1-24 channel, live_mode copy atau transcode); recheck memeriksa sumber tersimpan. Lihat docs/setup-api.md untuk payload tiap action. Poll jobs/{id}: HTTP 202 hanya berarti diterima, hasil akhir ada di state/result/code/advice. Apply tidak boleh saat sesi aktif atau finalisasi, dan tidak memulai sesi. Result: discover=Device[], profiles=Profile[], probe=Probe, apply=Configuration tersamarkan, recheck=SourceCheck[].",
+                "description": "Mode lan dan localhost dengan X-Local-Control. action=discover memakai ip interface; profiles memakai endpoint/username/password; probe memakai channel; apply memakai configuration (LAN IP/CIDR dan 1-24 channel, video NVR wajib HEVC/H.265; passthrough tetap tanpa pilihan mode); recheck memeriksa sumber tersimpan. Lihat docs/setup-api.md untuk payload tiap action. Poll jobs/{id}: HTTP 202 hanya berarti diterima, hasil akhir ada di state/result/code/advice. Apply tidak boleh saat sesi aktif atau finalisasi, dan tidak memulai sesi. Result: discover=Device[], profiles=Profile[], probe=Probe, apply=Configuration tersamarkan, recheck=SourceCheck[].",
                 "consumes": [
                     "application/json"
                 ],
@@ -1424,7 +1657,7 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
-                "whep_url": {
+                "rtsp_url": {
                     "type": "string"
                 }
             }
@@ -1565,13 +1798,11 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
-                "live_mode": {
-                    "type": "string",
-                    "enum": [
-                        "copy",
-                        "transcode"
-                    ],
-                    "example": "copy"
+                "ip": {
+                    "type": "string"
+                },
+                "mac": {
+                    "type": "string"
                 },
                 "password": {
                     "type": "string"
@@ -1612,6 +1843,12 @@ const docTemplate = `{
                     "type": "string",
                     "example": "192.168.1.10"
                 },
+                "nvr_ip": {
+                    "type": "string"
+                },
+                "nvr_mac": {
+                    "type": "string"
+                },
                 "version": {
                     "type": "integer",
                     "example": 1
@@ -1631,6 +1868,29 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.Ingestion": {
+            "type": "object",
+            "properties": {
+                "engine_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "mappings": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Mapping"
+                    }
+                },
+                "round_id": {
+                    "type": "string"
+                },
+                "session_id": {
                     "type": "string"
                 }
             }
@@ -1698,6 +1958,20 @@ const docTemplate = `{
                 }
             }
         },
+        "model.Mapping": {
+            "type": "object",
+            "properties": {
+                "channel_id": {
+                    "type": "string"
+                },
+                "gantangan_id": {
+                    "type": "string"
+                },
+                "registration_id": {
+                    "type": "string"
+                }
+            }
+        },
         "model.Network": {
             "type": "object",
             "properties": {
@@ -1708,6 +1982,23 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.Pairing": {
+            "type": "object",
+            "properties": {
+                "arena_id": {
+                    "type": "string"
+                },
+                "base_url": {
+                    "type": "string"
+                },
+                "engine_id": {
+                    "type": "string"
+                },
+                "token": {
                     "type": "string"
                 }
             }
@@ -1897,14 +2188,6 @@ const docTemplate = `{
                 "live_audio_codec": {
                     "type": "string"
                 },
-                "live_mode": {
-                    "type": "string",
-                    "enum": [
-                        "copy",
-                        "transcode"
-                    ],
-                    "example": "copy"
-                },
                 "live_video_codec": {
                     "type": "string"
                 },
@@ -1988,12 +2271,6 @@ const docTemplate = `{
             "type": "apiKey",
             "name": "Authorization",
             "in": "header"
-        },
-        "PlaybackTicket": {
-            "description": "Mode cloud: Bearer diikuti tiket playback cloud, bukan API_TOKEN. Mode LAN: tidak memerlukan tiket, tetap dibatasi subnet dan sesi aktif.",
-            "type": "apiKey",
-            "name": "Authorization",
-            "in": "header"
         }
     }
 }`
@@ -2005,7 +2282,7 @@ var SwaggerInfo = &swag.Spec{
 	BasePath:         "/",
 	Schemes:          []string{},
 	Title:            "Kicau Mania Local Media Engine API",
-	Description:      "Backend media LAN/cloud. Mulai dari setup/bootstrap (mode lan, akses localhost), checks, jobs lalu media/sessions. Endpoint media tersedia setelah engine dikonfigurasi. Try it out mengirim request nyata. Swagger tidak menampilkan video atau grafik. WHEP memakai SDP; WebSocket memerlukan client tersendiri. Jangan menaruh API_TOKEN engine pada frontend pengguna.",
+	Description:      "Backend media LAN/cloud. Mulai dari setup/bootstrap (mode lan, akses localhost), checks, jobs lalu media/sessions. Endpoint media tersedia setelah engine dikonfigurasi. Try it out mengirim request nyata. Swagger tidak menampilkan video atau grafik. Live RTSP/TCP memakai codec asli; WebSocket memerlukan client tersendiri. Jangan menaruh API_TOKEN engine pada frontend pengguna.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

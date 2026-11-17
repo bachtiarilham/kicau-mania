@@ -15,7 +15,7 @@ import (
 func TestGeneratedConfigPreservesUpstreamMapping(t *testing.T) {
 	sources := []Source{{ID: "one", URL: "rtsp://user:secret@192.0.2.1/one"}, {ID: "two", URL: "rtsp://192.0.2.1/two"}}
 	var e error
-	opts := Options{ConfigFile: filepath.Join(t.TempDir(), "data", "mediamtx.yml"), RTSPListen: "127.0.0.1:8554", WebRTCListen: ":8889", WebRTCBase: "http://arena.test:8889/", ICEHosts: []string{"192.0.2.2"}, Origins: []string{"http://arena.test"}, ReadCIDRs: []string{"192.0.2.0/24"}}
+	opts := Options{ConfigFile: filepath.Join(t.TempDir(), "data", "mediamtx.yml"), RTSPListen: "127.0.0.1:8554", ReadCIDRs: []string{"192.0.2.0/24"}}
 	mediaServer := newTestServer(opts, sources)
 	if e = mediaServer.Render(); e != nil {
 		t.Fatal(e)
@@ -35,18 +35,12 @@ func TestGeneratedConfigPreservesUpstreamMapping(t *testing.T) {
 	if paths["one"].(map[string]any)["source"] != "rtsp://user:secret@192.0.2.1/one" || paths["two"].(map[string]any)["source"] != "rtsp://192.0.2.1/two" {
 		t.Fatal(paths)
 	}
-	if len(paths) != 2 || cfg["api"] != false || cfg["hls"] != false || cfg["webrtcLocalUDPAddress"] != ":8189" {
+	if len(paths) != 2 || cfg["api"] != false || cfg["hls"] != false || cfg["webrtc"] != false {
 		t.Fatal(cfg)
 	}
 	direct := paths["one"].(map[string]any)
 	if direct["runOnDemand"] != nil || direct["runOnInit"] != nil {
-		t.Fatal("H264 passthrough must not spawn FFmpeg")
-	}
-	if cfg["webrtcAllowOrigin"] != "http://arena.test" || cfg["webrtcAllowOrigins"] != nil {
-		t.Fatal("MediaMTX v1.15.3 CORS schema mismatch")
-	}
-	if mediaServer.WHEP("two") != "http://arena.test:8889/api/v1/playback/two/whep" {
-		t.Fatal(mediaServer.WHEP("two"))
+		t.Fatal("HEVC passthrough must not spawn FFmpeg")
 	}
 	users := cfg["authInternalUsers"].([]any)
 	if len(users) != 1 {
@@ -121,7 +115,7 @@ func TestRenderEmptyReadCIDRsKeepsOnlyLoopback(t *testing.T) {
 	for _, cidrs := range [][]string{nil, {}} {
 		sources := []Source{{ID: "one", URL: "rtsp://192.0.2.1/a"}}
 		path := filepath.Join(t.TempDir(), "mediamtx.yml")
-		mediaServer := newTestServer(Options{ConfigFile: path, ReadCIDRs: cidrs, WebRTCLocalUDP: "127.0.0.1:8190"}, sources)
+		mediaServer := newTestServer(Options{ConfigFile: path, ReadCIDRs: cidrs}, sources)
 		if err := mediaServer.Render(); err != nil {
 			t.Fatal(err)
 		}
@@ -140,9 +134,6 @@ func TestRenderEmptyReadCIDRsKeepsOnlyLoopback(t *testing.T) {
 		}
 		if len(cfg.Users) != 1 || len(cfg.Users[0].IPs) != 2 || cfg.Users[0].IPs[0] != "127.0.0.1/32" || cfg.Users[0].IPs[1] != "::1/128" {
 			t.Fatal("empty CIDRs must not create unrestricted read access")
-		}
-		if cfg.UDP != "127.0.0.1:8190" {
-			t.Fatal("custom WebRTC UDP address ignored")
 		}
 	}
 }

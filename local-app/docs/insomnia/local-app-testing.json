@@ -1,15 +1,15 @@
 {
   "_type": "export",
   "__export_format": 4,
-  "__export_date": "2026-11-12T00:00:00.000Z",
+  "__export_date": "2026-11-16T00:00:00.000Z",
   "__export_source": "kicau-mania.local-app",
   "resources": [
     {
       "_id": "wrk_localapp",
       "_type": "workspace",
       "parentId": null,
-      "name": "Kicau local-app — Media Engine Testing",
-      "description": "Koleksi pengujian local-app (Mode LAN & Mode Cloud/Webcam). Baca local-app/docs/insomnia/README.md sebelum menjalankan.",
+      "name": "Kicau local-app \u2014 Media Engine Testing",
+      "description": "NVR HEVC/H.265, MKV, setup dan kontrol sesi; tanpa sumber media buatan atau konversi.",
       "scope": "collection"
     },
     {
@@ -22,7 +22,6 @@
         "ws_base_url": "ws://127.0.0.1:8090",
         "api_token": "",
         "local_control_nonce": "",
-        "playback_ticket": "",
         "lan_ip": "192.168.1.20",
         "lan_cidr": "192.168.1.0/24",
         "onvif_endpoint": "http://192.168.1.10:80/onvif/device_service",
@@ -30,16 +29,21 @@
         "onvif_password": "PASSWORD_ONVIF",
         "credential_ref": "",
         "channel_id": "gantangan01",
-        "channel_source": "rtsp://127.0.0.1:8555/webcam",
-        "live_mode": "copy",
+        "channel_source": "rtsp://192.168.1.123:554/Streaming/Channels/101",
         "session_id": "session-001",
         "restream_target": "youtube",
         "setup_job_id": "",
         "recordings_cursor": "",
         "guidance_code": "SOURCE_UNREACHABLE",
-        "whep_session_path": "/api/v1/playback/gantangan01/whep/00000000-0000-0000-0000-000000000000",
-        "whep_etag": "",
-        "sample_sdp_offer": "v=0\r\no=- 0 0 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\n"
+        "recording_id": "",
+        "engine_id": "",
+        "arena_id": "",
+        "engine_token": "",
+        "cloud_base_url": "https://dev.megaallstararena.com/api/v1",
+        "round_id": "",
+        "registration_id": "",
+        "gantangan_id": "",
+        "ingestion_id": ""
       },
       "dataPropertyOrder": null
     },
@@ -52,25 +56,23 @@
         "base_url": "http://127.0.0.1:8090",
         "ws_base_url": "ws://127.0.0.1:8090",
         "channel_id": "gantangan01",
-        "channel_source": "rtsp://127.0.0.1:8555/webcam",
-        "live_mode": "copy",
+        "channel_source": "rtsp://192.168.1.123:554/Streaming/Channels/101",
         "session_id": "session-lan-001"
       },
       "dataPropertyOrder": null
     },
     {
-      "_id": "env_localapp_cloud_webcam",
+      "_id": "env_localapp_cloud",
       "_type": "environment",
       "parentId": "env_localapp_base",
-      "name": "Mode Cloud / Webcam Test",
+      "name": "Mode Cloud",
       "data": {
         "base_url": "http://127.0.0.1:8090",
         "ws_base_url": "ws://127.0.0.1:8090",
         "api_token": "REPLACE_WITH_API_TOKEN_FROM_ENV",
-        "channel_id": "webcam01",
-        "channel_source": "rtsp://127.0.0.1:8555/webcam",
-        "live_mode": "copy",
-        "session_id": "session-webcam-001"
+        "channel_id": "gantangan01",
+        "channel_source": "rtsp://192.168.1.123:554/Streaming/Channels/101",
+        "session_id": "session-nvr-001"
       },
       "dataPropertyOrder": null
     },
@@ -78,7 +80,7 @@
       "_id": "fld_health",
       "_type": "request_group",
       "parentId": "wrk_localapp",
-      "name": "00 — Health & Docs",
+      "name": "00 \u2014 Health & Docs",
       "description": "Endpoint kesehatan dan dokumen kontrak OpenAPI/Swagger.",
       "environment": {},
       "metaSortKey": 0
@@ -87,7 +89,7 @@
       "_id": "fld_setup",
       "_type": "request_group",
       "parentId": "wrk_localapp",
-      "name": "01 — Setup Mode LAN (Loopback)",
+      "name": "01 \u2014 Setup Mode LAN (Loopback)",
       "description": "Hanya aktif jika ENGINE_ACCESS_MODE=lan dan diakses dari 127.0.0.1/localhost.",
       "environment": {},
       "metaSortKey": 1
@@ -96,7 +98,7 @@
       "_id": "fld_status",
       "_type": "request_group",
       "parentId": "wrk_localapp",
-      "name": "02 — Status, Guidance & Channels",
+      "name": "02 \u2014 Status, Guidance & Channels",
       "description": "Pembacaan status lokal, panduan gangguan, katalog channel, dan status engine.",
       "environment": {},
       "metaSortKey": 2
@@ -105,7 +107,7 @@
       "_id": "fld_session_lan",
       "_type": "request_group",
       "parentId": "wrk_localapp",
-      "name": "03 — Media Session (Mode LAN Nonce)",
+      "name": "03 \u2014 Media Session (Mode LAN Nonce)",
       "description": "Kontrol sesi media untuk Mode LAN memakai header X-Local-Control dari loopback.",
       "environment": {},
       "metaSortKey": 3
@@ -114,8 +116,8 @@
       "_id": "fld_session_cloud",
       "_type": "request_group",
       "parentId": "wrk_localapp",
-      "name": "04 — Media Session (Mode Cloud / Bearer)",
-      "description": "Kontrol sesi media untuk Mode Cloud atau .env.webcam memakai Bearer API_TOKEN.",
+      "name": "04 \u2014 Media Session (Mode Cloud / Bearer)",
+      "description": "Kontrol sesi media untuk Mode Cloud memakai Bearer API_TOKEN.",
       "environment": {},
       "metaSortKey": 4
     },
@@ -123,25 +125,16 @@
       "_id": "fld_recordings",
       "_type": "request_group",
       "parentId": "wrk_localapp",
-      "name": "05 — Recordings & Restreams",
+      "name": "05 \u2014 Recordings & Restreams",
       "description": "Daftar rekaman terpaginasi cursor dan status target restream.",
       "environment": {},
       "metaSortKey": 5
     },
     {
-      "_id": "fld_whep",
-      "_type": "request_group",
-      "parentId": "wrk_localapp",
-      "name": "06 — WHEP Signaling (Referensi)",
-      "description": "Endpoint signaling WebRTC WHEP. Membutuhkan SDP offer nyata dari RTCPeerConnection.",
-      "environment": {},
-      "metaSortKey": 6
-    },
-    {
       "_id": "fld_negative",
       "_type": "request_group",
       "parentId": "wrk_localapp",
-      "name": "90 — Negatif & Guardrails",
+      "name": "90 \u2014 Negatif & Guardrails",
       "description": "Uji penolakan auth, origin, nonce, payload invalid, konflik sesi, dan media type.",
       "environment": {},
       "metaSortKey": 7
@@ -150,7 +143,7 @@
       "_id": "req_root",
       "_type": "request",
       "parentId": "fld_health",
-      "name": "01 — Identitas layanan (GET /)",
+      "name": "01 \u2014 Identitas layanan (GET /)",
       "description": "Mengembalikan JSON identitas layanan (200), atau redirect 307 jika FRONTEND_ORIGIN disetel.",
       "url": "{{ _.base_url }}/",
       "method": "GET",
@@ -177,7 +170,7 @@
       "_id": "req_healthz",
       "_type": "request",
       "parentId": "fld_health",
-      "name": "02 — Liveness (/healthz)",
+      "name": "02 \u2014 Liveness (/healthz)",
       "description": "Selalu 200 saat proses HTTP hidup, meskipun konfigurasi/media belum siap.",
       "url": "{{ _.base_url }}/healthz",
       "method": "GET",
@@ -204,7 +197,7 @@
       "_id": "req_readyz",
       "_type": "request",
       "parentId": "fld_health",
-      "name": "03 — Readiness (/readyz)",
+      "name": "03 \u2014 Readiness (/readyz)",
       "description": "200 jika media siap (dan cloud terhubung pada Mode Cloud). 503 jika belum setup atau media belum siap.",
       "url": "{{ _.base_url }}/readyz",
       "method": "GET",
@@ -231,7 +224,7 @@
       "_id": "req_swagger_json",
       "_type": "request",
       "parentId": "fld_health",
-      "name": "04 — Kontrak OpenAPI JSON",
+      "name": "04 \u2014 Kontrak OpenAPI JSON",
       "description": "Spesifikasi Swagger/OpenAPI JSON yang tertanam di local-app.",
       "url": "{{ _.base_url }}/api/docs/doc.json",
       "method": "GET",
@@ -258,7 +251,7 @@
       "_id": "req_setup_bootstrap",
       "_type": "request",
       "parentId": "fld_setup",
-      "name": "01 — Bootstrap nonce & interface LAN",
+      "name": "01 \u2014 Bootstrap nonce & interface LAN",
       "description": "WAJIB dijalankan pertama di Mode LAN (hanya dari 127.0.0.1/localhost). Menyimpan local_control_nonce dan lan_ip/lan_cidr interface pertama.",
       "url": "{{ _.base_url }}/api/v1/setup/bootstrap",
       "method": "GET",
@@ -285,8 +278,8 @@
       "_id": "req_setup_checks",
       "_type": "request",
       "parentId": "fld_setup",
-      "name": "02 — Cek binary & encoder",
-      "description": "Memeriksa keberadaan FFmpeg, ffprobe, MediaMTX, libx264, libopus, dan AAC.",
+      "name": "02 \u2014 Cek binary media",
+      "description": "Memeriksa binary FFmpeg, ffprobe dan MediaMTX; tidak membutuhkan encoder.",
       "url": "{{ _.base_url }}/api/v1/setup/checks",
       "method": "GET",
       "headers": [
@@ -312,7 +305,7 @@
       "_id": "req_setup_configuration",
       "_type": "request",
       "parentId": "fld_setup",
-      "name": "03 — Baca konfigurasi tersimpan (disamarkan)",
+      "name": "03 \u2014 Baca konfigurasi tersimpan (disamarkan)",
       "description": "200 jika konfigurasi DPAPI/CHANNELS_JSON sudah ada, 404 jika belum ada konfigurasi tersimpan. Kredensial/query RTSP disamarkan.",
       "url": "{{ _.base_url }}/api/v1/setup/configuration",
       "method": "GET",
@@ -339,8 +332,8 @@
       "_id": "req_setup_discover",
       "_type": "request",
       "parentId": "fld_setup",
-      "name": "04 — Job: Discover perangkat ONVIF",
-      "description": "Mengirim multicast WS-Discovery ONVIF pada interface lan_ip. Poll hasilnya dengan request 05 — Poll status job setup.",
+      "name": "04 \u2014 Job: Discover perangkat ONVIF",
+      "description": "Mengirim multicast WS-Discovery ONVIF pada interface lan_ip. Poll hasilnya dengan request 05 \u2014 Poll status job setup.",
       "url": "{{ _.base_url }}/api/v1/setup/jobs",
       "method": "POST",
       "headers": [
@@ -377,7 +370,7 @@
       "_id": "req_setup_job_poll",
       "_type": "request",
       "parentId": "fld_setup",
-      "name": "05 — Poll status job setup",
+      "name": "05 \u2014 Poll status job setup",
       "description": "Membaca state job (RUNNING, SUCCEEDED, FAILED). Jika discover/profiles SUCCEEDED, otomatis menyimpan onvif_endpoint atau credential_ref pertama.",
       "url": "{{ _.base_url }}/api/v1/setup/jobs/{{ _.setup_job_id }}",
       "method": "GET",
@@ -404,7 +397,7 @@
       "_id": "req_setup_profiles",
       "_type": "request",
       "parentId": "fld_setup",
-      "name": "06 — Job: Baca profil ONVIF",
+      "name": "06 \u2014 Job: Baca profil ONVIF",
       "description": "Membaca profil Media1/Media2 dari perangkat ONVIF. Poll dengan request 05 untuk mendapatkan source dan credential_ref.",
       "url": "{{ _.base_url }}/api/v1/setup/jobs",
       "method": "POST",
@@ -442,7 +435,7 @@
       "_id": "req_setup_probe",
       "_type": "request",
       "parentId": "fld_setup",
-      "name": "07 — Job: Probe stream (RTSP manual)",
+      "name": "07 \u2014 Job: Probe stream (RTSP manual)",
       "description": "Menguji sampel paket stream melalui ffprobe. Jika memakai hasil ONVIF, tambahkan field credential_ref pada objek channel.",
       "url": "{{ _.base_url }}/api/v1/setup/jobs",
       "method": "POST",
@@ -462,7 +455,7 @@
       ],
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"action\": \"probe\",\n  \"channel\": {\n    \"id\": \"{{ _.channel_id }}\",\n    \"source\": \"{{ _.channel_source }}\",\n    \"live_mode\": \"{{ _.live_mode }}\"\n  }\n}"
+        "text": "{\n  \"action\": \"probe\",\n  \"channel\": {\n    \"id\": \"{{ _.channel_id }}\",\n    \"source\": \"{{ _.channel_source }}\"\n  }\n}"
       },
       "parameters": [],
       "authentication": {},
@@ -480,7 +473,7 @@
       "_id": "req_setup_apply",
       "_type": "request",
       "parentId": "fld_setup",
-      "name": "08 — Job: Apply konfigurasi channel & LAN",
+      "name": "08 \u2014 Job: Apply konfigurasi channel & LAN",
       "description": "Memvalidasi dan menyimpan konfigurasi terenkripsi DPAPI, lalu menerapkan runtime MediaMTX. Tidak boleh saat sesi aktif/finalisasi.",
       "url": "{{ _.base_url }}/api/v1/setup/jobs",
       "method": "POST",
@@ -500,7 +493,7 @@
       ],
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"action\": \"apply\",\n  \"configuration\": {\n    \"version\": 1,\n    \"lan_ip\": \"{{ _.lan_ip }}\",\n    \"lan_cidr\": \"{{ _.lan_cidr }}\",\n    \"channels\": [\n      {\n        \"id\": \"{{ _.channel_id }}\",\n        \"source\": \"{{ _.channel_source }}\",\n        \"live_mode\": \"{{ _.live_mode }}\"\n      }\n    ]\n  }\n}"
+        "text": "{\n  \"action\": \"apply\",\n  \"configuration\": {\n    \"version\": 1,\n    \"lan_ip\": \"{{ _.lan_ip }}\",\n    \"lan_cidr\": \"{{ _.lan_cidr }}\",\n    \"channels\": [\n      {\n        \"id\": \"{{ _.channel_id }}\",\n        \"source\": \"{{ _.channel_source }}\"\n      }\n    ]\n  }\n}"
       },
       "parameters": [],
       "authentication": {},
@@ -518,7 +511,7 @@
       "_id": "req_setup_recheck",
       "_type": "request",
       "parentId": "fld_setup",
-      "name": "09 — Job: Recheck sumber tersimpan",
+      "name": "09 \u2014 Job: Recheck sumber tersimpan",
       "description": "Memeriksa ulang semua channel pada konfigurasi tersimpan dengan ffprobe.",
       "url": "{{ _.base_url }}/api/v1/setup/jobs",
       "method": "POST",
@@ -556,7 +549,7 @@
       "_id": "req_setup_job_cancel",
       "_type": "request",
       "parentId": "fld_setup",
-      "name": "10 — Batalkan job setup",
+      "name": "10 \u2014 Batalkan job setup",
       "description": "Meminta pembatalan kooperatif untuk setup_job_id. Jalankan hanya saat job sedang RUNNING.",
       "url": "{{ _.base_url }}/api/v1/setup/jobs/{{ _.setup_job_id }}",
       "method": "DELETE",
@@ -587,7 +580,7 @@
       "_id": "req_setup_guidance",
       "_type": "request",
       "parentId": "fld_setup",
-      "name": "11 — Guidance kode diagnosis (Setup)",
+      "name": "11 \u2014 Guidance kode diagnosis (Setup)",
       "description": "Saran penanganan kode diagnosis (mis. SOURCE_UNREACHABLE, UNSUPPORTED_CODEC, DISK_LOW).",
       "url": "{{ _.base_url }}/api/v1/setup/guidance/{{ _.guidance_code }}",
       "method": "GET",
@@ -614,7 +607,7 @@
       "_id": "req_local_status",
       "_type": "request",
       "parentId": "fld_status",
-      "name": "01 — Status lokal runtime (Mode LAN)",
+      "name": "01 \u2014 Status lokal runtime (Mode LAN)",
       "description": "Hanya Mode LAN (dibatasi MEDIA_READ_CIDRS, tanpa token). Menampilkan kesiapan, channels, api_urls, targets, dan session.",
       "url": "{{ _.base_url }}/api/v1/local/status",
       "method": "GET",
@@ -641,7 +634,7 @@
       "_id": "req_local_guidance",
       "_type": "request",
       "parentId": "fld_status",
-      "name": "02 — Guidance kode diagnosis (LAN Viewer)",
+      "name": "02 \u2014 Guidance kode diagnosis (LAN Viewer)",
       "description": "Hanya Mode LAN (dibatasi MEDIA_READ_CIDRS, tanpa token).",
       "url": "{{ _.base_url }}/api/v1/local/guidance/{{ _.guidance_code }}",
       "method": "GET",
@@ -665,37 +658,10 @@
       "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 200', () => insomnia.expect(status === 200).to.eql(true));\nif (!(status === 200)) throw new Error(`Expected HTTP 200; received HTTP ${status} (${insomnia.response.status}).`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\n"
     },
     {
-      "_id": "req_channels_lan",
-      "_type": "request",
-      "parentId": "fld_status",
-      "name": "03 — Daftar channel & URL playback (Mode LAN)",
-      "description": "Mode LAN: tanpa token untuk peer dalam MEDIA_READ_CIDRS. Mengembalikan whep_url dan audio_path.",
-      "url": "{{ _.base_url }}/api/v1/channels",
-      "method": "GET",
-      "headers": [
-        {
-          "name": "Accept",
-          "value": "application/json"
-        }
-      ],
-      "body": {},
-      "parameters": [],
-      "authentication": {},
-      "metaSortKey": 3,
-      "isPrivate": false,
-      "settingStoreCookies": false,
-      "settingSendCookies": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "off",
-      "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 200', () => insomnia.expect(status === 200).to.eql(true));\nif (!(status === 200)) throw new Error(`Expected HTTP 200; received HTTP ${status} (${insomnia.response.status}).`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\n"
-    },
-    {
       "_id": "req_channels_cloud",
       "_type": "request",
       "parentId": "fld_status",
-      "name": "04 — Daftar channel & URL playback (Mode Cloud Bearer)",
+      "name": "04 \u2014 Daftar channel & URL playback (Mode Cloud Bearer)",
       "description": "Mode Cloud: wajib Authorization: Bearer {{ _.api_token }}.",
       "url": "{{ _.base_url }}/api/v1/channels",
       "method": "GET",
@@ -726,7 +692,7 @@
       "_id": "req_engine_status_lan",
       "_type": "request",
       "parentId": "fld_status",
-      "name": "05 — Engine status (Mode LAN Nonce)",
+      "name": "05 \u2014 Engine status (Mode LAN Nonce)",
       "description": "Mode LAN: wajib header X-Local-Control (termasuk pada GET) dari loopback jika tidak memakai Bearer API_TOKEN.",
       "url": "{{ _.base_url }}/api/v1/engine/status",
       "method": "GET",
@@ -757,7 +723,7 @@
       "_id": "req_engine_status_cloud",
       "_type": "request",
       "parentId": "fld_status",
-      "name": "06 — Engine status (Mode Cloud / Bearer)",
+      "name": "06 \u2014 Engine status (Mode Cloud / Bearer)",
       "description": "Mode Cloud atau saat API_TOKEN diisi eksplisit: gunakan Bearer {{ _.api_token }}.",
       "url": "{{ _.base_url }}/api/v1/engine/status",
       "method": "GET",
@@ -788,7 +754,7 @@
       "_id": "req_session_start_lan",
       "_type": "request",
       "parentId": "fld_session_lan",
-      "name": "01 — Mulai sesi media (LAN)",
+      "name": "01 \u2014 Mulai sesi media (LAN)",
       "description": "Mulai live, recording, audio/metrik, dan restreams opsional. Gunakan session_id baru untuk setiap siklus baru.",
       "url": "{{ _.base_url }}/api/v1/media/sessions",
       "method": "POST",
@@ -826,7 +792,7 @@
       "_id": "req_session_get_lan",
       "_type": "request",
       "parentId": "fld_session_lan",
-      "name": "02 — Baca status sesi media (LAN)",
+      "name": "02 \u2014 Baca status sesi media (LAN)",
       "description": "Pantau state sesi (STARTING -> RUNNING/DEGRADED) dan channel_states.",
       "url": "{{ _.base_url }}/api/v1/media/sessions/{{ _.session_id }}",
       "method": "GET",
@@ -857,7 +823,7 @@
       "_id": "req_session_stop_lan",
       "_type": "request",
       "parentId": "fld_session_lan",
-      "name": "03 — Stop sesi media (LAN)",
+      "name": "03 \u2014 Stop sesi media (LAN)",
       "description": "Meminta stop asinkron (202). Lanjutkan polling GET status sampai state terminal STOPPED/INTERRUPTED/FAILED.",
       "url": "{{ _.base_url }}/api/v1/media/sessions/{{ _.session_id }}/stop",
       "method": "POST",
@@ -895,7 +861,7 @@
       "_id": "req_session_poll_stop_lan",
       "_type": "request",
       "parentId": "fld_session_lan",
-      "name": "04 — Poll status setelah Stop (LAN)",
+      "name": "04 \u2014 Poll status setelah Stop (LAN)",
       "description": "Pastikan sesi sudah mencapai STOPPED (melewati STOPPING -> FINALIZING) sebelum memulai sesi baru.",
       "url": "{{ _.base_url }}/api/v1/media/sessions/{{ _.session_id }}",
       "method": "GET",
@@ -926,8 +892,8 @@
       "_id": "req_session_start_cloud",
       "_type": "request",
       "parentId": "fld_session_cloud",
-      "name": "01 — Mulai sesi media (Bearer)",
-      "description": "Untuk Mode Cloud atau pengujian .env.webcam memakai Bearer API_TOKEN.",
+      "name": "01 \u2014 Mulai sesi media (Bearer)",
+      "description": "Untuk Mode Cloud memakai Bearer API_TOKEN.",
       "url": "{{ _.base_url }}/api/v1/media/sessions",
       "method": "POST",
       "headers": [
@@ -964,7 +930,7 @@
       "_id": "req_session_get_cloud",
       "_type": "request",
       "parentId": "fld_session_cloud",
-      "name": "02 — Baca status sesi media (Bearer)",
+      "name": "02 \u2014 Baca status sesi media (Bearer)",
       "description": "Pantau state sesi dan channel_states menggunakan Bearer API_TOKEN.",
       "url": "{{ _.base_url }}/api/v1/media/sessions/{{ _.session_id }}",
       "method": "GET",
@@ -995,7 +961,7 @@
       "_id": "req_session_stop_cloud",
       "_type": "request",
       "parentId": "fld_session_cloud",
-      "name": "03 — Stop sesi media (Bearer)",
+      "name": "03 \u2014 Stop sesi media (Bearer)",
       "description": "Meminta stop asinkron (202) menggunakan Bearer API_TOKEN.",
       "url": "{{ _.base_url }}/api/v1/media/sessions/{{ _.session_id }}/stop",
       "method": "POST",
@@ -1033,7 +999,7 @@
       "_id": "req_session_poll_stop_cloud",
       "_type": "request",
       "parentId": "fld_session_cloud",
-      "name": "04 — Poll status setelah Stop (Bearer)",
+      "name": "04 \u2014 Poll status setelah Stop (Bearer)",
       "description": "Pastikan state sudah STOPPED sebelum memulai sesi baru.",
       "url": "{{ _.base_url }}/api/v1/media/sessions/{{ _.session_id }}",
       "method": "GET",
@@ -1064,7 +1030,7 @@
       "_id": "req_recordings_lan",
       "_type": "request",
       "parentId": "fld_recordings",
-      "name": "01 — Daftar rekaman (Mode LAN Nonce)",
+      "name": "01 \u2014 Daftar rekaman (Mode LAN Nonce)",
       "description": "Mengambil halaman pertama rekaman (limit 1..100). Otomatis menyimpan next_cursor ke recordings_cursor jika tersedia.",
       "url": "{{ _.base_url }}/api/v1/recordings?limit=25",
       "method": "GET",
@@ -1095,7 +1061,7 @@
       "_id": "req_recordings_next_lan",
       "_type": "request",
       "parentId": "fld_recordings",
-      "name": "02 — Daftar rekaman halaman berikut (Mode LAN Nonce)",
+      "name": "02 \u2014 Daftar rekaman halaman berikut (Mode LAN Nonce)",
       "description": "Mengambil halaman berikutnya memakai recordings_cursor.",
       "url": "{{ _.base_url }}/api/v1/recordings?limit=25&cursor={{ _.recordings_cursor }}",
       "method": "GET",
@@ -1126,7 +1092,7 @@
       "_id": "req_recordings_cloud",
       "_type": "request",
       "parentId": "fld_recordings",
-      "name": "03 — Daftar rekaman (Mode Cloud / Bearer)",
+      "name": "03 \u2014 Daftar rekaman (Mode Cloud / Bearer)",
       "description": "Mengambil daftar rekaman menggunakan Bearer API_TOKEN.",
       "url": "{{ _.base_url }}/api/v1/recordings?limit=25",
       "method": "GET",
@@ -1157,7 +1123,7 @@
       "_id": "req_restreams_lan",
       "_type": "request",
       "parentId": "fld_recordings",
-      "name": "04 — Daftar status restream (Mode LAN Nonce)",
+      "name": "04 \u2014 Daftar status restream (Mode LAN Nonce)",
       "description": "Melihat status target restream aktif.",
       "url": "{{ _.base_url }}/api/v1/restreams",
       "method": "GET",
@@ -1188,7 +1154,7 @@
       "_id": "req_restreams_cloud",
       "_type": "request",
       "parentId": "fld_recordings",
-      "name": "05 — Daftar status restream (Mode Cloud / Bearer)",
+      "name": "05 \u2014 Daftar status restream (Mode Cloud / Bearer)",
       "description": "Melihat status target restream aktif menggunakan Bearer API_TOKEN.",
       "url": "{{ _.base_url }}/api/v1/restreams",
       "method": "GET",
@@ -1216,147 +1182,10 @@
       "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 200', () => insomnia.expect(status === 200).to.eql(true));\nif (!(status === 200)) throw new Error(`Expected HTTP 200; received HTTP ${status} (${insomnia.response.status}).`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope success', () => insomnia.expect(body.success).to.eql(true));\n"
     },
     {
-      "_id": "req_whep_open_lan",
-      "_type": "request",
-      "parentId": "fld_whep",
-      "name": "01 — WHEP Open Playback (LAN, tanpa tiket)",
-      "description": "Memerlukan sesi media aktif untuk channel_id dan SDP offer nyata dari RTCPeerConnection browser. Jika 201, otomatis menyimpan whep_session_path (Location) dan whep_etag.",
-      "url": "{{ _.base_url }}/api/v1/playback/{{ _.channel_id }}/whep",
-      "method": "POST",
-      "headers": [
-        {
-          "name": "Accept",
-          "value": "application/sdp"
-        },
-        {
-          "name": "Content-Type",
-          "value": "application/sdp"
-        }
-      ],
-      "body": {
-        "mimeType": "application/sdp",
-        "text": "{{ _.sample_sdp_offer }}"
-      },
-      "parameters": [],
-      "authentication": {},
-      "metaSortKey": 1,
-      "isPrivate": false,
-      "settingStoreCookies": false,
-      "settingSendCookies": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "off",
-      "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 201', () => insomnia.expect(status === 201).to.eql(true));\nif (!(status === 201)) throw new Error(`Expected HTTP 201; received HTTP ${status} (${insomnia.response.status}).`);\nif (status === 201) {\n  const loc = insomnia.response.headers.find(h => h.key.toLowerCase() === 'location');\n  const etag = insomnia.response.headers.find(h => h.key.toLowerCase() === 'etag');\n  if (loc?.value) insomnia.environment.set('whep_session_path', loc.value);\n  if (etag?.value) insomnia.environment.set('whep_etag', etag.value);\n}\n"
-    },
-    {
-      "_id": "req_whep_open_cloud",
-      "_type": "request",
-      "parentId": "fld_whep",
-      "name": "02 — WHEP Open Playback (Cloud, dengan tiket)",
-      "description": "Mode Cloud mewajibkan Authorization: Bearer {{ _.playback_ticket }} (tiket playback dari cloud-app, bukan API_TOKEN).",
-      "url": "{{ _.base_url }}/api/v1/playback/{{ _.channel_id }}/whep",
-      "method": "POST",
-      "headers": [
-        {
-          "name": "Accept",
-          "value": "application/sdp"
-        },
-        {
-          "name": "Authorization",
-          "value": "Bearer {{ _.playback_ticket }}"
-        },
-        {
-          "name": "Content-Type",
-          "value": "application/sdp"
-        }
-      ],
-      "body": {
-        "mimeType": "application/sdp",
-        "text": "{{ _.sample_sdp_offer }}"
-      },
-      "parameters": [],
-      "authentication": {},
-      "metaSortKey": 2,
-      "isPrivate": false,
-      "settingStoreCookies": false,
-      "settingSendCookies": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "off",
-      "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 201', () => insomnia.expect(status === 201).to.eql(true));\nif (!(status === 201)) throw new Error(`Expected HTTP 201; received HTTP ${status} (${insomnia.response.status}).`);\nif (status === 201) {\n  const loc = insomnia.response.headers.find(h => h.key.toLowerCase() === 'location');\n  const etag = insomnia.response.headers.find(h => h.key.toLowerCase() === 'etag');\n  if (loc?.value) insomnia.environment.set('whep_session_path', loc.value);\n  if (etag?.value) insomnia.environment.set('whep_etag', etag.value);\n}\n"
-    },
-    {
-      "_id": "req_whep_patch",
-      "_type": "request",
-      "parentId": "fld_whep",
-      "name": "03 — WHEP Trickle ICE (PATCH)",
-      "description": "Meneruskan trickle-ICE SDP fragment ke MediaMTX memakai whep_session_path dari header Location POST.",
-      "url": "{{ _.base_url }}{{ _.whep_session_path }}",
-      "method": "PATCH",
-      "headers": [
-        {
-          "name": "Accept",
-          "value": "application/sdp"
-        },
-        {
-          "name": "If-Match",
-          "value": "{{ _.whep_etag }}"
-        },
-        {
-          "name": "Content-Type",
-          "value": "application/trickle-ice-sdpfrag"
-        }
-      ],
-      "body": {
-        "mimeType": "application/trickle-ice-sdpfrag",
-        "text": "a=mid:0\r\na=candidate:1 1 UDP 2130706431 127.0.0.1 50000 typ host\r\n"
-      },
-      "parameters": [],
-      "authentication": {},
-      "metaSortKey": 3,
-      "isPrivate": false,
-      "settingStoreCookies": false,
-      "settingSendCookies": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "off",
-      "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 204', () => insomnia.expect(status === 204).to.eql(true));\nif (!(status === 204)) throw new Error(`Expected HTTP 204; received HTTP ${status} (${insomnia.response.status}).`);\ninsomnia.test('Empty body', () => insomnia.expect(insomnia.response.text()).to.eql(''));\n"
-    },
-    {
-      "_id": "req_whep_delete",
-      "_type": "request",
-      "parentId": "fld_whep",
-      "name": "04 — WHEP Close Playback (DELETE)",
-      "description": "Menutup satu viewer WHEP saja (tidak menghentikan sesi media engine).",
-      "url": "{{ _.base_url }}{{ _.whep_session_path }}",
-      "method": "DELETE",
-      "headers": [
-        {
-          "name": "Accept",
-          "value": "application/json"
-        }
-      ],
-      "body": {},
-      "parameters": [],
-      "authentication": {},
-      "metaSortKey": 4,
-      "isPrivate": false,
-      "settingStoreCookies": false,
-      "settingSendCookies": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "off",
-      "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 200 atau 204', () => insomnia.expect(status === 200 || status === 204).to.eql(true));\nif (!(status === 200 || status === 204)) throw new Error(`Expected HTTP 200 atau 204; received HTTP ${status} (${insomnia.response.status}).`);\n"
-    },
-    {
       "_id": "req_neg_no_auth",
       "_type": "request",
       "parentId": "fld_negative",
-      "name": "01 — Operator tanpa auth/nonce -> 401",
+      "name": "01 \u2014 Operator tanpa auth/nonce -> 401",
       "description": "Berlaku pada Mode LAN maupun Mode Cloud saat header Authorization dan X-Local-Control tidak dikirim.",
       "url": "{{ _.base_url }}/api/v1/engine/status",
       "method": "GET",
@@ -1383,7 +1212,7 @@
       "_id": "req_neg_bad_origin",
       "_type": "request",
       "parentId": "fld_negative",
-      "name": "02 — Origin tidak diizinkan -> 403",
+      "name": "02 \u2014 Origin tidak diizinkan -> 403",
       "description": "CORS middleware menolak Origin di luar ALLOWED_ORIGINS dan di luar Host request.",
       "url": "{{ _.base_url }}/api/v1/channels",
       "method": "GET",
@@ -1414,7 +1243,7 @@
       "_id": "req_neg_setup_no_nonce",
       "_type": "request",
       "parentId": "fld_negative",
-      "name": "03 — Setup POST tanpa X-Local-Control (LAN) -> 403",
+      "name": "03 \u2014 Setup POST tanpa X-Local-Control (LAN) -> 403",
       "description": "Khusus Mode LAN: mutasi setup tanpa header X-Local-Control ditolak 403.",
       "url": "{{ _.base_url }}/api/v1/setup/jobs",
       "method": "POST",
@@ -1448,7 +1277,7 @@
       "_id": "req_neg_setup_bad_nonce",
       "_type": "request",
       "parentId": "fld_negative",
-      "name": "04 — Setup POST nonce salah (LAN) -> 403",
+      "name": "04 \u2014 Setup POST nonce salah (LAN) -> 403",
       "description": "Khusus Mode LAN: mutasi setup dengan nonce yang salah/kedaluwarsa ditolak 403.",
       "url": "{{ _.base_url }}/api/v1/setup/jobs",
       "method": "POST",
@@ -1486,7 +1315,7 @@
       "_id": "req_neg_setup_bad_action",
       "_type": "request",
       "parentId": "fld_negative",
-      "name": "05 — Setup action tidak valid (LAN) -> 400",
+      "name": "05 \u2014 Setup action tidak valid (LAN) -> 400",
       "description": "Khusus Mode LAN: action di luar discover/profiles/probe/apply/recheck mengembalikan 400.",
       "url": "{{ _.base_url }}/api/v1/setup/jobs",
       "method": "POST",
@@ -1524,7 +1353,7 @@
       "_id": "req_neg_setup_job_404",
       "_type": "request",
       "parentId": "fld_negative",
-      "name": "06 — Setup job ID tidak ditemukan (LAN) -> 404",
+      "name": "06 \u2014 Setup job ID tidak ditemukan (LAN) -> 404",
       "description": "Khusus Mode LAN: job ID yang tidak ada atau sudah kedaluwarsa (>15 menit) mengembalikan 404.",
       "url": "{{ _.base_url }}/api/v1/setup/jobs/nonexistent-job-id",
       "method": "GET",
@@ -1551,7 +1380,7 @@
       "_id": "req_neg_session_empty_channels_lan",
       "_type": "request",
       "parentId": "fld_negative",
-      "name": "07 — Start sesi channels kosong (LAN Nonce) -> 400",
+      "name": "07 \u2014 Start sesi channels kosong (LAN Nonce) -> 400",
       "description": "Khusus Mode LAN: validasi payload menolak array channels kosong (400).",
       "url": "{{ _.base_url }}/api/v1/media/sessions",
       "method": "POST",
@@ -1589,7 +1418,7 @@
       "_id": "req_neg_session_empty_channels_cloud",
       "_type": "request",
       "parentId": "fld_negative",
-      "name": "08 — Start sesi channels kosong (Bearer) -> 400",
+      "name": "08 \u2014 Start sesi channels kosong (Bearer) -> 400",
       "description": "Khusus Mode Cloud/Bearer: validasi payload menolak array channels kosong (400).",
       "url": "{{ _.base_url }}/api/v1/media/sessions",
       "method": "POST",
@@ -1627,7 +1456,7 @@
       "_id": "req_neg_session_404_lan",
       "_type": "request",
       "parentId": "fld_negative",
-      "name": "09 — Sesi media tidak ditemukan (LAN Nonce) -> 404",
+      "name": "09 \u2014 Sesi media tidak ditemukan (LAN Nonce) -> 404",
       "description": "Khusus Mode LAN: ID sesi yang belum pernah dibuat mengembalikan 404.",
       "url": "{{ _.base_url }}/api/v1/media/sessions/nonexistent-session",
       "method": "GET",
@@ -1658,7 +1487,7 @@
       "_id": "req_neg_session_404_cloud",
       "_type": "request",
       "parentId": "fld_negative",
-      "name": "10 — Sesi media tidak ditemukan (Bearer) -> 404",
+      "name": "10 \u2014 Sesi media tidak ditemukan (Bearer) -> 404",
       "description": "Khusus Mode Cloud/Bearer: ID sesi yang belum pernah dibuat mengembalikan 404.",
       "url": "{{ _.base_url }}/api/v1/media/sessions/nonexistent-session",
       "method": "GET",
@@ -1686,17 +1515,40 @@
       "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 404', () => insomnia.expect(status === 404).to.eql(true));\nif (!(status === 404)) throw new Error(`Expected HTTP 404; received HTTP ${status} (${insomnia.response.status}).`);\nconst body = insomnia.response.json();\ninsomnia.test('Envelope error', () => insomnia.expect(body.success).to.eql(false));\n"
     },
     {
-      "_id": "req_neg_whep_wrong_ct",
+      "_id": "fld_desktop_media",
+      "_type": "request_group",
+      "parentId": "wrk_localapp",
+      "name": "Desktop - pairing, mapping, MKV dan upload",
+      "description": "Localhost + nonce. Gunakan hasil konfirmasi cloud, bukan identitas buatan."
+    },
+    {
+      "_id": "req_desktop_pair_status",
       "_type": "request",
-      "parentId": "fld_negative",
-      "name": "11 — WHEP tanpa Content-Type application/sdp -> 415",
-      "description": "Memerlukan channel_id yang sudah terdaftar pada konfigurasi/CHANNELS_JSON (jika belum terdaftar, ValidateChannel mengembalikan 404). WHEP menolak media type selain application/sdp dengan HTTP 415.",
-      "url": "{{ _.base_url }}/api/v1/playback/{{ _.channel_id }}/whep",
-      "method": "POST",
+      "parentId": "fld_desktop_media",
+      "name": "Status pairing",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/v1/desktop/cloud",
       "headers": [
         {
-          "name": "Accept",
-          "value": "application/json"
+          "name": "X-Local-Control",
+          "value": "{{ _.local_control_nonce }}"
+        }
+      ],
+      "body": {},
+      "authentication": {},
+      "parameters": []
+    },
+    {
+      "_id": "req_desktop_pair_save",
+      "_type": "request",
+      "parentId": "fld_desktop_media",
+      "name": "Simpan credential engine",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/v1/desktop/cloud",
+      "headers": [
+        {
+          "name": "X-Local-Control",
+          "value": "{{ _.local_control_nonce }}"
         },
         {
           "name": "Content-Type",
@@ -1705,19 +1557,92 @@
       ],
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"offer\": \"not-sdp\"\n}"
+        "text": "{\n  \"base_url\": \"{{ _.cloud_base_url }}\",\n  \"engine_id\": \"{{ _.engine_id }}\",\n  \"arena_id\": \"{{ _.arena_id }}\",\n  \"token\": \"{{ _.engine_token }}\"\n}"
       },
-      "parameters": [],
       "authentication": {},
-      "metaSortKey": 11,
-      "isPrivate": false,
-      "settingStoreCookies": false,
-      "settingSendCookies": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "off",
-      "preRequestScript": "",
-      "afterResponseScript": "const status = insomnia.response.code;\ninsomnia.test('HTTP 415', () => insomnia.expect(status === 415).to.eql(true));\nif (!(status === 415)) throw new Error(`Expected HTTP 415; received HTTP ${status} (${insomnia.response.status}).`);\n"
+      "parameters": []
+    },
+    {
+      "_id": "req_desktop_mapping",
+      "_type": "request",
+      "parentId": "fld_desktop_media",
+      "name": "Simpan mapping terkonfirmasi",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/v1/desktop/mappings",
+      "headers": [
+        {
+          "name": "X-Local-Control",
+          "value": "{{ _.local_control_nonce }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"id\": \"{{ _.ingestion_id }}\",\n  \"engine_id\": \"{{ _.engine_id }}\",\n  \"session_id\": \"{{ _.session_id }}\",\n  \"round_id\": \"{{ _.round_id }}\",\n  \"mappings\": [\n    {\n      \"channel_id\": \"{{ _.channel_id }}\",\n      \"registration_id\": \"{{ _.registration_id }}\",\n      \"gantangan_id\": \"{{ _.gantangan_id }}\"\n    }\n  ]\n}"
+      },
+      "authentication": {},
+      "parameters": []
+    },
+    {
+      "_id": "req_desktop_upload_status",
+      "_type": "request",
+      "parentId": "fld_desktop_media",
+      "name": "Status upload",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/v1/recordings/{{ _.recording_id }}/upload",
+      "headers": [
+        {
+          "name": "X-Local-Control",
+          "value": "{{ _.local_control_nonce }}"
+        }
+      ],
+      "body": {},
+      "authentication": {},
+      "parameters": []
+    },
+    {
+      "_id": "req_desktop_upload_retry",
+      "_type": "request",
+      "parentId": "fld_desktop_media",
+      "name": "Retry upload",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/v1/recordings/{{ _.recording_id }}/retry",
+      "headers": [
+        {
+          "name": "X-Local-Control",
+          "value": "{{ _.local_control_nonce }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{}"
+      },
+      "authentication": {},
+      "parameters": []
+    },
+    {
+      "_id": "req_desktop_file",
+      "_type": "request",
+      "parentId": "fld_desktop_media",
+      "name": "Baca MKV",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/v1/recordings/{{ _.recording_id }}/file",
+      "headers": [
+        {
+          "name": "X-Local-Control",
+          "value": "{{ _.local_control_nonce }}"
+        }
+      ],
+      "body": {},
+      "authentication": {},
+      "parameters": []
     }
   ]
 }

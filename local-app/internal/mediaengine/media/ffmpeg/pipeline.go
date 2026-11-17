@@ -11,17 +11,7 @@ import (
 )
 
 // Pipeline records A/V and decodes PCM from the same RTSP input.
-type Pipeline struct {
-	Binary   string
-	Profiles map[string]media.StreamProfile
-}
-
-func (f Pipeline) Profile(source string) media.StreamProfile {
-	if v, ok := f.Profiles[source]; ok {
-		return v
-	}
-	return media.StreamProfile{HasAudio: true}
-}
+type Pipeline struct{ Binary, Probe string }
 
 // progress never forwards stderr text, which can contain source credentials.
 type progress struct {
@@ -47,6 +37,8 @@ func (p *progress) Write(b []byte) (int, error) {
 			p.code, p.message = "DEVICE_AUTH_FAILED", "Kredensial sumber ditolak"
 		case strings.Contains(text, "no space left"):
 			p.code, p.message = "DISK_FULL", "Ruang penyimpanan habis"
+		case strings.Contains(text, "could not find tag for codec") || strings.Contains(text, "codec not supported"):
+			p.code, p.message = "UNSUPPORTED_MEDIA_CODEC", "Codec audio sumber tidak dapat disimpan dalam MKV tanpa konversi"
 		case strings.Contains(text, "unknown encoder"):
 			p.code, p.message = "ENCODER_MISSING", "Encoder media tidak tersedia"
 		case strings.Contains(text, "connection refused") || strings.Contains(text, "connection timed out"):
@@ -70,33 +62,23 @@ func (p *progress) Write(b []byte) (int, error) {
 }
 
 func (f Pipeline) RunMedia(ctx context.Context, source, file string, ready func(), consume func([]byte)) error {
-	profile := f.Profile(source)
-	inputURL := source
-	if profile.InputURL != "" {
-		inputURL = profile.InputURL
+	observed, err := (Inspector{ProbeBinary: f.Probe}).Probe(ctx, source)
+	if err != nil {
+		return &media.PipelineError{Code: "SOURCE_VALIDATION_FAILED", Message: "Sumber harus HEVC/H.265 dan dapat dibaca; periksa probe NVR"}
 	}
 	r, w := io.Pipe()
 	defer r.Close()
-	args := append([]string{"-progress", "pipe:2", "-nostats", "-stats_period", "0.5"}, input(inputURL)...)
+	args := append([]string{"-progress", "pipe:2", "-nostats", "-stats_period", "0.5"}, input(source)...)
 	args = append(args, "-map", "0:v:0", "-c:v", "copy")
-	if profile.HasAudio {
-		args = append(args, "-map", "0:a:0", "-c:a", "aac")
+	if observed.HasAudio {
+		args = append(args, "-map", "0:a:0", "-c:a", "copy")
 	}
-	args = append(args, "-movflags", "+frag_keyframe+empty_moov+default_base_moof", "-flush_packets", "1", "-frag_duration", "1000000", "-f", "mp4", "-n", file)
-	if profile.HasAudio {
+	// Fill only missing presentation timestamps from decode timestamps.
+	// This changes container timing metadata, never encoded video packets.
+	args = append(args, "-bsf:v", "setts=pts=if(eq(PTS\\,NOPTS)\\,DTS\\,PTS)")
+	args = append(args, "-flush_packets", "1", "-cluster_time_limit", "1000", "-f", "matroska", "-n", file)
+	if observed.HasAudio {
 		args = append(args, "-map", "0:a:0", "-vn", "-ac", "1", "-ar", "16000", "-c:a", "pcm_s16le", "-f", "s16le", "pipe:1")
-	}
-	if profile.PublishURL != "" {
-		args = append(args, "-map", "0:v:0")
-		if profile.Transcode {
-			args = append(args, "-c:v", "libx264", "-preset", "veryfast", "-tune", "zerolatency", "-profile:v", "baseline", "-pix_fmt", "yuv420p", "-vf", "scale=640:360:force_original_aspect_ratio=decrease,pad=640:360:(ow-iw)/2:(oh-ih)/2", "-r", "15", "-g", "30", "-bf", "0", "-b:v", "750k")
-		} else {
-			args = append(args, "-c:v", "copy")
-		}
-		if profile.HasAudio {
-			args = append(args, "-map", "0:a:0", "-c:a", "libopus", "-ar", "48000", "-ac", "1", "-b:a", "64k")
-		}
-		args = append(args, "-f", "rtsp", "-rtsp_transport", "tcp", profile.PublishURL)
 	}
 	// Session cancellation is handled with Stop (q + bounded kill), not an
 	// immediate CommandContext kill that would skip recording finalization.

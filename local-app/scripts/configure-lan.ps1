@@ -1,5 +1,5 @@
 #Requires -Version 7.0
-[CmdletBinding()]param([string]$SourceEnv='.env.webcam',[string]$Settings='.env.lan')
+[CmdletBinding()]param([string]$SourceEnv='.env.portable.example',[string]$Settings='.env.lan')
 $ErrorActionPreference='Stop'
 $appRoot=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $binary=Join-Path $appRoot 'bin/lan-config.exe'

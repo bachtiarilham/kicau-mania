@@ -45,6 +45,6 @@ func (s *Uploader) Put(ctx context.Context, key, file string) error {
 		return e
 	}
 	defer f.Close()
-	_, e = s.u.Upload(ctx, &awss3.PutObjectInput{Bucket: aws.String(s.bucket), Key: aws.String(key), Body: f, ContentType: aws.String("video/mp4")})
+	_, e = s.u.Upload(ctx, &awss3.PutObjectInput{Bucket: aws.String(s.bucket), Key: aws.String(key), Body: f, ContentType: aws.String("video/x-matroska")})
 	return e
 }

@@ -1,7 +1,7 @@
 -- Additional application contracts for schema 010. No DDL or legacy aliases.
 
 -- name: SchemaReady
-SELECT jsonb_build_object('ready',true) WHERE NOT EXISTS(SELECT FROM unnest(ARRAY['iam.user_master_history','asset.bird_master_history','cloud_read.v_users','cloud_read.v_birds','cloud_read.v_registrations','cloud_read.v_round_score_summary']) x(name) WHERE to_regclass(x.name) IS NULL) AND (SELECT count(*) FROM iam.roles WHERE name IN ('ADMIN','OPERATOR','JURI','PESERTA'))=4;
+SELECT jsonb_build_object('ready',true) WHERE NOT EXISTS(SELECT FROM unnest(ARRAY['iam.user_master_history','asset.bird_master_history','cloud_read.v_users','cloud_read.v_birds','cloud_read.v_registrations','cloud_read.v_round_score_summary','media.ingest_engines','media.ingest_sessions','media.ingest_mappings','media.recording_assets']) x(name) WHERE to_regclass(x.name) IS NULL) AND (SELECT count(*) FROM iam.roles WHERE name IN ('ADMIN','OPERATOR','JURI','PESERTA'))=4;
 
 -- name: ActorProfile
 -- params: user_id uuid

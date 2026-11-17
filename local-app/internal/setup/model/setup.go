@@ -7,11 +7,11 @@ import (
 )
 
 type Channel struct {
-	ID             string `json:"id"`
-	IP             string `json:"ip,omitempty"`
-	MAC            string `json:"mac,omitempty"`
-	Source         string `json:"source"`
-	LiveMode       string `json:"live_mode" enums:"copy,transcode" example:"copy"`
+	ID     string `json:"id"`
+	IP     string `json:"ip,omitempty"`
+	MAC    string `json:"mac,omitempty"`
+	Source string `json:"source"`
+
 	Username       string `json:"username,omitempty"`
 	Password       string `json:"password,omitempty"`
 	CredentialRef  string `json:"credential_ref,omitempty"`
@@ -36,6 +36,15 @@ type Probe struct {
 	BFrames    int       `json:"b_frames"`
 	TestedAt   time.Time `json:"tested_at"`
 }
+
+// ValidateMedia is shared by setup, startup and each capture reconnect.
+func ValidateMedia(p Probe) error {
+	if p.VideoCodec != "hevc" {
+		return &Failure{Code: "UNSUPPORTED_VIDEO_CODEC", Message: "NVR harus menggunakan video HEVC/H.265; konversi codec tidak tersedia"}
+	}
+	return nil
+}
+
 type Network struct {
 	Name string `json:"name"`
 	IP   string `json:"ip"`
@@ -104,7 +113,6 @@ type ViewChannel struct {
 	VideoCodec     string `json:"video_codec"`
 	Width          int    `json:"width"`
 	Height         int    `json:"height"`
-	LiveMode       string `json:"live_mode" enums:"copy,transcode" example:"copy"`
 }
 type Diagnostic struct {
 	Advice    string `json:"advice,omitempty"`
@@ -121,7 +129,7 @@ func (e *Failure) Error() string { return e.Message }
 func Advice(code string) string {
 	switch code {
 	case "MEDIA_UNAVAILABLE":
-		return "MediaMTX belum berjalan. Periksa binary, port RTSP/WebRTC internal dan proses lain; API tetap tersedia."
+		return "MediaMTX belum berjalan. Periksa binary, port RTSP internal dan proses lain; API tetap tersedia."
 	case "MAX_DURATION":
 		return "Batas durasi sesi tercapai. Tunggu finalisasi sebelum memulai sesi berikutnya."
 	case "DISK_LOW", "DISK_UNAVAILABLE":
@@ -137,7 +145,7 @@ func Advice(code string) string {
 	case "SESSION_ACTIVE":
 		return "Stop seluruh media dan tunggu status terminal sebelum mengubah konfigurasi."
 	case "BINARY_MISSING", "ENCODER_MISSING":
-		return "Periksa paket FFmpeg, ffprobe dan MediaMTX; gunakan build dengan libx264, libopus dan AAC."
+		return "Periksa paket FFmpeg, ffprobe dan MediaMTX; codec sumber diteruskan tanpa encode ulang."
 	case "DEVICE_AUTH_FAILED":
 		return "Periksa akun ONVIF/RTSP serta sinkronisasi waktu PC dan NVR; kedua layanan dapat memakai akun berbeda."
 	case "SOURCE_UNREACHABLE", "DEVICE_UNREACHABLE", "TIMEOUT":
@@ -146,8 +154,8 @@ func Advice(code string) string {
 		return "Aktifkan ONVIF dan multicast UDP 3702 atau gunakan alamat layanan/RTSP manual."
 	case "NETWORK_SCOPE", "NETWORK_UNAVAILABLE":
 		return "Pilih interface LAN aktif pada subnet yang sama dengan perangkat."
-	case "UNSUPPORTED_CODEC":
-		return "Pilih profil H.264 tanpa B-frame atau konversi H.264; konversi H.265 memerlukan uji kapasitas mini PC."
+	case "UNSUPPORTED_VIDEO_CODEC":
+		return "Pilih profil NVR HEVC/H.265. Codec lain ditolak; konversi tidak tersedia."
 	case "CONFIGURATION_UNAVAILABLE":
 		return "Jalankan dengan akun Windows yang menyimpan konfigurasi DPAPI, atau masukkan ulang konfigurasi saat pindah PC."
 	case "CONFIG_APPLY_FAILED", "ENGINE_START_FAILED":

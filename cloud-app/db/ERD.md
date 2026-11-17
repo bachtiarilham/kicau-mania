@@ -1,8 +1,8 @@
 # Rancangan ERD Lengkap Kicau Mania (Multi-Arena & EO)
 
-> **Status — SKEMA LOKAL SUDAH MENGIKUTI HISTORY MASTER, VERSI DATA, DAN SOFT DELETE**
+> **Status — RANCANGAN SCHEMA 011, HISTORY MASTER, SOFT DELETE DAN MEDIA DESKTOP**
 >
-> Tanggal revisi: 15 November 2026. Database lokal `localhost:5433/kicau_mania` sudah menerapkan migrasi 008–010. History master, version, soft delete, trigger append-only dan empat role sudah diterapkan; query 13 alur bisnis tersedia. Repository/UseCase/handler, seed/Insomnia dan integrasi Redis masih menunggu adaptasi. VPS tidak diubah.
+> Tanggal revisi: 15 November 2026. Rancangan mencakup migrasi 008–011. Penerapan pada database dilakukan terpisah; perubahan media desktop ini tidak mereset atau memigrasikan database operasional/VPS otomatis.
 > Rancangan ini menyederhanakan arsitektur database dengan:
 > 1. Menghapus tabel perantara dan audit mikro (`asset_owners`, `asset_bird_owner_transfers`, `competition_registration_items`, `competition_registration_payments`, `judging_participant_assessments`, `judging_score_operations`, `judging_score_revisions`).
 > 2. Menyimpan EO sebagai akun `iam.users` dengan boolean `is_eo`; event terhubung langsung ke akun penyelenggara melalui `owner_id`. Arena tetap merupakan fasilitas fisik terpisah.
@@ -955,3 +955,60 @@ Contoh urutan:
 | `judging` | `round_judges` | Penugasan juri yang bertugas di ronde tertentu. |
 | `judging` | `round_scores` | Skor nilai kriteria juri (revisi langsung menimpa baris ini). |
 | `media` | `round_recordings` | Link rekaman video kamera gantangan dan status pengiriman ke WA pendaftar. |
+
+
+## Tambahan media desktop — migrasi 011 (additif)
+
+Bagian ini adalah implementasi migrasi baru pada repository, bukan pernyataan bahwa database operasional/VPS sudah dimigrasikan. Tabel `media.round_recordings` lama tetap ada. Setiap sesi/channel baru disimpan sebagai aset tersendiri agar tiket yang sama dapat memiliki beberapa rekaman.
+
+```mermaid
+erDiagram
+    asset_arenas ||--o{ media_ingest_engines : scope
+    iam_users ||--o{ media_ingest_engines : pairs
+    media_ingest_engines ||--o{ media_ingest_sessions : owns
+    competition_rounds ||--o{ media_ingest_sessions : recorded_in
+    media_ingest_sessions ||--|{ media_ingest_mappings : maps
+    competition_registrations ||--o{ media_ingest_mappings : participant
+    asset_gantangan ||--o{ media_ingest_mappings : position
+    media_ingest_mappings ||--o{ media_recording_assets : preserves
+    media_ingest_engines ||--o{ media_recording_assets : uploads
+
+    media_ingest_engines {
+        uuid id PK
+        uuid arena_id FK
+        uuid created_by FK
+        text token_hash UK
+        timestamptz revoked_at
+    }
+    media_ingest_sessions {
+        uuid id PK
+        uuid engine_id FK
+        text local_session_id
+        uuid round_id FK
+        uuid created_by FK
+    }
+    media_ingest_mappings {
+        uuid ingestion_id PK, FK
+        text channel_id PK
+        uuid registration_id FK
+        uuid gantangan_id FK
+        jsonb snapshot
+    }
+    media_recording_assets {
+        uuid id PK
+        uuid engine_id FK
+        uuid ingestion_id FK
+        text channel_id FK
+        text local_recording_id
+        text object_key UK
+        bigint size_bytes
+        text sha256
+        text state
+        text multipart_id
+        jsonb parts
+        timestamptz started_at
+        timestamptz ended_at
+    }
+```
+
+Constraint unik: `(engine_id,local_session_id)` untuk sesi; `(ingestion_id,channel_id)` dan `(ingestion_id,registration_id)` untuk mapping; `(engine_id,local_recording_id)` untuk aset. Mapping bersifat immutable melalui API. Checksum tiap part diverifikasi object storage. Credential engine disimpan sebagai hash, bukan token asli; signed URL dibuat saat dibutuhkan setelah otorisasi.

@@ -9,6 +9,9 @@ import (
 )
 
 func (u *UseCase) Recordings(ctx context.Context, cursor string, limit int) ([]model.Recording, string, error) {
+	return u.RecordingsFiltered(ctx, cursor, limit, "", "", "")
+}
+func (u *UseCase) RecordingsFiltered(ctx context.Context, cursor string, limit int, session, channel, state string) ([]model.Recording, string, error) {
 	if limit < 1 || limit > 100 {
 		return nil, "", apperror.ErrInvalid
 	}
@@ -21,6 +24,9 @@ func (u *UseCase) Recordings(ctx context.Context, cursor string, limit int) ([]m
 	out := []model.Recording{}
 	next := ""
 	for _, r := range all {
+		if session != "" && r.RoundID != session || channel != "" && r.ChannelID != channel || state != "" && r.State != state {
+			continue
+		}
 		if r.ID <= cursor {
 			continue
 		}

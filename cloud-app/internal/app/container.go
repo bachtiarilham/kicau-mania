@@ -8,11 +8,15 @@ import (
 	authService "kicau.cloud/control/internal/auth/service"
 	"kicau.cloud/control/internal/delivery"
 	"kicau.cloud/control/internal/delivery/rest"
+	mediaDelivery "kicau.cloud/control/internal/delivery/rest/media"
 	handler "kicau.cloud/control/internal/delivery/rest/workflow"
 	health "kicau.cloud/control/internal/health/usecase"
 	"kicau.cloud/control/internal/infra/postgres"
 	redisService "kicau.cloud/control/internal/login/service"
 	login "kicau.cloud/control/internal/login/usecase"
+	mediaModel "kicau.cloud/control/internal/media/model"
+	mediaService "kicau.cloud/control/internal/media/service"
+	mediaUC "kicau.cloud/control/internal/media/usecase"
 	repo "kicau.cloud/control/internal/workflow/repository"
 	workflow "kicau.cloud/control/internal/workflow/usecase"
 )
@@ -56,7 +60,17 @@ func New(ctx context.Context, cfg config.Config) (*Container, error) {
 	c.Auth = login.New(d, r, p, authService.NewLimiter())
 	c.Workflow = workflow.New(d, p)
 	h := &handler.Handler{UC: c.Workflow, Auth: c.Auth, CookieName: cfg.CookieName, Secure: cfg.CookieSecure, Origins: cfg.AllowedOrigins}
-	c.Handlers = delivery.Handlers{Health: rest.NewHealthHandler(health.New(readiness{db, r}, cfg.DBHealthTimeout)), Workflow: h, Verifier: c.Auth}
+	var objects mediaModel.Objects
+	if cfg.MediaS3Bucket != "" {
+		var err error
+		objects, err = mediaService.NewObjects(ctx, cfg.MediaS3Endpoint, cfg.MediaS3Region, cfg.MediaS3Bucket, cfg.MediaS3Key, cfg.MediaS3Secret)
+		if err != nil {
+			c.Close()
+			return nil, err
+		}
+	}
+	mh := &mediaDelivery.Handler{UC: &mediaUC.UseCase{DB: d, ACL: c.Workflow, Objects: objects}}
+	c.Handlers = delivery.Handlers{Media: mh, Health: rest.NewHealthHandler(health.New(readiness{db, r}, cfg.DBHealthTimeout)), Workflow: h, Verifier: c.Auth}
 	return c, nil
 }
 func (c *Container) Close() {

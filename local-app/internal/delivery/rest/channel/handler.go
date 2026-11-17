@@ -15,7 +15,7 @@ type ChannelUseCase interface {
 // ChannelResponse is the REST representation of a playable channel.
 type ChannelResponse struct {
 	ID    string `json:"id"`
-	WHEP  string `json:"whep_url"`
+	RTSP  string `json:"rtsp_url"`
 	Audio string `json:"audio_path"`
 }
 
@@ -28,7 +28,7 @@ func New(uc ChannelUseCase) *Handler {
 }
 
 // channels godoc
-// @Summary Daftar channel dan alamat WHEP/audio
+// @Summary Daftar channel dan alamat RTSP/audio
 // @Description Mode LAN: subnet pembaca tanpa token. Mode cloud: OperatorToken. Katalog tidak otomatis memulai stream; channel harus masuk sesi aktif untuk playback.
 // @Tags Channels
 // @Security OperatorToken
@@ -42,7 +42,7 @@ func (h *Handler) channels(c *gin.Context) {
 	for _, ch := range records {
 		out = append(out, ChannelResponse{
 			ID:    ch.ID,
-			WHEP:  ch.WHEP,
+			RTSP:  ch.RTSP,
 			Audio: "/api/v1/channels/" + ch.ID + "/audio",
 		})
 	}

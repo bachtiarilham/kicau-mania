@@ -1,8 +1,8 @@
-# API aktif schema 010
+# API aktif schema 011
 
 Prefix `/api/v1`. Semua respons JSON memakai `{success,message,data,errors}`; field null opsional dapat tidak disertakan. Daftar CRUD memakai `{items,next_cursor,has_more}`, `limit` 1–100 (default 25). Cursor adalah UUID terakhir; history memakai `after_version`. Error 400 validasi, 401 sesi invalid, 403 hak akses, 404 tidak ditemukan, 409 konflik versi/relasi/status, 429 batas percobaan login, 503 layanan tidak tersedia. Tidak ada konversi error menjadi daftar kosong.
 
-Swagger `/api/docs/` dan [JSON](generated/swagger.json) dihasilkan melalui `go run ./cmd/openapi docs/generated/swagger.json`. Query SQL bukan endpoint tersendiri. Tidak ada route media, owners, engines, devices, signup, Google atau reset email pada aplikasi aktif.
+Swagger `/api/docs/` dan [JSON](generated/swagger.json) dihasilkan melalui `go run ./cmd/openapi docs/generated/swagger.json`. Query SQL bukan endpoint tersendiri. Media desktop ditambahkan melalui migrasi 011. Tidak ada resource inventory owners/engines/devices lama, signup, Google atau reset email.
 
 ## Auth dan petugas
 
@@ -60,3 +60,9 @@ GET `/arenas/{arena}/judges` adalah lookup juri aktif pada arena. GET `/rounds/{
 POST `/rounds/{id}/start`: PREPARED → RUNNING, memerlukan arena aktif, peserta eligible, roster juri aktif dan kriteria. `/begin-judging`: RUNNING → JUDGING. `/close`: JUDGING → CLOSED hanya setelah nilai lengkap. `/cancel`: sebelum CLOSED. Body `{expected_status}` mencegah perubahan dari tampilan stale. Tidak ada field bracket atau pemenang tersimpan.
 
 GET `/judge/rounds` hanya tugas akun sendiri. GET/PUT `/arenas/{arena}/rounds/{id}/scores/{registration}` hanya juri roster pada arena tersebut. PUT `{scores:[{criteria_id,score_value:"9.25"},...]}` wajib mencakup setiap kriteria tepat sekali dalam satu transaksi. Nilai 1–10, desimal maksimal 32 karakter; revisi langsung. Round lock yang sama dipakai submit dan penutupan, sehingga penutupan tidak melihat paket nilai separuh. Rekap tidak memakai materialized view.
+
+## Media desktop (schema 011)
+
+Pairing/mapping memakai autentikasi pengguna arena, sedangkan `/engine/media/uploads` memakai credential engine khusus. Detail endpoint, payload, multipart, checksum dan akses file ada pada [kontrak media desktop](desktop-media-contract.md). File disimpan pada bucket privat; cloud tidak menerima body MKV/MP4 besar melalui handler JSON. Signed URL tidak disimpan permanen. Daftar/detail/download peserta dibatasi kepemilikan tiket; petugas dibatasi penugasan arena.
+
+Migrasi 011 bersifat additif dan wajib diterapkan secara eksplisit sebelum menjalankan release baru; `/readyz` memeriksa tabel ingestion. Konfigurasi `MEDIA_S3_ENDPOINT`, `MEDIA_S3_REGION`, `MEDIA_S3_BUCKET`, `MEDIA_S3_ACCESS_KEY`, `MEDIA_S3_SECRET_KEY` hanya di server cloud. Tanpa konfigurasi storage, CRUD lama tetap berjalan tetapi operasi upload/download media menghasilkan 503. Mode desktop tidak memerlukan endpoint command/heartbeat/WHEP cloud lama.

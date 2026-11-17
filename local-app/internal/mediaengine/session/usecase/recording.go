@@ -38,7 +38,7 @@ func (u *UseCase) capture(r *run, ctx context.Context, id string) {
 		u.mu.Lock()
 		rec := r.records[id]
 		attempt := len(rec.Segments) + 1
-		part := fmt.Sprintf("%s.segment-%06d.mp4.partial", rec.File, attempt)
+		part := fmt.Sprintf("%s.segment-%06d%s.partial", rec.File, attempt, filepath.Ext(rec.File))
 		rec.Segments = append(rec.Segments, recording.Segment{File: part, StartedAt: time.Now().UTC()})
 		r.records[id] = rec
 		for i := range r.session.ChannelsState {

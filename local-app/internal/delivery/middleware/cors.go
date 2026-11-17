@@ -17,7 +17,7 @@ func originAllowed(c *gin.Context, origin string, origins []string) bool {
 	return err == nil && u.User == nil && u.RawQuery == "" && u.Fragment == "" && u.Path == "" && (u.Scheme == "http" || u.Scheme == "https") && u.Host == c.Request.Host
 }
 
-// CORS checks origins and owns CORS headers for REST, WHEP, and WebSocket handshakes.
+// CORS checks origins and owns CORS headers for REST and WebSocket handshakes.
 // Requests without Origin remain usable by native clients; authentication is separate.
 func CORS(origins []string) gin.HandlerFunc {
 	return func(c *gin.Context) {

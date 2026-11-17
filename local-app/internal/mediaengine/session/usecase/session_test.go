@@ -150,8 +150,8 @@ func TestSessionOwnsBackgroundAndPlaybackBarrier(t *testing.T) {
 func TestRestartFinalizesWithoutResuming(t *testing.T) {
 	u, journal, files, pipeline := sessionFixture(t)
 	now := time.Now().UTC()
-	file := filepath.Join(u.opts.DataDir, "recordings", "recording.mp4")
-	part := file + ".segment-000001.mp4.partial"
+	file := filepath.Join(u.opts.DataDir, "recordings", "recording.mkv")
+	part := file + ".segment-000001.mkv.partial"
 	if err := os.MkdirAll(filepath.Dir(file), 0700); err != nil {
 		t.Fatal(err)
 	}
@@ -162,7 +162,7 @@ func TestRestartFinalizesWithoutResuming(t *testing.T) {
 	if err := journal.Save(context.Background(), s); err != nil {
 		t.Fatal(err)
 	}
-	rec := recording.Recording{ID: "recording", RoundID: s.ID, ChannelID: "one", State: "RECORDING", File: file, StartedAt: now, Segments: []recording.Segment{{File: part, StartedAt: now}}}
+	rec := recording.Recording{ID: "recording", RoundID: s.ID, ChannelID: "one", State: "RECORDING", File: file, Key: "rounds/interrupted/one/recording.mkv", StartedAt: now, Segments: []recording.Segment{{File: part, StartedAt: now}}}
 	if err := files.Save(context.Background(), rec); err != nil {
 		t.Fatal(err)
 	}

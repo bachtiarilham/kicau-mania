@@ -64,7 +64,7 @@ func TestSchema010BusinessFlows(t *testing.T) {
 	if _, e = db.Exec(ctx, scaffold); e != nil {
 		t.Fatal(e)
 	}
-	for _, name := range []string{"008_simplified_erd_reset.up.sql", "009_simplified_cloud_read.up.sql", "010_master_history_and_soft_delete.up.sql"} {
+	for _, name := range []string{"008_simplified_erd_reset.up.sql", "009_simplified_cloud_read.up.sql", "010_master_history_and_soft_delete.up.sql", "011_desktop_media.up.sql"} {
 		b, e := os.ReadFile(filepath.Join("../../db/migrations", name))
 		if e != nil {
 			t.Fatal(e)
@@ -136,8 +136,8 @@ func TestSchema010BusinessFlows(t *testing.T) {
 		}
 	}
 	for path := range doc.Paths {
-		for _, old := range []string{"/owners", "/engines", "/devices", "/media", "/auth/register", "/auth/google"} {
-			if strings.Contains(path, old+"/") || strings.HasSuffix(path, old) {
+		for _, old := range []string{"/owners", "/engines", "/devices", "/auth/register", "/auth/google"} {
+			if strings.HasPrefix(path, "/api/v1"+old+"/") || path == "/api/v1"+old {
 				t.Fatal("Swagger advertises obsolete route", path)
 			}
 		}
@@ -233,6 +233,9 @@ func TestSchema010BusinessFlows(t *testing.T) {
 		t.Fatal("DQ changed payment")
 	}
 	call("POST", "/registrations/"+tid+"/requalify?arena_id="+a, map[string]any{}, 200)
+	t.Run("DesktopMedia", func(t *testing.T) {
+		testDesktopMedia(t, c, call, &token, a, round["id"].(string), tid, gantangan["id"].(string))
+	})
 	// Ticket edits remain possible before verification; wrong species/arena fail.
 	round2 := call("POST", "/arenas/"+a+"/rounds", map[string]any{"event_id": event["id"], "bird_species_id": species["id"], "title": "Ronde kedua", "round_number": 2}, 200)
 	transferInput := map[string]any{}
@@ -350,6 +353,7 @@ func TestSchema010BusinessFlows(t *testing.T) {
 	call("PUT", baseRound+"/scores/"+tid, values("5", "5"), 409)
 	token = adminToken
 	call("POST", "/registrations/"+tid+"/requalify?arena_id="+a, map[string]any{}, 200)
+
 	// Both handlers use the same round lock: closure cannot observe half a package.
 	var wg sync.WaitGroup
 	statuses := make(chan int, 2)

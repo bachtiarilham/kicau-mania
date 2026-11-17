@@ -120,13 +120,13 @@ func fixture(t *testing.T) (*testContainer, config.Config, *fakeMedia) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	mediaServer := mediamtx.New(mediamtx.Options{WebRTCBase: "http://192.0.2.2:8889"})
+	mediaServer := mediamtx.New(mediamtx.Options{})
 	repo, e := savingRepo.NewFiles(filepath.Join(dir, "queue"))
 	if e != nil {
 		t.Fatal(e)
 	}
 	media := &fakeMedia{events: make(chan observed, 10)}
-	v := channelUC.New(catalog, mediaServer)
+	v := channelUC.New(catalog, catalog)
 	a := audioUC.New(audioUC.Options{SampleRate: 16000, Threshold: -35}, catalog, audioService.NewBroadcaster(), nil, audioWorker.New())
 	s := streamingUC.New(catalog, media, map[string]string{"youtube": "rtmps://example.test/live/key"}, streamingWorker.New())
 	save := savingUC.New(repo, nil, savingWorker.New())
@@ -244,7 +244,7 @@ func TestExistingHTTPContracts(t *testing.T) {
 	if e := json.Unmarshal(body["data"], &channels); e != nil {
 		t.Fatal(e)
 	}
-	if len(channels) != 1 || len(channels[0]) != 3 || channels[0]["id"] != "lapak01" || channels[0]["whep_url"] != "http://192.0.2.2:8889/api/v1/playback/lapak01/whep" || channels[0]["audio_path"] != "/api/v1/channels/lapak01/audio" {
+	if len(channels) != 1 || len(channels[0]) != 3 || channels[0]["id"] != "lapak01" || channels[0]["rtsp_url"] != "rtsp://127.0.0.1:8554/lapak01" || channels[0]["audio_path"] != "/api/v1/channels/lapak01/audio" {
 		t.Fatal(channels)
 	}
 	for _, tc := range []struct {
@@ -263,7 +263,7 @@ func TestExistingHTTPContracts(t *testing.T) {
 		{"POST", "/api/v1/restreams", `{"channel_id":"lapak01","target":"youtube"}`, 405},
 		{"POST", "/api/v1/restreams", `{"channel_id":"lapak01","target":"youtube"}`, 405},
 		{"GET", "/api/v1/restreams", "", 200},
-		{"DELETE", "/api/v1/restreams/youtube", "", 404},
+		{"DELETE", "/api/v1/restreams/youtube", "", 405},
 	} {
 		if got, _ := request(tc.method, tc.path, tc.body, true); got != tc.want {
 			t.Fatalf("%s %s: got %d want %d", tc.method, tc.path, got, tc.want)

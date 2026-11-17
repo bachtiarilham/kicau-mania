@@ -14,16 +14,17 @@ import (
 )
 
 type Config struct {
-	HTTPAddress                       string
-	DatabaseURL                       string
-	RedisURL                          string
-	DBMaxConns, DBMinConns            int32
-	DBConnectTimeout, DBHealthTimeout time.Duration
-	RequestTimeout, ShutdownTimeout   time.Duration
-	AllowedOrigins                    []string
-	TrustedProxies                    []string
-	FrontendURL, CookieName           string
-	CookieSecure                      bool
+	MediaS3Endpoint, MediaS3Region, MediaS3Bucket, MediaS3Key, MediaS3Secret string
+	HTTPAddress                                                              string
+	DatabaseURL                                                              string
+	RedisURL                                                                 string
+	DBMaxConns, DBMinConns                                                   int32
+	DBConnectTimeout, DBHealthTimeout                                        time.Duration
+	RequestTimeout, ShutdownTimeout                                          time.Duration
+	AllowedOrigins                                                           []string
+	TrustedProxies                                                           []string
+	FrontendURL, CookieName                                                  string
+	CookieSecure                                                             bool
 }
 
 func Load(path string) (Config, error) {
@@ -31,6 +32,15 @@ func Load(path string) (Config, error) {
 		return Config{}, fmt.Errorf("cannot load environment file")
 	}
 	c := Config{HTTPAddress: env("HTTP_ADDR", "127.0.0.1:8091"), DatabaseURL: strings.TrimSpace(env("DATABASE_URL", ""))}
+	c.MediaS3Endpoint = env("MEDIA_S3_ENDPOINT", "")
+	c.MediaS3Region = env("MEDIA_S3_REGION", "us-east-1")
+	c.MediaS3Bucket = env("MEDIA_S3_BUCKET", "")
+	c.MediaS3Key = env("MEDIA_S3_ACCESS_KEY", "")
+	c.MediaS3Secret = env("MEDIA_S3_SECRET_KEY", "")
+	if c.MediaS3Bucket != "" && (c.MediaS3Key == "" || c.MediaS3Secret == "") {
+		return c, fmt.Errorf("MEDIA_S3_ACCESS_KEY and MEDIA_S3_SECRET_KEY are required with MEDIA_S3_BUCKET")
+	}
+
 	c.RedisURL = strings.TrimSpace(env("REDIS_URL", ""))
 	_, port, err := net.SplitHostPort(c.HTTPAddress)
 	if err != nil {

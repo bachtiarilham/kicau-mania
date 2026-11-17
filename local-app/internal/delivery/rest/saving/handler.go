@@ -41,6 +41,11 @@ func (h *Handler) recordings(c *gin.Context) {
 		return
 	}
 	out, next, e := h.uc.Recordings(c.Request.Context(), c.Query("cursor"), limit)
+	if filtered, ok := h.uc.(interface {
+		RecordingsFiltered(context.Context, string, int, string, string, string) ([]model.Recording, string, error)
+	}); ok {
+		out, next, e = filtered.RecordingsFiltered(c.Request.Context(), c.Query("cursor"), limit, c.Query("session_id"), c.Query("channel_id"), c.Query("state"))
+	}
 	if e != nil {
 		response.WriteError(c, e)
 		return

@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 
 	"kicau.local/edge/internal/core/identifier"
@@ -33,6 +34,9 @@ func (r *Files) Save(ctx context.Context, v model.Recording) error {
 	}
 	if !identifier.Valid(v.ID) {
 		return fmt.Errorf("unsafe manifest name")
+	}
+	if !strings.EqualFold(filepath.Ext(v.File), ".mkv") || !strings.HasSuffix(strings.ToLower(v.Key), ".mkv") {
+		return fmt.Errorf("recording must use MKV")
 	}
 	previous, readErr := os.ReadFile(filepath.Join(r.dir, v.ID+".json"))
 	if readErr == nil {
@@ -89,6 +93,9 @@ func (r *Files) List(ctx context.Context) ([]model.Recording, error) {
 		var v model.Recording
 		if e = json.Unmarshal(b, &v); e != nil {
 			return nil, fmt.Errorf("corrupt recording manifest %s", f.Name())
+		}
+		if !strings.EqualFold(filepath.Ext(v.File), ".mkv") || !strings.HasSuffix(strings.ToLower(v.Key), ".mkv") {
+			return nil, fmt.Errorf("unsupported recording format in %s", f.Name())
 		}
 		out = append(out, v)
 	}

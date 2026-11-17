@@ -2,6 +2,7 @@
 package delivery
 
 import (
+	mediaDelivery "kicau.cloud/control/internal/delivery/rest/media"
 	"sort"
 	"strings"
 	"time"
@@ -17,6 +18,7 @@ import (
 )
 
 type Handlers struct {
+	Media    *mediaDelivery.Handler
 	Health   *rest.HealthHandler
 	Workflow *workflow.Handler
 	Verifier middleware.UserVerifier
@@ -42,6 +44,9 @@ func Router(opts Options, h Handlers) *gin.Engine {
 	h.Workflow.Public(r.Group("/api/v1/auth"))
 	g := r.Group("/api/v1", middleware.RequireUser(h.Verifier))
 	h.Workflow.Routes(g)
+	if h.Media != nil {
+		h.Media.Routes(g, r.Group("/api/v1/engine/media"))
+	}
 	r.NoRoute(func(c *gin.Context) { response.WriteError(c, apperror.ErrNotFound) })
 	r.NoMethod(func(c *gin.Context) {
 		methods := []string{}

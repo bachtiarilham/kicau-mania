@@ -1,5 +1,4 @@
 .env
-.env.webcam
 .env.lan
 /runtime/
 data/
@@ -8,3 +7,7 @@ bin/
 coverage.out
 !PETA-KODE.md
 /logs/
+
+/data-nvr/
+
+/runtime-nvr/

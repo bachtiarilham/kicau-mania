@@ -32,24 +32,24 @@ type Channels interface {
 	HubRTSP(string) (string, error)
 }
 type EngineOptions struct {
-	LAN                                bool
-	ArenaID, EngineID, PlaybackBaseURL string
-	HeartbeatTimeout                   time.Duration
-	CommandsConfigured                 bool
+	LAN                bool
+	ArenaID, EngineID  string
+	HeartbeatTimeout   time.Duration
+	CommandsConfigured bool
 }
 type Engine struct {
-	opts                          EngineOptions
-	channels                      Channels
-	media                         MediaStatus
-	recordings                    Recordings
-	restreams                     Restreams
-	updates                       MediaUpdates
-	heartbeat, metadata, playback Poster
-	mu                            sync.Mutex
-	lastHeartbeat                 time.Time
-	heartbeatFailed               bool
+	opts                EngineOptions
+	channels            Channels
+	media               MediaStatus
+	recordings          Recordings
+	restreams           Restreams
+	updates             MediaUpdates
+	heartbeat, metadata Poster
+	mu                  sync.Mutex
+	lastHeartbeat       time.Time
+	heartbeatFailed     bool
 }
 
-func NewEngine(opts EngineOptions, channels Channels, server MediaStatus, recordings Recordings, restreams Restreams, updates MediaUpdates, heartbeat, metadata, playback Poster) *Engine {
-	return &Engine{opts: opts, channels: channels, media: server, recordings: recordings, restreams: restreams, updates: updates, heartbeat: heartbeat, metadata: metadata, playback: playback}
+func NewEngine(opts EngineOptions, channels Channels, server MediaStatus, recordings Recordings, restreams Restreams, updates MediaUpdates, heartbeat, metadata Poster) *Engine {
+	return &Engine{opts: opts, channels: channels, media: server, recordings: recordings, restreams: restreams, updates: updates, heartbeat: heartbeat, metadata: metadata}
 }

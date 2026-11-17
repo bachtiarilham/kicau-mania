@@ -3,6 +3,8 @@ package usecase
 
 import (
 	"context"
+	"errors"
+	"kicau.local/edge/internal/mediaengine/saving/model"
 	"time"
 
 	"go.uber.org/zap"
@@ -33,9 +35,19 @@ func (u *UseCase) uploadPending(ctx context.Context) {
 		if r.State != "READY" || activeRounds[r.RoundID] || time.Now().Before(r.NextAttempt) {
 			continue
 		}
-		err = u.executor.UploadWithTimeout(ctx, func(uploadCtx context.Context) error { return u.storage.Put(uploadCtx, r.Key, r.File) })
+		err = u.executor.UploadWithTimeout(ctx, func(uploadCtx context.Context) error {
+			if cloud, ok := u.storage.(interface {
+				PutRecording(context.Context, model.Recording) error
+			}); ok {
+				return cloud.PutRecording(uploadCtx, r)
+			}
+			return u.storage.Put(uploadCtx, r.Key, r.File)
+		})
 		if ctx.Err() != nil {
 			return
+		}
+		if errors.Is(err, model.ErrNotMapped) {
+			continue
 		}
 		r.Attempts++
 		if err == nil {

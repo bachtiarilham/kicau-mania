@@ -10,7 +10,7 @@ type ChannelRepository interface {
 }
 
 type Playback interface {
-	WHEP(string) string
+	HubRTSP(string) (string, error)
 }
 
 type UseCase struct {
@@ -31,9 +31,13 @@ func New(
 func (u *UseCase) Channels() []model.PlaybackChannel {
 	out := []model.PlaybackChannel{}
 	for _, ch := range u.sources.Channels() {
+		address, err := u.playback.HubRTSP(ch.ID)
+		if err != nil {
+			continue
+		}
 		out = append(out, model.PlaybackChannel{
 			ID:   ch.ID,
-			WHEP: u.playback.WHEP(ch.ID),
+			RTSP: address,
 		})
 	}
 	return out

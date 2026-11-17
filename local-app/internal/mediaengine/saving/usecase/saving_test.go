@@ -44,11 +44,11 @@ func waitRecording(t *testing.T, u *UseCase, id, state string) model.Recording {
 }
 func TestUploadRetrySurvivesRestart(t *testing.T) {
 	u, r := fixture(t)
-	file := filepath.Join(t.TempDir(), "clip.mp4")
+	file := filepath.Join(t.TempDir(), "clip.mkv")
 	if e := os.WriteFile(file, []byte("fixture"), 0600); e != nil {
 		t.Fatal(e)
 	}
-	rec := model.Recording{ID: "upload1", RoundID: "round1", ChannelID: "lapak01", State: "READY", File: file, Key: "rounds/r1/a.mp4"}
+	rec := model.Recording{ID: "upload1", RoundID: "round1", ChannelID: "lapak01", State: "READY", File: file, Key: "rounds/r1/a.mkv"}
 	if e := r.Save(context.Background(), rec); e != nil {
 		t.Fatal(e)
 	}

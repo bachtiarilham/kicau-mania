@@ -83,7 +83,7 @@ func (h *Handler) configuration(c *gin.Context) {
 
 // startJob godoc
 // @Summary Jalankan discovery, profil, probe, apply atau recheck
-// @Description Mode lan dan localhost dengan X-Local-Control. action=discover memakai ip interface; profiles memakai endpoint/username/password; probe memakai channel; apply memakai configuration (LAN IP/CIDR dan 1-24 channel, live_mode copy atau transcode); recheck memeriksa sumber tersimpan. Lihat docs/setup-api.md untuk payload tiap action. Poll jobs/{id}: HTTP 202 hanya berarti diterima, hasil akhir ada di state/result/code/advice. Apply tidak boleh saat sesi aktif atau finalisasi, dan tidak memulai sesi. Result: discover=Device[], profiles=Profile[], probe=Probe, apply=Configuration tersamarkan, recheck=SourceCheck[].
+// @Description Mode lan dan localhost dengan X-Local-Control. action=discover memakai ip interface; profiles memakai endpoint/username/password; probe memakai channel; apply memakai configuration (LAN IP/CIDR dan 1-24 channel, video NVR wajib HEVC/H.265; passthrough tetap tanpa pilihan mode); recheck memeriksa sumber tersimpan. Lihat docs/setup-api.md untuk payload tiap action. Poll jobs/{id}: HTTP 202 hanya berarti diterima, hasil akhir ada di state/result/code/advice. Apply tidak boleh saat sesi aktif atau finalisasi, dan tidak memulai sesi. Result: discover=Device[], profiles=Profile[], probe=Probe, apply=Configuration tersamarkan, recheck=SourceCheck[].
 // @Tags Setup
 // @Accept json
 // @Produce json

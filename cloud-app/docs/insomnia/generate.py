@@ -25,6 +25,7 @@ variables = dict(base_url='https://dev.megaallstararena.com', frontend_origin='h
 def fixture(group, number):
     return f'6d6f636b-{group:04x}-4000-8000-{number:012d}'
 
+variables.update(engine_id=fixture(15,1),engine_token='',media_upload_id='',media_recording_id='',media_session_id='',channel_id='gantangan01')
 variables.update(email='admin@mock.kicau.test', password='KicauMock2026!',
                  user_id=fixture(1,7), owner_id=fixture(1,2), new_owner_id=fixture(1,8),
                  arena_id=fixture(2,1), other_arena_id=fixture(2,2), species_id=fixture(14,1),
@@ -70,6 +71,7 @@ def folder(label):
 
 def group(path, method):
     if method == 'DELETE': return '99 Penghapusan dan pencabutan - jalankan manual'
+    if '/engine/media/' in path or '/media/' in path: return '15 Media desktop dan upload privat'
     if '/auth/' in path: return '01 Autentikasi dan sesi'
     if path.startswith('/api/v1/users'): return '03 Master peserta dan EO'
     if path.startswith('/api/v1/bird-species'): return '04 Spesies burung'
@@ -110,6 +112,10 @@ def example(name):
         'Scores': dict(scores=[dict(criteria_id=ref('criterion_id'), score_value='9.25'),
                               dict(criteria_id=ref('criterion_2_id'), score_value='8.75'),
                               dict(criteria_id=ref('criterion_3_id'), score_value='8.50')]),
+        'MediaPair': dict(arena_id=ref('arena_id')),
+        'MediaIngestion': dict(engine_id=ref('engine_id'),session_id=ref('media_session_id'),round_id=ref('round_id'),mappings=[dict(channel_id=ref('channel_id'),registration_id=ref('registration_id'),gantangan_id=ref('gantangan_id'))]),
+        'MediaUpload': dict(container='mkv',session_id=ref('media_session_id'),channel_id=ref('channel_id'),recording_id='local-recording-id',size_bytes=1,sha256='REPLACE_WITH_FILE_SHA256_HEX',started_at='2026-11-15T00:00:00Z',ended_at='2026-11-15T00:01:00Z'),
+        'MediaPart': dict(number=1,sha256='REPLACE_WITH_PART_SHA256_BASE64'),
         'Password': dict(old_password=ref('password'), new_password=ref('new_password')),
         'Credentials': dict(password=ref('staff_password')),
         'Transition': dict(expected_status='PREPARED'),
@@ -146,16 +152,18 @@ def script(capture=None, version=None, token=False, binary=False):
 def add(path, method, op, title=None, payload=None, capture=None, suffix=''):
     method = method.upper()
     ids = dict(arena='arena_id', judge='staff_user_id', ticket='registration_id',
-               user='staff_user_id', role='staff_role', session='session_id', award='award_id')
+               user='staff_user_id', role='staff_role', session='session_id', award='award_id',engine_id='engine_id')
     for segment, key in [('users', 'user_id'), ('bird-species', 'species_id'), ('birds', 'bird_id'),
                           ('events', 'event_id'), ('categories', 'category_id'), ('rounds', 'round_id'),
                           ('gantangan', 'gantangan_id'), ('criteria', 'criterion_id'),
                           ('registrations', 'registration_id')]:
         if f'/{segment}/{{id}}' in path: ids['id'] = key
+    if '/engine/media/uploads/{id}' in path: ids['id']='media_upload_id'
+    if '/media/recordings/{id}' in path: ids['id']='media_recording_id'
     url = ref('base_url') + re.sub(r'\{(\w+)\}', lambda m: ref(ids[m[1]]), path)
     headers = [dict(name='Accept', value='image/jpeg, image/png' if path.endswith('/proof') and method == 'GET' else 'application/json')]
     public = path in ['/api/v1/auth/login', '/api/v1/auth/refresh', '/api/v1/auth/logout']
-    if not public: headers.append(dict(name='Authorization', value='Bearer ' + ref('access_token')))
+    if not public: headers.append(dict(name='Authorization', value='Bearer ' + ref('engine_token' if '/engine/media/' in path else 'access_token')))
     if public: headers.append(dict(name='Origin', value=ref('frontend_origin')))
     body = {}
     parameters = []
@@ -184,6 +192,7 @@ def add(path, method, op, title=None, payload=None, capture=None, suffix=''):
         parameters.append(dict(id='param_' + key, name=key, value=value,
                                disabled=not (p.get('required') or key in ['limit', 'after_version'] or key == 'arena_id')))
     capture = capture or capture_for(path, method)
+    if path=='/api/v1/engine/media/uploads' and method=='POST': capture='media_upload_id'
     version = ('user_version' if path in ['/api/v1/users', '/api/v1/users/{id}'] else
                'bird_version' if path in ['/api/v1/birds', '/api/v1/birds/{id}', '/api/v1/birds/{id}/transfer'] else None)
     key = 'req_' + hashlib.sha256((method + path + suffix).encode()).hexdigest()[:24]
@@ -197,6 +206,8 @@ def add(path, method, op, title=None, payload=None, capture=None, suffix=''):
                    settingRebuildPath=True, settingFollowRedirects='off', preRequestScript='',
                    afterResponseScript=script(capture, version, path in ['/api/v1/auth/login', '/api/v1/auth/refresh'],
                                               path.endswith('/proof') and method == 'GET'))
+    if path == '/api/v1/media/engines/{engine_id}' and method=='POST':
+        request['afterResponseScript'] += "if (ok) {const d=insomnia.response.json().data;if(d?.token)insomnia.environment.set('engine_token',d.token);if(d?.id)insomnia.environment.set('engine_id',d.id); }\n"
     if path == '/api/v1/auth/logout':
         request['afterResponseScript'] += "if (ok) insomnia.environment.unset('access_token');\n"
     resources.append(request)

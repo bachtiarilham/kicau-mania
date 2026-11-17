@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 
 	"kicau.local/edge/internal/infra/runtime/subprocess"
@@ -19,11 +18,9 @@ type Source struct {
 }
 
 type Options struct {
-	PublishToken                                             string
-	Sources                                                  []Source
-	Binary, ConfigFile, RTSPListen, WebRTCListen, WebRTCBase string
-	WebRTCLocalUDP                                           string
-	ICEHosts, Origins, ReadCIDRs                             []string
+	Sources                        []Source
+	Binary, ConfigFile, RTSPListen string
+	ReadCIDRs                      []string
 }
 type Server struct {
 	opts   Options
@@ -34,18 +31,11 @@ type Server struct {
 }
 
 func New(opts Options) *Server {
-	if opts.WebRTCLocalUDP == "" {
-		opts.WebRTCLocalUDP = ":8189"
-	}
 	opts.Sources = append([]Source(nil), opts.Sources...)
 	return &Server{opts: opts, launch: func(ctx context.Context, binary string, args []string) (media.Process, error) {
 		return subprocess.StartMediaServer(ctx, binary, args, nil)
 	}}
 }
-func (s *Server) WHEP(id string) string {
-	return strings.TrimRight(s.opts.WebRTCBase, "/") + "/api/v1/playback/" + id + "/whep"
-}
-
 func (s *Server) MediaStatus() media.Status {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -83,30 +73,20 @@ func (s *Server) Render() error {
 				map[string]any{"action": "read", "path": ""},
 			}},
 	}
-	if s.opts.PublishToken != "" {
-		authUsers = append(authUsers, map[string]any{"user": "pipeline", "pass": s.opts.PublishToken, "ips": []string{"127.0.0.1/32", "::1/128"}, "permissions": []any{map[string]any{"action": "publish", "path": ""}}})
-	}
 	cfg := map[string]any{
-		"logLevel":                "warn",
-		"rtsp":                    true,
-		"rtspAddress":             s.opts.RTSPListen,
-		"rtspTransports":          []string{"tcp"},
-		"rtmp":                    false,
-		"hls":                     false,
-		"srt":                     false,
-		"api":                     false,
-		"playback":                false,
-		"webrtc":                  true,
-		"webrtcAddress":           s.opts.WebRTCListen,
-		"webrtcLocalUDPAddress":   s.opts.WebRTCLocalUDP,
-		"webrtcAdditionalHosts":   s.opts.ICEHosts,
-		"webrtcIPsFromInterfaces": false,
-		"webrtcICEServers2":       []any{},
-		"webrtcTrustedProxies":    []string{"127.0.0.1/32", "::1/128"},
-		"webrtcAllowOrigin":       s.webRTCOrigin(),
-		"authMethod":              "internal",
-		"authInternalUsers":       authUsers,
-		"paths":                   paths,
+		"logLevel":          "warn",
+		"rtsp":              true,
+		"rtspAddress":       s.opts.RTSPListen,
+		"rtspTransports":    []string{"tcp"},
+		"rtmp":              false,
+		"hls":               false,
+		"srt":               false,
+		"api":               false,
+		"playback":          false,
+		"webrtc":            false,
+		"authMethod":        "internal",
+		"authInternalUsers": authUsers,
+		"paths":             paths,
 	}
 	b, e := json.MarshalIndent(cfg, "", "  ")
 	if e != nil {
@@ -121,13 +101,6 @@ func (s *Server) Render() error {
 	return nil
 }
 
-// MediaMTX v1.15.3 accepts one CORS origin. Go API CORS still uses the full list.
-func (s *Server) webRTCOrigin() string {
-	if len(s.opts.Origins) > 0 {
-		return s.opts.Origins[0]
-	}
-	return "http://localhost:3000"
-}
 func (s *Server) Start(ctx context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()

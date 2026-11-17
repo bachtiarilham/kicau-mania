@@ -14,7 +14,7 @@ func TestS3UploadUsesStableKey(t *testing.T) {
 	body := "synthetic finalized clip"
 	received := make(chan string, 2)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "PUT" || r.URL.Path != "/clips/rounds/r1/lapak01/id.mp4" {
+		if r.Method != "PUT" || r.URL.Path != "/clips/rounds/r1/lapak01/id.mkv" {
 			t.Errorf("unexpected request %s %s", r.Method, r.URL.Path)
 			w.WriteHeader(400)
 			return
@@ -30,12 +30,12 @@ func TestS3UploadUsesStableKey(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	file := filepath.Join(t.TempDir(), "clip.mp4")
+	file := filepath.Join(t.TempDir(), "clip.mkv")
 	if e = os.WriteFile(file, []byte(body), 0600); e != nil {
 		t.Fatal(e)
 	}
 	for i := 0; i < 2; i++ {
-		if e = s.Put(context.Background(), "rounds/r1/lapak01/id.mp4", file); e != nil {
+		if e = s.Put(context.Background(), "rounds/r1/lapak01/id.mkv", file); e != nil {
 			t.Fatal(e)
 		}
 		if got := <-received; got != body {

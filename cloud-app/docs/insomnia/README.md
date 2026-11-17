@@ -54,3 +54,10 @@ python cloud-app/docs/insomnia/generate.py
 ```
 
 Lihat [kontrak API](../API.md) dan [panduan backend](../../README.md). Swagger menjelaskan kontrak endpoint; folder mock menjelaskan urutan penggunaan fixture.
+
+
+## Media desktop schema 011
+
+Folder **15 Media desktop dan upload privat** mengikuti Swagger terbaru. Terapkan migrasi 011 dan konfigurasi bucket privat sebelum menguji. Pair engine sebagai ADMIN arena; simpan `engine_token` dari response satu kali (script response mengisinya). Jangan mengganti `access_token` pengguna dengan credential engine. Isi `media_session_id`, `channel_id`, `registration_id` dan `gantangan_id`, lalu buat ingestion. Init upload memakai ukuran dan SHA-256 file sebenarnya; script menyimpan `media_upload_id`. Endpoint engine memakai Bearer `engine_token`, endpoint petugas memakai Bearer `access_token`.
+
+Upload part memakai PUT langsung ke `data.url` beserta `data.headers` dari respons presign, dengan body binary potongan file dan checksum Base64 part yang benar. Ini bukan request JSON atau unggah file ke VPS. Setelah parts lengkap, panggil complete; GET daftar/detail/download tetap memakai sesi pengguna yang berhak. Jangan Run All karena pairing, revocation dan mutasi adalah tindakan nyata. Endpoint lama command/heartbeat/playback cloud tetap bukan bagian implementasi ini.

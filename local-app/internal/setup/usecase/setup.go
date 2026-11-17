@@ -213,7 +213,7 @@ func (u *UseCase) apply(ctx context.Context, c model.Configuration) (any, error)
 	seen := map[string]bool{}
 	for i, v := range c.Channels {
 		u.jobs.Report(ctx, "Memeriksa channel "+v.ID)
-		if !identifier.Valid(v.ID) || seen[v.ID] || (v.LiveMode != "copy" && v.LiveMode != "transcode") {
+		if !identifier.Valid(v.ID) || seen[v.ID] {
 			return nil, apperror.ErrInvalid
 		}
 		seen[v.ID] = true
@@ -225,15 +225,8 @@ func (u *UseCase) apply(ctx context.Context, c model.Configuration) (any, error)
 		if e != nil {
 			return nil, e
 		}
-		if v.LiveMode == "copy" && (p.VideoCodec != "h264" || p.BFrames > 0) {
-			return nil, &model.Failure{Code: "UNSUPPORTED_CODEC", Message: "Pilih profil H.264 tanpa B-frame atau aktifkan konversi H.264"}
-		}
-		if p.HasAudio {
-			required["libopus"] = true
-			required["aac"] = true
-		}
-		if v.LiveMode == "transcode" {
-			required["libx264"] = true
+		if e := model.ValidateMedia(p); e != nil {
+			return nil, e
 		}
 		v.Probe = &p
 		c.Channels[i] = v

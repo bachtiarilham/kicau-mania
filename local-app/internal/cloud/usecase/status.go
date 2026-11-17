@@ -20,6 +20,6 @@ func (e *Engine) Status() EngineStatus {
 	defer e.mu.Unlock()
 	connected := !e.heartbeatFailed && !e.lastHeartbeat.IsZero() && time.Since(e.lastHeartbeat) < e.opts.HeartbeatTimeout
 	status := e.media.MediaStatus()
-	ready := status.State == "RUNNING" && (e.opts.LAN || connected && e.opts.CommandsConfigured && e.metadata != nil && e.playback != nil)
+	ready := status.State == "RUNNING" && (e.opts.LAN || connected && e.opts.CommandsConfigured && e.metadata != nil)
 	return EngineStatus{ArenaID: e.opts.ArenaID, EngineID: e.opts.EngineID, Ready: ready, CloudConnected: connected, LastHeartbeat: e.lastHeartbeat, Media: status}
 }

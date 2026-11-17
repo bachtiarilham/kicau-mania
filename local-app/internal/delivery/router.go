@@ -3,6 +3,7 @@ package delivery
 
 import (
 	"io"
+	desktopDelivery "kicau.local/edge/internal/delivery/rest/desktop"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -20,14 +21,13 @@ import (
 	setupDelivery "kicau.local/edge/internal/delivery/rest/setup"
 	streamingDelivery "kicau.local/edge/internal/delivery/rest/streaming"
 	"kicau.local/edge/internal/delivery/websocket"
-	"kicau.local/edge/internal/delivery/whep"
 	"kicau.local/edge/internal/infra/logger"
 )
 
 type Handlers struct {
+	Desktop   *desktopDelivery.Handler
 	Setup     *setupDelivery.Handler
 	Engine    *engineDelivery.Handler
-	WHEP      *whep.Handler
 	Channels  *channelDelivery.Handler
 	WebSocket *websocket.Handler
 	Streaming *streamingDelivery.Handler
@@ -79,14 +79,10 @@ func Router(c config.Config, handlers Handlers) *gin.Engine {
 	} else {
 		r.GET("/readyz", func(ctx *gin.Context) { response.JSON(ctx, 503, false, "Engine setup required", nil, nil) })
 	}
-	if handlers.WHEP != nil {
-		playback := r.Group("/api/v1/playback")
-		if c.AccessMode == "lan" {
-			playback.Use(middleware.LANViewer(c.ReadCIDRs))
-		}
-		whep.RegisterRoutes(playback, handlers.WHEP)
-	}
 	g := r.Group("/api/v1", middleware.Operator(c.Token, c.LocalControlToken, c.AccessMode == "lan", c.Origins))
+	if handlers.Desktop != nil && c.AccessMode == "lan" {
+		handlers.Desktop.Routes(r.Group("/api/v1", middleware.LocalControl(c.LocalControlToken, c.Origins)))
+	}
 	r.OPTIONS("/api/v1/*path", func(c *gin.Context) { c.Status(http.StatusNoContent) })
 	if handlers.Engine != nil {
 		g.GET("/engine/status", handlers.Engine.Status)

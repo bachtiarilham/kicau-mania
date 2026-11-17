@@ -29,7 +29,7 @@ func domainOf(pkg string) string {
 	if len(parts) < 3 || parts[0] != "internal" {
 		return ""
 	}
-	if parts[1] == "cloud" || parts[1]=="setup" {
+	if parts[1] == "cloud" || parts[1] == "setup" {
 		return parts[1]
 	}
 	switch parts[1] + "/" + parts[2] {
@@ -74,7 +74,7 @@ func dependencyViolation(from, imported string) string {
 	if to == "internal/mediaengine/audio/delivery" || strings.HasPrefix(to, "internal/mediaengine/audio/delivery/") {
 		return "legacy audio delivery import; use delivery/websocket"
 	}
-	if (from == "internal/delivery/whep" || from == "internal/delivery/websocket") && strings.Contains(to+"/", "/usecase/") {
+	if from == "internal/delivery/websocket" && strings.Contains(to+"/", "/usecase/") {
 		return "protocol delivery depends on concrete usecase instead of an injected interface"
 	}
 	if to == "internal/edge" || strings.HasPrefix(to, "internal/edge/") {
@@ -206,9 +206,7 @@ func TestDependencyRules(t *testing.T) {
 		{"internal/app", "internal/mediaengine/audio/delivery", false},
 		{"internal/app", "internal/delivery/http", false},
 		{"internal/app", "internal/mediaengine/video/delivery", false},
-		{"internal/delivery", "internal/delivery/whep", true},
 		{"internal/delivery", "internal/delivery/websocket", true},
-		{"internal/delivery/whep", "internal/cloud/usecase", false},
 		{"internal/cloud/usecase", "internal/cloud/client", false},
 		{"internal/cloud/usecase", "internal/cloud/model", true},
 		{"internal/cloud/usecase", "internal/mediaengine/saving/model", true},

@@ -22,3 +22,8 @@ Aplikasi backend dijalankan dari direktori masing-masing; tidak ada satu perinta
 - [Runbook deployment](cloud-app/deployment/devops_runbook.md) dan [belajar deployment](cloud-app/deployment/BELAJAR-DEPLOYMENT.md).
 
 [Indeks dokumentasi](docs/README.md) juga memuat catatan kerja, laporan historis, dan template referensi. Semua file `.txt` hasil diskusi tetap berada di root dengan nama dan isi aslinya; catatan tersebut bukan pengganti status implementasi pada panduan aktif.
+
+
+## Desktop CCTV Windows
+
+Aplikasi Wails berada di [wails/kicau-mania-desktop](D:/ilham/workdir/wails/kicau-mania-desktop/README.md). Desktop mengontrol local-app pada komputer yang sama, menonton RTSP melalui mpv native, serta mengatur mapping dan upload rekaman ke cloud. Integrasi media membutuhkan migrasi cloud 011 additif dan object storage privat; tidak ada reset database operasional otomatis.

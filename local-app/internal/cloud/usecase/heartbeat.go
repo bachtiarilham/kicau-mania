@@ -16,7 +16,7 @@ func (e *Engine) Heartbeat(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	heartbeat := cloudmodel.Heartbeat{ArenaID: e.opts.ArenaID, EngineID: e.opts.EngineID, At: time.Now().UTC(), MediaState: e.media.MediaStatus().State, PlaybackBaseURL: e.opts.PlaybackBaseURL, Channels: []string{}, RestreamCount: len(e.restreams.Restreams())}
+	heartbeat := cloudmodel.Heartbeat{ArenaID: e.opts.ArenaID, EngineID: e.opts.EngineID, At: time.Now().UTC(), MediaState: e.media.MediaStatus().State, Channels: []string{}, RestreamCount: len(e.restreams.Restreams())}
 	for _, channel := range e.channels.Channels() {
 		heartbeat.Channels = append(heartbeat.Channels, channel.ID)
 	}

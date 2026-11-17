@@ -1,6 +1,11 @@
 package model
 
-import "time"
+import (
+	"errors"
+	"time"
+)
+
+var ErrNotMapped = errors.New("recording has no approved cloud mapping")
 
 type Recording struct {
 	Segments    []Segment `json:"segments,omitempty"`
