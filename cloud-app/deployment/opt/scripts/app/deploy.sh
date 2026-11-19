@@ -6,6 +6,7 @@ APP_DIR="${APP_DIR:-/opt/apps/kicau-mania}"
 DOCKER_CONFIG="${DOCKER_CONFIG:-$APP_DIR/config/docker}"
 export DOCKER_CONFIG
 APP_CONTAINER="${APP_CONTAINER:-kicau_mania_app}"
+DB_CONTAINER="${DB_CONTAINER:-kicau_mania_db}"
 PUBLIC_API_URL="${PUBLIC_API_URL:-https://dev.megaallstararena.com}"
 READY_TIMEOUT=${DEPLOY_READY_TIMEOUT:-120}
 [[ $READY_TIMEOUT =~ ^[0-9]+$ ]] && (( READY_TIMEOUT >= 1 && READY_TIMEOUT <= 120 )) || exit 2
@@ -76,6 +77,20 @@ record starting
 # --no-deps on the app deliberately leaves PostgreSQL untouched. Start/wait for
 # its newly required Redis service explicitly, including upgrades from old stacks.
 compose "$release" up -d --no-deps --wait --wait-timeout "$READY_TIMEOUT" redis
+shopt -s nullglob
+migrations=("$BUNDLE"/database/migrations/*.up.sql)
+if (( ${#migrations[@]} > 0 )); then
+  mkdir -p "$APP_DIR/state"
+  touch "$APP_DIR/state/migrations.log"
+  for m in "${migrations[@]}"; do
+    m_hash=$(sha256sum "$m" | awk '{print $1}')
+    if ! grep -q "$m_hash" "$APP_DIR/state/migrations.log"; then
+      echo "Applying pending database migration: $(basename "$m")"
+      docker exec -i "$DB_CONTAINER" sh -c 'exec psql -X -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"' < "$m"
+      printf '%s %s\n' "$(date -u +%FT%TZ)" "$(sha256sum "$m")" >> "$APP_DIR/state/migrations.log"
+    fi
+  done
+fi
 switched=1
 compose "$release" up -d --no-deps --pull never app
 ready
