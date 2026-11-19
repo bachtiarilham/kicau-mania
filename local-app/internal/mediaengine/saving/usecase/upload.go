@@ -28,11 +28,17 @@ func (u *UseCase) uploadPending(ctx context.Context) {
 			activeRounds[r.RoundID] = true
 		}
 	}
+	if len(activeRounds) > 0 {
+		// Session-Aware Bandwidth Protection:
+		// Active recording session in progress; pause cloud upload worker
+		// so 100% upstream bandwidth is dedicated to livestreaming.
+		return
+	}
 	for _, r := range records {
 		if ctx.Err() != nil {
 			return
 		}
-		if r.State != "READY" || activeRounds[r.RoundID] || time.Now().Before(r.NextAttempt) {
+		if r.State != "READY" || time.Now().Before(r.NextAttempt) {
 			continue
 		}
 		err = u.executor.UploadWithTimeout(ctx, func(uploadCtx context.Context) error {

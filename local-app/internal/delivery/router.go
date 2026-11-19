@@ -20,6 +20,7 @@ import (
 	sessionDelivery "kicau.local/edge/internal/delivery/rest/session"
 	setupDelivery "kicau.local/edge/internal/delivery/rest/setup"
 	streamingDelivery "kicau.local/edge/internal/delivery/rest/streaming"
+	zoomDelivery "kicau.local/edge/internal/delivery/rest/zoom"
 	"kicau.local/edge/internal/delivery/websocket"
 	"kicau.local/edge/internal/infra/logger"
 )
@@ -33,6 +34,7 @@ type Handlers struct {
 	Streaming *streamingDelivery.Handler
 	Saving    *savingDelivery.Handler
 	Sessions  *sessionDelivery.Handler
+	Zoom      *zoomDelivery.Handler
 }
 
 // Router godoc
@@ -105,6 +107,9 @@ func Router(c config.Config, handlers Handlers) *gin.Engine {
 	}
 	if handlers.Sessions != nil {
 		sessionDelivery.RegisterRoutes(g, handlers.Sessions)
+	}
+	if handlers.Zoom != nil {
+		handlers.Zoom.Routes(g)
 	}
 	r.NoRoute(func(c *gin.Context) { response.WriteError(c, apperror.ErrNotFound) })
 	r.NoMethod(func(c *gin.Context) { response.JSON(c, 405, false, "method not allowed", nil, nil) })

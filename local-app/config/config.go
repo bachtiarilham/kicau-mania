@@ -56,8 +56,14 @@ type Config struct {
 	NVRMAC       string
 
 	// Audio
-	SampleRate int
-	Threshold  float64
+	SampleRate                int
+	Threshold                 float64
+	AudioFilterEnabled        bool
+	AudioHighpassFreq         int
+	AudioGateRatio            float64
+	AudioGateAttack           float64
+	AudioGateRelease          float64
+	AudioFilterApplyRecording bool
 
 	// Recording
 	MaxRound     time.Duration
@@ -94,6 +100,24 @@ func Load(path string) (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
+	audioFilterEnabled := getEnvAsBool("AUDIO_FILTER_ENABLED", true)
+	highpassFreq, err := getEnvAsInt("AUDIO_HIGHPASS_FREQ", 100)
+	if err != nil {
+		return Config{}, err
+	}
+	gateRatio, err := getEnvAsFloat64("AUDIO_GATE_RATIO", "4.0")
+	if err != nil {
+		return Config{}, err
+	}
+	gateAttack, err := getEnvAsFloat64("AUDIO_GATE_ATTACK_MS", "5.0")
+	if err != nil {
+		return Config{}, err
+	}
+	gateRelease, err := getEnvAsFloat64("AUDIO_GATE_RELEASE_MS", "150.0")
+	if err != nil {
+		return Config{}, err
+	}
+	audioFilterApplyRecording := getEnvAsBool("AUDIO_FILTER_APPLY_RECORDING", false)
 	maxRound, err := getEnvAsDuration("MAX_ROUND_DURATION", "1h")
 	if err != nil {
 		return Config{}, fmt.Errorf("MAX_ROUND_DURATION must be 1m..24h")
@@ -169,8 +193,14 @@ func Load(path string) (Config, error) {
 		NVRMAC:       getEnv("NVR_MAC", "B8:86:87:C0:C3:AF"),
 
 		// Audio
-		SampleRate: 16000,
-		Threshold:  threshold,
+		SampleRate:                16000,
+		Threshold:                 threshold,
+		AudioFilterEnabled:        audioFilterEnabled,
+		AudioHighpassFreq:         highpassFreq,
+		AudioGateRatio:            gateRatio,
+		AudioGateAttack:           gateAttack,
+		AudioGateRelease:          gateRelease,
+		AudioFilterApplyRecording: audioFilterApplyRecording,
 
 		// Recording
 		MaxRound:     maxRound,
@@ -265,6 +295,18 @@ func validate(c Config) error {
 	if !(c.Threshold >= -120 && c.Threshold <= 0) {
 		return fmt.Errorf("invalid AUDIO_ACTIVE_DBFS")
 	}
+	if c.AudioHighpassFreq < 20 || c.AudioHighpassFreq > 1000 {
+		return fmt.Errorf("AUDIO_HIGHPASS_FREQ must be 20..1000 Hz")
+	}
+	if c.AudioGateRatio < 1 || c.AudioGateRatio > 100 {
+		return fmt.Errorf("AUDIO_GATE_RATIO must be 1..100")
+	}
+	if c.AudioGateAttack < 0.1 || c.AudioGateAttack > 1000 {
+		return fmt.Errorf("AUDIO_GATE_ATTACK_MS must be 0.1..1000 ms")
+	}
+	if c.AudioGateRelease < 1 || c.AudioGateRelease > 5000 {
+		return fmt.Errorf("AUDIO_GATE_RELEASE_MS must be 1..5000 ms")
+	}
 	if c.MaxRound < time.Minute || c.MaxRound > 24*time.Hour {
 		return fmt.Errorf("MAX_ROUND_DURATION must be 1m..24h")
 	}
@@ -347,6 +389,26 @@ func getEnvAsUint64(key, fallback string) (uint64, error) {
 		return 0, fmt.Errorf("invalid %s", key)
 	}
 	return value, nil
+}
+
+func getEnvAsBool(key string, fallback bool) bool {
+	if val, exists := os.LookupEnv(key); exists {
+		val = strings.TrimSpace(strings.ToLower(val))
+		return val == "true" || val == "1" || val == "yes"
+	}
+	return fallback
+}
+
+func getEnvAsInt(key string, fallback int) (int, error) {
+	val := getEnv(key, "")
+	if val == "" {
+		return fallback, nil
+	}
+	n, err := strconv.Atoi(val)
+	if err != nil {
+		return 0, fmt.Errorf("invalid %s", key)
+	}
+	return n, nil
 }
 
 func ValidID(s string) bool { return identifier.Valid(s) }

@@ -2,6 +2,7 @@ package ffmpeg
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"kicau.local/edge/internal/infra/runtime/subprocess"
 	"kicau.local/edge/internal/mediaengine/media"
@@ -10,8 +11,49 @@ import (
 	"sync"
 )
 
+type AudioFilterOptions struct {
+	Enabled        bool
+	HighpassFreq   int
+	GateThreshold  float64
+	GateRatio      float64
+	GateAttack     float64
+	GateRelease    float64
+	ApplyRecording bool
+}
+
 // Pipeline records A/V and decodes PCM from the same RTSP input.
-type Pipeline struct{ Binary, Probe string }
+type Pipeline struct {
+	Binary, Probe string
+	AudioFilter   AudioFilterOptions
+}
+
+func (f Pipeline) AudioFilterString() string {
+	if !f.AudioFilter.Enabled {
+		return ""
+	}
+	freq := f.AudioFilter.HighpassFreq
+	if freq <= 0 {
+		freq = 100
+	}
+	ratio := f.AudioFilter.GateRatio
+	if ratio <= 0 {
+		ratio = 4.0
+	}
+	attack := f.AudioFilter.GateAttack
+	if attack <= 0 {
+		attack = 5.0
+	}
+	release := f.AudioFilter.GateRelease
+	if release <= 0 {
+		release = 150.0
+	}
+	thresh := f.AudioFilter.GateThreshold
+	if thresh == 0 {
+		thresh = -35.0
+	}
+	return fmt.Sprintf("highpass=f=%d,agate=threshold=%.1fdB:ratio=%.1f:attack=%.1f:release=%.1f",
+		freq, thresh, ratio, attack, release)
+}
 
 // progress never forwards stderr text, which can contain source credentials.
 type progress struct {
@@ -71,14 +113,23 @@ func (f Pipeline) RunMedia(ctx context.Context, source, file string, ready func(
 	args := append([]string{"-progress", "pipe:2", "-nostats", "-stats_period", "0.5"}, input(source)...)
 	args = append(args, "-map", "0:v:0", "-c:v", "copy")
 	if observed.HasAudio {
-		args = append(args, "-map", "0:a:0", "-c:a", "copy")
+		if f.AudioFilter.ApplyRecording && f.AudioFilterString() != "" {
+			args = append(args, "-map", "0:a:0", "-af", f.AudioFilterString(), "-c:a", "aac", "-b:a", "128k")
+		} else {
+			args = append(args, "-map", "0:a:0", "-c:a", "copy")
+		}
 	}
 	// Fill only missing presentation timestamps from decode timestamps.
 	// This changes container timing metadata, never encoded video packets.
 	args = append(args, "-bsf:v", "setts=pts=if(eq(PTS\\,NOPTS)\\,DTS\\,PTS)")
 	args = append(args, "-flush_packets", "1", "-cluster_time_limit", "1000", "-f", "matroska", "-n", file)
 	if observed.HasAudio {
-		args = append(args, "-map", "0:a:0", "-vn", "-ac", "1", "-ar", "16000", "-c:a", "pcm_s16le", "-f", "s16le", "pipe:1")
+		pcmArgs := []string{"-map", "0:a:0", "-vn"}
+		if filter := f.AudioFilterString(); filter != "" {
+			pcmArgs = append(pcmArgs, "-af", filter)
+		}
+		pcmArgs = append(pcmArgs, "-ac", "1", "-ar", "16000", "-c:a", "pcm_s16le", "-f", "s16le", "pipe:1")
+		args = append(args, pcmArgs...)
 	}
 	// Session cancellation is handled with Stop (q + bounded kill), not an
 	// immediate CommandContext kill that would skip recording finalization.

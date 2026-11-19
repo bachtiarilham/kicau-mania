@@ -20,6 +20,7 @@ import (
 	sessionDelivery "kicau.local/edge/internal/delivery/rest/session"
 	streamingDelivery "kicau.local/edge/internal/delivery/rest/streaming"
 	websocketDelivery "kicau.local/edge/internal/delivery/websocket"
+	zoomDelivery "kicau.local/edge/internal/delivery/rest/zoom"
 	"kicau.local/edge/internal/infra/storage/filesystem"
 	"kicau.local/edge/internal/infra/storage/s3"
 	audioService "kicau.local/edge/internal/mediaengine/audio/service"
@@ -37,6 +38,9 @@ import (
 	sessionWorker "kicau.local/edge/internal/mediaengine/session/worker"
 	streamingUC "kicau.local/edge/internal/mediaengine/streaming/usecase"
 	streamingWorker "kicau.local/edge/internal/mediaengine/streaming/worker"
+	zoomRepository "kicau.local/edge/internal/mediaengine/zoom/repository"
+	zoomService "kicau.local/edge/internal/mediaengine/zoom/service"
+	zoomUsecase "kicau.local/edge/internal/mediaengine/zoom/usecase"
 )
 
 type Container struct {
@@ -50,6 +54,7 @@ type Container struct {
 	Streaming      *streamingUC.UseCase
 	Saving         *savingUC.UseCase
 	Sessions       *sessionUC.UseCase
+	Zoom           *zoomUsecase.UseCase
 	Handlers       delivery.Handlers
 }
 
@@ -113,7 +118,20 @@ func NewContainer(ctx context.Context, c config.Config) (*Container, error) {
 	if err != nil {
 		return nil, err
 	}
-	sessions := sessionUC.New(sessionUC.Options{DataDir: c.DataDir, MaxDuration: c.MaxRound, MinFreeBytes: c.MinFreeBytes, Targets: c.Destinations}, sessionJournal, repo, sources, ffmpeg.Pipeline{Binary: c.FFmpeg, Probe: c.FFprobe}, ffmpeg.Finalizer{Binary: c.FFmpeg, Probe: c.FFprobe}, audio, streaming, filesystem.Disk{}, sessionWorker.New(), mediaServer)
+	pipeline := ffmpeg.Pipeline{
+		Binary: c.FFmpeg,
+		Probe:  c.FFprobe,
+		AudioFilter: ffmpeg.AudioFilterOptions{
+			Enabled:        c.AudioFilterEnabled,
+			HighpassFreq:   c.AudioHighpassFreq,
+			GateThreshold:  c.Threshold,
+			GateRatio:      c.AudioGateRatio,
+			GateAttack:     c.AudioGateAttack,
+			GateRelease:    c.AudioGateRelease,
+			ApplyRecording: c.AudioFilterApplyRecording,
+		},
+	}
+	sessions := sessionUC.New(sessionUC.Options{DataDir: c.DataDir, MaxDuration: c.MaxRound, MinFreeBytes: c.MinFreeBytes, Targets: c.Destinations}, sessionJournal, repo, sources, pipeline, ffmpeg.Finalizer{Binary: c.FFmpeg, Probe: c.FFprobe}, audio, streaming, filesystem.Disk{}, sessionWorker.New(), mediaServer)
 	engine := cloudUC.NewEngine(cloudUC.EngineOptions{
 		ArenaID: c.ArenaID, EngineID: c.EngineID,
 		HeartbeatTimeout: c.HeartbeatTimeout, CommandsConfigured: c.CloudCommandsURL != "",
@@ -126,11 +144,30 @@ func NewContainer(ctx context.Context, c config.Config) (*Container, error) {
 	if c.CloudCommandsURL != "" {
 		commands = cloudClient.New(c.CloudCommandsURL, c.CloudToken)
 	}
+
+	zoomRepo := zoomRepository.NewFileRepository(filepath.Join(c.DataDir, "channels_zoom.json"))
+	zoomBuilder := zoomService.NewBuilder(c.FFmpeg)
+	zoomUC, err := zoomUsecase.New(zoomRepo, zoomBuilder)
+	if err != nil {
+		return nil, err
+	}
+	zoomHandler := zoomDelivery.New(zoomUC)
+
 	return &Container{
 		Background: cloudWorker.New(), Engine: engine,
 		Commands:       cloudUC.NewCommands(journal, commands, cloudUC.NewCommandExecutor(sessions), c.ArenaID, c.EngineID),
 		ChannelCatalog: sources, MediaServer: mediaServer, Channels: channels, Audio: audio, Streaming: streaming, Saving: saving, Sessions: sessions,
-		Handlers: delivery.Handlers{Desktop: &desktopDelivery.Handler{Cloud: bridge, Saving: saving}, Engine: engineDelivery.New(engine), Channels: channelDelivery.New(channels), WebSocket: sockets, Streaming: streamingDelivery.New(streaming), Saving: savingDelivery.New(saving), Sessions: sessionDelivery.New(sessions)},
+		Zoom:           zoomUC,
+		Handlers: delivery.Handlers{
+			Desktop:   &desktopDelivery.Handler{Cloud: bridge, Saving: saving},
+			Engine:    engineDelivery.New(engine),
+			Channels:  channelDelivery.New(channels),
+			WebSocket: sockets,
+			Streaming: streamingDelivery.New(streaming),
+			Saving:    savingDelivery.New(saving),
+			Sessions:  sessionDelivery.New(sessions),
+			Zoom:      zoomHandler,
+		},
 	}, nil
 }
 

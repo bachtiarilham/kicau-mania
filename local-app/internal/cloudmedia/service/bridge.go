@@ -283,9 +283,11 @@ func (b *Bridge) PutRecording(c context.Context, r model.Recording) (err error) 
 	if !found {
 		return model.ErrNotMapped
 	}
-	if strings.ToLower(filepath.Ext(r.File)) != ".mkv" {
+	ext := strings.ToLower(filepath.Ext(r.File))
+	if ext != ".mkv" && ext != ".mp4" {
 		return apperror.ErrInvalid
 	}
+	container := strings.TrimPrefix(ext, ".")
 	f, e := os.Open(r.File)
 	if e != nil {
 		return e
@@ -316,12 +318,12 @@ func (b *Bridge) PutRecording(c context.Context, r model.Recording) (err error) 
 		return e
 	}
 	var upload remote
-	payload := map[string]any{"container": "mkv", "session_id": r.RoundID, "channel_id": r.ChannelID, "recording_id": r.ID, "size_bytes": stat.Size(), "sha256": hash, "started_at": r.StartedAt, "ended_at": r.EndedAt}
+	payload := map[string]any{"container": container, "session_id": r.RoundID, "channel_id": r.ChannelID, "recording_id": r.ID, "size_bytes": stat.Size(), "sha256": hash, "started_at": r.StartedAt, "ended_at": r.EndedAt}
 	if e = b.call(c, p, "POST", "/uploads", payload, &upload); e != nil {
 		return e
 	}
-	if !strings.HasSuffix(upload.ObjectKey, ".mkv") {
-		failureMessage = "Cloud belum mendukung MKV; perbarui cloud-app. File lokal dipertahankan"
+	if !strings.HasSuffix(upload.ObjectKey, ext) {
+		failureMessage = "Cloud belum mendukung " + strings.ToUpper(container) + "; perbarui cloud-app. File lokal dipertahankan"
 		return apperror.ErrUnavailable
 	}
 	progress.UploadID = upload.ID
