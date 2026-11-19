@@ -48,7 +48,7 @@ func (u *UseCase) Save(c context.Context, actor, res, id, arena string, f model.
 	allowed, required, ids, pos := "", "", "", ""
 	switch res {
 	case "users":
-		allowed = "name phone email is_active is_eo expected_version"
+		allowed = "name phone email is_active is_eo expected_version nickname address position"
 		required = "name phone"
 	case "birds":
 		allowed = "name owner_id bird_species_id expected_version"
@@ -65,14 +65,14 @@ func (u *UseCase) Save(c context.Context, actor, res, id, arena string, f model.
 		required = "number baris kolom"
 		pos = required
 	case "events":
-		allowed = "owner_id title description event_date status"
+		allowed = "owner_id title description event_date status location grand_prize pic_name min_participants max_participants"
 		required = "owner_id title event_date"
 		ids = "owner_id"
 	case "categories":
 		allowed = "code name"
 		required = allowed
 	case "rounds":
-		allowed = "event_id category_id bird_species_id round_number title"
+		allowed = "event_id category_id bird_species_id round_number title start_time end_time coordinator_name head_judge_name field_judge_1 field_judge_2 field_judge_3 field_judge_4 monitor_judge_1 monitor_judge_2 monitor_judge_3 monitor_judge_4"
 		required = "event_id bird_species_id round_number title"
 		ids = "event_id category_id bird_species_id"
 		pos = "round_number"
@@ -86,7 +86,7 @@ func (u *UseCase) Save(c context.Context, actor, res, id, arena string, f model.
 	if e := validPatch(f, allowed, required, ids, pos, create); e != nil {
 		return nil, e
 	}
-	for _, k := range []string{"name", "title", "code", "description", "timezone", "phone", "email", "event_date"} {
+	for _, k := range []string{"name", "title", "code", "description", "timezone", "phone", "email", "event_date", "nickname", "address", "position", "location", "grand_prize", "pic_name", "start_time", "end_time", "coordinator_name", "head_judge_name", "field_judge_1", "field_judge_2", "field_judge_3", "field_judge_4", "monitor_judge_1", "monitor_judge_2", "monitor_judge_3", "monitor_judge_4"} {
 		if v, ok := f[k]; ok && v != nil {
 			if _, ok = v.(string); !ok {
 				return nil, apperror.ErrInvalid
@@ -199,7 +199,7 @@ func (u *UseCase) Save(c context.Context, actor, res, id, arena string, f model.
 				if v, ok := f["is_active"].(bool); ok {
 					active = v
 				}
-				out, e = u.db.One(c, "AccountCreate", id, str(f, "name"), null(str(f, "phone")), null(str(f, "email")), nil, eo, active)
+				out, e = u.db.One(c, "AccountCreate", id, str(f, "name"), null(str(f, "phone")), null(str(f, "email")), nil, eo, active, null(str(f, "nickname")), null(str(f, "address")), null(str(f, "position")))
 				if e == nil {
 					e = u.db.Exec(c, "ParticipantAssignRole", id)
 				}
@@ -288,7 +288,7 @@ func (u *UseCase) Save(c context.Context, actor, res, id, arena string, f model.
 				return apperror.ErrInvalid
 			}
 			if create {
-				out, e = u.db.One(c, "EventCreate", arena, str(r, "owner_id"), str(r, "title"), null(str(r, "description")), str(r, "event_date"), status)
+				out, e = u.db.One(c, "EventCreate", arena, str(r, "owner_id"), str(r, "title"), null(str(r, "description")), str(r, "event_date"), status, null(str(r, "location")), null(str(r, "grand_prize")), null(str(r, "pic_name")), num(r, "min_participants"), num(r, "max_participants"))
 			} else {
 				out, e = u.db.One(c, "EventUpdate", arena, id, jsonValue(f))
 			}
@@ -308,7 +308,7 @@ func (u *UseCase) Save(c context.Context, actor, res, id, arena string, f model.
 				return e
 			}
 			if create {
-				out, e = u.db.One(c, "RoundCreate", arena, str(f, "event_id"), null(str(f, "category_id")), str(f, "bird_species_id"), num(f, "round_number"), str(f, "title"))
+				out, e = u.db.One(c, "RoundCreate", arena, str(f, "event_id"), null(str(f, "category_id")), str(f, "bird_species_id"), num(f, "round_number"), str(f, "title"), null(str(f, "start_time")), null(str(f, "end_time")), null(str(f, "coordinator_name")), null(str(f, "head_judge_name")), null(str(f, "field_judge_1")), null(str(f, "field_judge_2")), null(str(f, "field_judge_3")), null(str(f, "field_judge_4")), null(str(f, "monitor_judge_1")), null(str(f, "monitor_judge_2")), null(str(f, "monitor_judge_3")), null(str(f, "monitor_judge_4")))
 			} else {
 				out, e = u.db.One(c, "RoundUpdate", arena, id, jsonValue(f))
 			}

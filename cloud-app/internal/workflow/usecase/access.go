@@ -164,7 +164,7 @@ func validPatch(r model.Record, allowed, required, ids, positive string, create 
 	if e := model.ValidateFields(r, allowed); e != nil {
 		return e
 	}
-	if e := model.Strings(r, "name title code description address timezone phone email event_date status criteria_name award_name event_name organizer_name awarded_at certificate_url payment_method"); e != nil {
+	if e := model.Strings(r, "name title code description address timezone phone email event_date status criteria_name award_name event_name organizer_name awarded_at certificate_url payment_method nickname position location grand_prize pic_name start_time end_time coordinator_name head_judge_name field_judge_1 field_judge_2 field_judge_3 field_judge_4 monitor_judge_1 monitor_judge_2 monitor_judge_3 monitor_judge_4 registration_number registration_date participant_name participant_phone owner_name owner_phone"); e != nil {
 		return e
 	}
 	copy := model.Record{}

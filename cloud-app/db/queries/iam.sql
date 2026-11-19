@@ -34,12 +34,15 @@ SELECT to_jsonb(v) FROM cloud_read.v_users v WHERE id=$1::uuid AND deleted_at IS
 SELECT jsonb_build_object('id',id,'version',version,'deleted_at',deleted_at,'is_active',is_active,'is_eo',is_eo) FROM iam.users WHERE id=$1::uuid FOR UPDATE;
 
 -- name: MasterUserUpdate
--- params: user_id uuid, expected_version int, patch jsonb (name/phone/email/is_active/is_eo)
+-- params: user_id uuid, expected_version int, patch jsonb (name/phone/email/is_active/is_eo/nickname/address/position)
 UPDATE iam.users SET name=CASE WHEN $3::jsonb ? 'name' THEN ($3::jsonb->>'name')::text ELSE name END,
  phone=CASE WHEN $3::jsonb ? 'phone' THEN ($3::jsonb->>'phone')::text ELSE phone END,
  email=CASE WHEN $3::jsonb ? 'email' THEN lower(btrim(($3::jsonb->>'email')::text)) ELSE email END,
  is_active=CASE WHEN $3::jsonb ? 'is_active' THEN ($3::jsonb->>'is_active')::boolean ELSE is_active END,
- is_eo=CASE WHEN $3::jsonb ? 'is_eo' THEN ($3::jsonb->>'is_eo')::boolean ELSE is_eo END WHERE id=$1::uuid AND version=$2::int AND deleted_at IS NULL RETURNING jsonb_build_object('id',id,'version',version);
+ is_eo=CASE WHEN $3::jsonb ? 'is_eo' THEN ($3::jsonb->>'is_eo')::boolean ELSE is_eo END,
+ nickname=CASE WHEN $3::jsonb ? 'nickname' THEN ($3::jsonb->>'nickname')::text ELSE nickname END,
+ address=CASE WHEN $3::jsonb ? 'address' THEN ($3::jsonb->>'address')::text ELSE address END,
+ position=CASE WHEN $3::jsonb ? 'position' THEN ($3::jsonb->>'position')::text ELSE position END WHERE id=$1::uuid AND version=$2::int AND deleted_at IS NULL RETURNING jsonb_build_object('id',id,'version',version);
 
 -- name: MasterUserSoftDelete
 -- params: user_id uuid, expected_version int

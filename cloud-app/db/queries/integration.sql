@@ -32,8 +32,8 @@ SELECT jsonb_build_object('privileged',EXISTS(SELECT FROM iam.user_roles a JOIN 
 SELECT jsonb_build_object('id',a.arena_id) FROM iam.arena_user_roles a JOIN iam.roles r ON r.id=a.role_id WHERE a.user_id=$1::uuid AND r.name='ADMIN' ORDER BY a.arena_id;
 
 -- name: RegistrationUpdate
--- params: arena_id uuid, registration_id uuid, user_id uuid, round_id uuid, bird_id uuid, gantangan_id uuid, entry_fee numeric, payment_method text
-UPDATE competition.registrations SET user_id=$3::uuid,round_id=$4::uuid,bird_id=$5::uuid,gantangan_id=$6::uuid,entry_fee=$7::numeric,payment_method=$8,updated_at=CURRENT_TIMESTAMP WHERE arena_id=$1::uuid AND id=$2::uuid AND status='PENDING_PAYMENT' AND payment_status<>'VERIFIED' RETURNING jsonb_build_object('id',id);
+-- params: arena_id uuid, registration_id uuid, user_id uuid, round_id uuid, bird_id uuid, gantangan_id uuid, entry_fee numeric, payment_method text, registration_number text nullable, registration_date date nullable, participant_name text nullable, participant_phone text nullable, owner_name text nullable, owner_phone text nullable
+UPDATE competition.registrations SET user_id=$3::uuid,round_id=$4::uuid,bird_id=$5::uuid,gantangan_id=$6::uuid,entry_fee=$7::numeric,payment_method=$8,registration_number=$9,registration_date=coalesce($10::date,CURRENT_DATE),participant_name=$11,participant_phone=$12,owner_name=$13,owner_phone=$14,updated_at=CURRENT_TIMESTAMP WHERE arena_id=$1::uuid AND id=$2::uuid AND status='PENDING_PAYMENT' AND payment_status<>'VERIFIED' RETURNING jsonb_build_object('id',id);
 
 -- name: ParticipantRequalify
 -- params: arena_id uuid, registration_id uuid
@@ -95,8 +95,8 @@ SELECT to_jsonb(v) FROM cloud_read.v_round_judges v WHERE arena_id=$1::uuid AND 
 DELETE FROM iam.arena_user_roles WHERE arena_id=$1::uuid;
 
 -- name: AccountCreate
--- params: user_id uuid, name text, phone text nullable, email text nullable, password_hash text nullable, is_eo boolean, is_active boolean
-INSERT INTO iam.users(id,name,phone,email,password_hash,is_eo,is_active) VALUES($1::uuid,$2,$3,lower(btrim($4)),$5,$6,$7) RETURNING jsonb_build_object('id',id,'version',version);
+-- params: user_id uuid, name text, phone text nullable, email text nullable, password_hash text nullable, is_eo boolean, is_active boolean, nickname text nullable, address text nullable, position text nullable
+INSERT INTO iam.users(id,name,phone,email,password_hash,is_eo,is_active,nickname,address,position) VALUES($1::uuid,$2,$3,lower(btrim($4)),$5,$6,$7,$8,$9,$10) RETURNING jsonb_build_object('id',id,'version',version);
 
 -- name: BootstrapLock
 SELECT pg_advisory_xact_lock(753125);

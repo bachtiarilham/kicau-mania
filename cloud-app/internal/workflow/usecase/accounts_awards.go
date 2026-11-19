@@ -175,7 +175,7 @@ func (u *UseCase) Bootstrap(c context.Context, name, emailAddress, phone, passwo
 		if e = u.context(c, id, ""); e != nil {
 			return e
 		}
-		if _, e = u.db.One(c, "AccountCreate", id, name, phone, emailAddress, hash, false, true); e != nil {
+		if _, e = u.db.One(c, "AccountCreate", id, name, phone, emailAddress, hash, false, true, nil, nil, nil); e != nil {
 			return e
 		}
 		if _, e = u.db.One(c, "AccountVerifyEmail", id); e != nil {

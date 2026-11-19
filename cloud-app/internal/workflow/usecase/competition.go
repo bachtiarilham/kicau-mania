@@ -17,8 +17,9 @@ func (u *UseCase) Registration(c context.Context, actor, id, arena string, f mod
 	if e := u.Require(c, actor, arena, "ADMIN", "OPERATOR"); e != nil {
 		return nil, e
 	}
-	fields := "user_id round_id bird_id gantangan_id entry_fee payment_method"
-	if e := validPatch(f, fields, fields, "user_id round_id bird_id gantangan_id", "", true); e != nil {
+	allowed := "user_id round_id bird_id gantangan_id entry_fee payment_method registration_number registration_date participant_name participant_phone owner_name owner_phone"
+	required := "user_id round_id bird_id gantangan_id entry_fee payment_method"
+	if e := validPatch(f, allowed, required, "user_id round_id bird_id gantangan_id", "", true); e != nil {
 		return nil, e
 	}
 	cents, e := model.Cents(f["entry_fee"])
@@ -94,9 +95,9 @@ func (u *UseCase) Registration(c context.Context, actor, id, arena string, f mod
 		}
 		var row model.Record
 		if id == "" {
-			row, e = u.db.One(c, "RegistrationCreate", str(f, "user_id"), arena, str(f, "round_id"), str(f, "bird_id"), str(f, "gantangan_id"), fmt.Sprint(f["entry_fee"]), str(f, "payment_method"))
+			row, e = u.db.One(c, "RegistrationCreate", str(f, "user_id"), arena, str(f, "round_id"), str(f, "bird_id"), str(f, "gantangan_id"), fmt.Sprint(f["entry_fee"]), str(f, "payment_method"), null(str(f, "registration_number")), null(str(f, "registration_date")), null(str(f, "participant_name")), null(str(f, "participant_phone")), null(str(f, "owner_name")), null(str(f, "owner_phone")))
 		} else {
-			row, e = u.db.One(c, "RegistrationUpdate", arena, id, str(f, "user_id"), str(f, "round_id"), str(f, "bird_id"), str(f, "gantangan_id"), fmt.Sprint(f["entry_fee"]), str(f, "payment_method"))
+			row, e = u.db.One(c, "RegistrationUpdate", arena, id, str(f, "user_id"), str(f, "round_id"), str(f, "bird_id"), str(f, "gantangan_id"), fmt.Sprint(f["entry_fee"]), str(f, "payment_method"), null(str(f, "registration_number")), null(str(f, "registration_date")), null(str(f, "participant_name")), null(str(f, "participant_phone")), null(str(f, "owner_name")), null(str(f, "owner_phone")))
 		}
 		if e == nil {
 			id = str(row, "id")
