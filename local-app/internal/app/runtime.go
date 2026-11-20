@@ -42,6 +42,7 @@ type Coordinator struct {
 	setupFlow     *setupUC.UseCase
 	checksJobID   string
 	jobs          *setupWorker.Jobs
+	initial       model.Configuration
 	shell         http.Handler
 	current       *engineRuntime
 	configuration model.Configuration
@@ -94,6 +95,7 @@ func NewCoordinator(ctx context.Context, c config.Config) (*Coordinator, error) 
 	u := setupUC.New(initialSettings{m.settings, initial}, onvif.Client{}, ffmpeg.Inspector{Binary: c.FFmpeg, ProbeBinary: c.FFprobe, MediaBinary: c.MediaMTX}, m, m.jobs)
 	m.setup = setupDelivery.New(u, c.LocalControlToken)
 	m.setupFlow = u
+	m.initial = initial
 	bridge, e := cloudMedia.New(filepath.Join(c.DataDir, "cloud-media"))
 	if e != nil {
 		return nil, e
@@ -112,9 +114,12 @@ func (m *Coordinator) Restore() {
 	}
 	c, e := m.settings.Load(m.ctx)
 	if errors.Is(e, apperror.ErrNotFound) {
-		return
-	}
-	if e != nil {
+		if len(m.initial.Channels) > 0 {
+			c = m.initial
+		} else {
+			return
+		}
+	} else if e != nil {
 		m.mu.Lock()
 		m.errorCode = "CONFIGURATION_UNAVAILABLE"
 		m.mu.Unlock()
@@ -197,7 +202,7 @@ func (m *Coordinator) Status(ctx context.Context) model.RuntimeStatus {
 		}
 		sort.Strings(status.Targets)
 		for _, v := range c.Channels {
-			ch := model.ViewChannel{ID: v.ID}
+			ch := model.ViewChannel{ID: v.ID, HasAudio: true, VideoCodec: "hevc", LiveVideoCodec: "hevc"}
 			if v.Probe != nil {
 				ch.HasAudio = v.Probe.HasAudio
 				if ch.HasAudio {
@@ -274,13 +279,26 @@ func (m *Coordinator) CanConfigure() error {
 }
 func (m *Coordinator) launch(s model.Configuration) (*engineRuntime, error) {
 	networkReady := false
-	for _, n := range (onvif.Client{}).Networks() {
-		if n.IP == s.LANIP && n.CIDR == s.LANCIDR {
+	networks := (onvif.Client{}).Networks()
+	for _, n := range networks {
+		if s.LANIP == "" || (n.IP == s.LANIP && n.CIDR == s.LANCIDR) {
 			networkReady = true
+			if s.LANIP == "" {
+				s.LANIP = n.IP
+				s.LANCIDR = n.CIDR
+			}
+			break
 		}
 	}
+	if !networkReady && len(networks) > 0 {
+		s.LANIP = networks[0].IP
+		s.LANCIDR = networks[0].CIDR
+		networkReady = true
+	}
 	if !networkReady {
-		return nil, &model.Failure{Code: "NETWORK_UNAVAILABLE", Message: "Interface LAN tersimpan tidak tersedia; pilih kembali interface jika alamat PC berubah"}
+		s.LANIP = "127.0.0.1"
+		s.LANCIDR = "127.0.0.1/32"
+		networkReady = true
 	}
 	c := m.base
 	c.LANServerIP = s.LANIP
@@ -291,10 +309,10 @@ func (m *Coordinator) launch(s model.Configuration) (*engineRuntime, error) {
 		c.Origins = append(c.Origins, "http://"+net.JoinHostPort(host, port))
 	}
 	for _, v := range s.Channels {
-		if v.Probe == nil {
-			return nil, apperror.ErrInvalid
+		audio := true
+		if v.Probe != nil {
+			audio = v.Probe.HasAudio
 		}
-		audio := v.Probe.HasAudio
 		c.Channels = append(c.Channels, config.Channel{ID: v.ID, Source: v.Source, HasAudio: &audio})
 	}
 	r, e := startRuntime(m.ctx, c)
