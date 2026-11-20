@@ -27,7 +27,7 @@ func main() {
 		os.Exit(1)
 	}
 	defer c.Close()
-	e = c.Workflow.Bootstrap(ctx, os.Getenv("BOOTSTRAP_ADMIN_NAME"), os.Getenv("BOOTSTRAP_ADMIN_EMAIL"), os.Getenv("BOOTSTRAP_ADMIN_PHONE"), os.Getenv("BOOTSTRAP_ADMIN_PASSWORD"))
+	e = c.User.Bootstrap(ctx, os.Getenv("BOOTSTRAP_ADMIN_NAME"), os.Getenv("BOOTSTRAP_ADMIN_EMAIL"), os.Getenv("BOOTSTRAP_ADMIN_PHONE"), os.Getenv("BOOTSTRAP_ADMIN_PASSWORD"))
 	if e != nil {
 		fmt.Fprintln(os.Stderr, "Bootstrap rejected; check schema, account uniqueness, and input")
 		os.Exit(1)

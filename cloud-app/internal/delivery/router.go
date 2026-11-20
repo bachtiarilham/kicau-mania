@@ -2,7 +2,6 @@
 package delivery
 
 import (
-	mediaDelivery "kicau.cloud/control/internal/delivery/rest/media"
 	"sort"
 	"strings"
 	"time"
@@ -10,19 +9,25 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"kicau.cloud/control/internal/apperror"
+	assetDelivery "kicau.cloud/control/internal/asset/delivery"
+	competitionDelivery "kicau.cloud/control/internal/competition/delivery"
 	"kicau.cloud/control/internal/delivery/middleware"
 	"kicau.cloud/control/internal/delivery/rest"
 	"kicau.cloud/control/internal/delivery/rest/apidocs"
+	mediaDelivery "kicau.cloud/control/internal/delivery/rest/media"
 	"kicau.cloud/control/internal/delivery/rest/response"
-	workflow "kicau.cloud/control/internal/delivery/rest/workflow"
+	identityDelivery "kicau.cloud/control/internal/identity/delivery"
 )
 
 type Handlers struct {
-	Media    *mediaDelivery.Handler
-	Health   *rest.HealthHandler
-	Workflow *workflow.Handler
-	Verifier middleware.UserVerifier
+	Media       *mediaDelivery.Handler
+	Health      *rest.HealthHandler
+	Identity    *identityDelivery.Handler
+	Asset       *assetDelivery.Handler
+	Competition *competitionDelivery.Handler
+	Verifier    middleware.UserVerifier
 }
+
 type Options struct {
 	AllowedOrigins, TrustedProxies []string
 	RequestTimeout                 time.Duration
@@ -41,12 +46,26 @@ func Router(opts Options, h Handlers) *gin.Engine {
 	r.GET("/readyz", h.Health.Ready)
 	r.HEAD("/readyz", h.Health.Ready)
 	apidocs.Routes(r)
-	h.Workflow.Public(r.Group("/api/v1/auth"))
+
+	if h.Identity != nil {
+		h.Identity.PublicRoutes(r.Group("/api/v1/auth"))
+	}
+
 	g := r.Group("/api/v1", middleware.RequireUser(h.Verifier))
-	h.Workflow.Routes(g)
+
+	if h.Identity != nil {
+		h.Identity.ProtectedRoutes(g)
+	}
+	if h.Asset != nil {
+		h.Asset.Routes(g)
+	}
+	if h.Competition != nil {
+		h.Competition.Routes(g)
+	}
 	if h.Media != nil {
 		h.Media.Routes(g, r.Group("/api/v1/engine/media"))
 	}
+
 	r.NoRoute(func(c *gin.Context) { response.WriteError(c, apperror.ErrNotFound) })
 	r.NoMethod(func(c *gin.Context) {
 		methods := []string{}

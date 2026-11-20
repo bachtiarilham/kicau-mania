@@ -34,6 +34,18 @@ type CursorPage[T any] struct {
 	HasMore    bool   `json:"has_more"`
 }
 
+func Paginate[T any](items []T, limit int, getID func(T) string) CursorPage[T] {
+	p := CursorPage[T]{Items: items}
+	if len(items) > limit && limit > 0 {
+		p.Items = items[:limit]
+		p.HasMore = true
+		if getID != nil && len(p.Items) > 0 {
+			p.NextCursor = getID(p.Items[len(p.Items)-1])
+		}
+	}
+	return p
+}
+
 // JSON encodes before committing headers so encoding failures can return 500.
 // Errors/details passed here must be safe for display, never raw internal errors.
 func JSON(c *gin.Context, status int, success bool, message string, data, details any) {

@@ -14,7 +14,7 @@ import (
 	"kicau.cloud/control/config"
 	"kicau.cloud/control/db/queries"
 	"kicau.cloud/control/internal/delivery"
-	redisService "kicau.cloud/control/internal/login/service"
+	redisInfra "kicau.cloud/control/internal/infra/redis"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
@@ -107,7 +107,7 @@ func TestSchema010BusinessFlows(t *testing.T) {
 	if e = c.Database.QueryRow(ctx, "SELECT current_user").Scan(&dbRole); e != nil || dbRole != "kicau_cloud_app" {
 		t.Fatalf("API must use application grants: %s %v", dbRole, e)
 	}
-	if e = c.Workflow.Bootstrap(ctx, "Admin", "admin@example.test", "081200000001", "test-password-admin-010"); e != nil {
+	if e = c.User.Bootstrap(ctx, "Admin", "admin@example.test", "081200000001", "test-password-admin-010"); e != nil {
 		t.Fatalf("bootstrap: %v", e)
 	}
 	engine := delivery.Router(delivery.Options{AllowedOrigins: []string{"http://web.test"}, RequestTimeout: 15 * time.Second}, c.Handlers)
@@ -465,7 +465,7 @@ func TestSchema010BusinessFlows(t *testing.T) {
 	}
 	ready.Body.Close()
 	// Cleanup only token keys belonging to sessions in this disposable database.
-	cleanup, e := redisService.New(redisURL)
+	cleanup, e := redisInfra.New(redisURL)
 	if e != nil {
 		t.Fatal(e)
 	}
