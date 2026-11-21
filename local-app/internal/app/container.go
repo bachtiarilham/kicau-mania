@@ -3,10 +3,14 @@ package app
 
 import (
 	"context"
+	"errors"
+	"path/filepath"
+
+	"go.uber.org/zap"
 	cloudMedia "kicau.local/edge/internal/cloudmedia/service"
 	desktopDelivery "kicau.local/edge/internal/delivery/rest/desktop"
-
-	"path/filepath"
+	"kicau.local/edge/internal/infra/logger"
+	setup "kicau.local/edge/internal/setup/model"
 
 	"kicau.local/edge/config"
 	cloudClient "kicau.local/edge/internal/cloud/client"
@@ -73,11 +77,20 @@ func NewMedia(c config.Config) (*channelRepo.Catalog, *mediamtx.Server, error) {
 }
 func NewContainer(ctx context.Context, c config.Config) (*Container, error) {
 	for i := range c.Channels {
-		p, err := (ffmpeg.Inspector{ProbeBinary: c.FFprobe}).Probe(ctx, c.Channels[i].Source)
-		if err != nil {
-			return nil, err
+		hasAudio := true
+		if c.Channels[i].HasAudio != nil {
+			hasAudio = *c.Channels[i].HasAudio
 		}
-		hasAudio := p.HasAudio
+		p, err := (ffmpeg.Inspector{ProbeBinary: c.FFprobe}).Probe(ctx, c.Channels[i].Source)
+		if err == nil {
+			hasAudio = p.HasAudio
+		} else {
+			var failure *setup.Failure
+			if errors.As(err, &failure) && failure.Code == "UNSUPPORTED_VIDEO_CODEC" {
+				return nil, err
+			}
+			logger.Warn("channel probe unreached during startup, continuing with fallback", zap.String("channel_id", c.Channels[i].ID), zap.Error(err))
+		}
 		c.Channels[i].HasAudio = &hasAudio
 	}
 	sources, mediaServer, e := NewMedia(c)

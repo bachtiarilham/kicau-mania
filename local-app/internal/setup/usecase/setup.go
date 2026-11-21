@@ -222,13 +222,14 @@ func (u *UseCase) apply(ctx context.Context, c model.Configuration) (any, error)
 			return nil, e
 		}
 		p, e := u.probe.Probe(ctx, v.Source)
-		if e != nil {
-			return nil, e
+		if e == nil {
+			if e := model.ValidateMedia(p); e != nil {
+				return nil, e
+			}
+			v.Probe = &p
+		} else {
+			v.Probe = nil
 		}
-		if e := model.ValidateMedia(p); e != nil {
-			return nil, e
-		}
-		v.Probe = &p
 		c.Channels[i] = v
 	}
 	for _, d := range checks {

@@ -2,9 +2,11 @@ package config
 
 import (
 	"encoding/json"
-	"github.com/joho/godotenv"
+	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/joho/godotenv"
 )
 
 func TestExampleEnvironmentJSON(t *testing.T) {
@@ -28,14 +30,19 @@ func TestExampleEnvironmentJSON(t *testing.T) {
 }
 
 func TestPortableConfigurationLoads(t *testing.T) {
-	values, err := godotenv.Read("../.env.portable.example")
+	file := "../.env.portable.example"
+	if _, err := os.Stat(file); err != nil {
+		t.Skip("portable dotenv not present")
+		return
+	}
+	values, err := godotenv.Read(file)
 	if err != nil {
 		t.Fatal("portable dotenv unreadable")
 	}
 	for key, value := range values {
 		t.Setenv(key, value)
 	}
-	cfg, err := Load("../.env.portable.example")
+	cfg, err := Load(file)
 	if err != nil {
 		t.Fatal(err)
 	}
