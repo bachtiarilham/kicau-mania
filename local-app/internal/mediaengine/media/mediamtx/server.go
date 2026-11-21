@@ -62,7 +62,7 @@ func (s *Server) Render() error {
 			"source":                   in.URL,
 			"rtspTransport":            "tcp",
 			"sourceOnDemand":           true,
-			"sourceOnDemandCloseAfter": "1s",
+			"sourceOnDemandCloseAfter": "10s",
 		}
 	}
 	authUsers := []any{

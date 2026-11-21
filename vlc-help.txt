@@ -1,0 +1,1428 @@
+﻿Usage: vlc [options] [stream] ...
+You can specify multiple streams on the commandline.
+They will be enqueued in the playlist.
+The first item specified will be played first.
+
+Options-styles:
+  --option  A global option that is set for the duration of the program.
+   -option  A single letter version of a global --option.
+   :option  An option that only applies to the stream directly before it
+            and that overrides previous settings.
+
+Stream MRL syntax:
+  [[access][/demux]://]URL[#[title][:chapter][-[title][:chapter]]]
+  [:option=value ...]
+
+  Many of the global --options can also be used as MRL specific :options.
+  Multiple :option=value pairs can be specified.
+
+URL syntax:
+  file:///path/file              Plain media file
+  http://host[:port]/file        HTTP URL
+  ftp://host[:port]/file         FTP URL
+  mms://host[:port]/file         MMS URL
+  screen://                      Screen capture
+  dvd://[device]                 DVD device
+  vcd://[device]                 VCD device
+  cdda://[device]                Audio CD device
+  udp://[[<source address>]@[<bind address>][:<bind port>]]
+                                 UDP stream sent by a streaming server
+  vlc://pause:<seconds>          Pause the playlist for a certain time
+  vlc://quit                     Special item to quit VLC
+
+
+ core program (core)
+
+ Audio
+ These options allow you to modify the behavior of the audio subsystem, and to add audio filters which can be used for post processing or visual effects (spectrum analyzer, etc.). Enable these filters here, and configure them in the "audio filters" modules section.
+      --audio, --no-audio        Enable audio
+                                 (default enabled)
+          You can completely disable the audio output. The audio decoding stage
+          will not take place, thus saving some processing power.
+      --gain=<float [0.000000 .. 8.000000]> 
+                                 Audio gain
+          This linear gain will be applied to outputted audio.
+      --volume-step=<float [1.000000 .. 256.000000]> 
+                                 Audio output volume step
+          The step size of the volume is adjustable using this option.
+      --volume-save, --no-volume-save 
+                                 Remember the audio volume
+                                 (default enabled)
+          Remember the audio volume
+      --spdif, --no-spdif        Force S/PDIF support
+                                 (default disabled)
+          This option should be used when the audio output can't negotiate
+          S/PDIF support.
+      --force-dolby-surround={0 (Auto), 1 (On), 2 (Off)} 
+                                 Force detection of Dolby Surround
+          Use this when you know your stream is (or is not) encoded with Dolby
+          Surround but fails to be detected as such. Even if the stream is not
+          actually encoded with Dolby Surround, turning on this option might
+          enhance your experience, especially when combined with the Headphone
+          Channel Mixer.
+      --stereo-mode={0 (Unset), 1 (Stereo), 2 (Reverse stereo), 3 (Left), 4 (Right), 5 (Dolby Surround), 6 (Headphones), 7 (Mono)} 
+                                 Stereo audio output mode
+          Stereo audio output mode
+      --audio-desync=<integer>   Audio desynchronization compensation
+          This delays the audio output. The delay must be given in
+          milliseconds. This can be handy if you notice a lag between the video
+          and the audio.
+      --audio-replay-gain-mode={none,track,album} 
+                                 Replay gain mode
+          Select the replay gain mode
+      --audio-replay-gain-preamp=<float> 
+                                 Replay preamp
+          This allows you to change the default target level (89 dB) for stream
+          with replay gain information
+      --audio-replay-gain-default=<float> 
+                                 Default replay gain
+          This is the gain used for stream without replay gain information
+      --audio-replay-gain-peak-protection, --no-audio-replay-gain-peak-protection 
+                                 Peak protection
+                                 (default enabled)
+          Protect against sound clipping
+      --audio-time-stretch, --no-audio-time-stretch 
+                                 Enable time stretching audio
+                                 (default enabled)
+          This allows playing audio at lower or higher speed without affecting
+          the audio pitch
+  -A, --aout={any,mmdevice,directsound,waveout,amem,afile,adummy,none} 
+                                 Audio output module
+          This is the audio output method used by VLC. The default behavior is
+          to automatically select the best method available.
+      --role={video,music,communication,game,notification,animation,production,accessibility,test} 
+                                 Media role
+          Media (player) role for operating system policy.
+      --audio-filter=<string>    Audio filters
+          This adds audio post processing filters, to modify the sound
+          rendering.
+      --audio-visual={any,goom,projectm,visual,glspectrum,none} 
+                                 Audio visualizations
+          This adds visualization modules (spectrum analyzer, etc.).
+      --audio-resampler={any,samplerate,ugly,speex_resampler,none} 
+                                 Audio resampler
+          This selects which plugin to use for audio resampling.
+
+ Video
+ These options allow you to modify the behavior of the video output subsystem. You can for example enable video filters (deinterlacing, image adjusting, etc.). Enable these filters here and configure them in the "video filters" modules section. You can also set many miscellaneous video options.
+      --video, --no-video        Enable video
+                                 (default enabled)
+          You can completely disable the video output. The video decoding stage
+          will not take place, thus saving some processing power.
+      --grayscale, --no-grayscale 
+                                 Grayscale video output
+                                 (default disabled)
+          Output video in grayscale. As the color information aren't decoded,
+          this can save some processing power.
+  -f, --fullscreen, --no-fullscreen 
+                                 Fullscreen video output
+                                 (default disabled)
+          Start video in fullscreen mode
+      --embedded-video, --no-embedded-video 
+                                 Embedded video
+                                 (default enabled)
+          Embed the video output in the main interface.
+      --xlib, --no-xlib          
+                                 (default enabled)
+      --drop-late-frames, --no-drop-late-frames 
+                                 Drop late frames
+                                 (default enabled)
+          This drops frames that are late (arrive to the video output after
+          their intended display date).
+      --skip-frames, --no-skip-frames 
+                                 Skip frames
+                                 (default enabled)
+          Enables framedropping on MPEG2 stream. Framedropping occurs when your
+          computer is not powerful enough
+      --quiet-synchro, --no-quiet-synchro 
+                                 Quiet synchro
+                                 (default disabled)
+          This avoids flooding the message log with debug output from the video
+          output synchronization mechanism.
+      --keyboard-events, --no-keyboard-events 
+                                 Key press events
+                                 (default enabled)
+          This enables VLC hotkeys from the (non-embedded) video window.
+      --mouse-events, --no-mouse-events 
+                                 Mouse events
+                                 (default enabled)
+          This enables handling of mouse clicks on the video.
+      --video-on-top, --no-video-on-top 
+                                 Always on top
+                                 (default disabled)
+          Always place the video window on top of other windows.
+      --video-wallpaper, --no-video-wallpaper 
+                                 Enable wallpaper mode
+                                 (default disabled)
+          The wallpaper mode allows you to display the video as the desktop
+          background.
+      --disable-screensaver, --no-disable-screensaver 
+                                 Disable screensaver
+                                 (default enabled)
+          Disable the screensaver during video playback.
+      --video-title-show, --no-video-title-show 
+                                 Show media title on video
+                                 (default enabled)
+          Display the title of the video on top of the movie.
+      --video-title-timeout=<integer> 
+                                 Show video title for x milliseconds
+          Show the video title for n milliseconds, default is 5000 ms (5 sec.)
+      --video-title-position={0 (Center), 1 (Left), 2 (Right), 4 (Top), 8 (Bottom), 5 (Top-Left), 6 (Top-Right), 9 (Bottom-Left), 10 (Bottom-Right)} 
+                                 Position of video title
+          Place on video where to display the title (default bottom center).
+      --mouse-hide-timeout=<integer> 
+                                 Hide cursor and fullscreen controller after x
+                                 milliseconds
+          Hide mouse cursor and fullscreen controller after n milliseconds.
+   Snapshot:
+      --snapshot-path=<string>   Video snapshot directory (or filename)
+          Directory where the video snapshots will be stored.
+      --snapshot-prefix=<string> Video snapshot file prefix
+          Video snapshot file prefix
+      --snapshot-format={png,jpg,tiff} 
+                                 Video snapshot format
+          Image format which will be used to store the video snapshots
+      --snapshot-preview, --no-snapshot-preview 
+                                 Display video snapshot preview
+                                 (default enabled)
+          Display the snapshot preview in the screen's top-left corner.
+      --snapshot-sequential, --no-snapshot-sequential 
+                                 Use sequential numbers instead of timestamps
+                                 (default disabled)
+          Use sequential numbers instead of timestamps for snapshot numbering
+      --snapshot-width=<integer> Video snapshot width
+          You can enforce the width of the video snapshot. By default it will
+          keep the original width (-1). Using 0 will scale the width to keep
+          the aspect ratio.
+      --snapshot-height=<integer> 
+                                 Video snapshot height
+          You can enforce the height of the video snapshot. By default it will
+          keep the original height (-1). Using 0 will scale the height to keep
+          the aspect ratio.
+   Window properties:
+      --width=<integer>          Video width
+          You can enforce the video width. By default (-1) VLC will adapt to
+          the video characteristics.
+      --height=<integer>         Video height
+          You can enforce the video height. By default (-1) VLC will adapt to
+          the video characteristics.
+      --video-x=<integer>        Video X coordinate
+          You can enforce the position of the top left corner of the video
+          window (X coordinate).
+      --video-y=<integer>        Video Y coordinate
+          You can enforce the position of the top left corner of the video
+          window (Y coordinate).
+      --crop=<string>            Video cropping
+          This forces the cropping of the source video. Accepted formats are
+          x:y (4:3, 16:9, etc.) expressing the global image aspect.
+      --custom-crop-ratios=<string> 
+                                 Custom crop ratios list
+          Comma separated list of crop ratios which will be added in the
+          interface's crop ratios list.
+      --aspect-ratio=<string>    Source aspect ratio
+          This forces the source aspect ratio. For instance, some DVDs claim to
+          be 16:9 while they are actually 4:3. This can also be used as a hint
+          for VLC when a movie does not have aspect ratio information. Accepted
+          formats are x:y (4:3, 16:9, etc.) expressing the global image aspect,
+          or a float value (1.25, 1.3333, etc.) expressing pixel squareness.
+      --autoscale, --no-autoscale 
+                                 Video Auto Scaling
+                                 (default enabled)
+          Let the video scale to fit a given window or fullscreen.
+      --monitor-par=<string>     Monitor pixel aspect ratio
+          This forces the monitor aspect ratio. Most monitors have square
+          pixels (1:1). If you have a 16:9 screen, you might need to change
+          this to 4:3 in order to keep proportions.
+      --custom-aspect-ratios=<string> 
+                                 Custom aspect ratios list
+          Comma separated list of aspect ratios which will be added in the
+          interface's aspect ratio list.
+      --hdtv-fix, --no-hdtv-fix  Fix HDTV height
+                                 (default enabled)
+          This allows proper handling of HDTV-1080 video format even if broken
+          encoder incorrectly sets height to 1088 lines. You should only
+          disable this option if your video has a non-standard format requiring
+          all 1088 lines.
+      --video-deco, --no-video-deco 
+                                 Window decorations
+                                 (default enabled)
+          VLC can avoid creating window caption, frames, etc... around the
+          video, giving a "minimal" window.
+      --video-title=<string>     Video title
+          Custom title for the video window (in case the video is not embedded
+          in the interface).
+      --align={0 (Center), 1 (Left), 2 (Right), 4 (Top), 8 (Bottom), 5 (Top-Left), 6 (Top-Right), 9 (Bottom-Left), 10 (Bottom-Right)} 
+                                 Video alignment
+          Enforce the alignment of the video in its window. By default (0) it
+          will be centered (0=center, 1=left, 2=right, 4=top, 8=bottom, you can
+          also use combinations of these values, like 6=4+2 meaning top-right).
+      --zoom=<float>             Zoom video
+          You can zoom the video by the specified factor.
+      --deinterlace={0 (Off), -1 (Automatic), 1 (On)} 
+                                 Deinterlace
+          Deinterlace
+      --deinterlace-mode={auto,discard,blend,mean,bob,linear,x,yadif,yadif2x,phosphor,ivtc} 
+                                 Deinterlace mode
+          Deinterlace method to use for video processing.
+  -V, --vout={any,direct3d11,direct3d9,glwin32,gl,directdraw,wingdi,caca,vdummy,vmem,flaschen,yuv,vdummy,none} 
+                                 Video output module
+          This is the the video output method used by VLC. The default behavior
+          is to automatically select the best method available.
+      --video-filter=<string>    Video filter module
+          This adds post-processing filters to enhance the picture quality, for
+          instance deinterlacing, or distort the video.
+      --video-splitter=<string>  Video splitter module
+          This adds video splitters like clone or wall
+
+ Subpictures
+ These options allow you to modify the behavior of the subpictures subsystem. You can for example enable subpictures sources (logo, etc.). Enable these filters here and configure them in the "subsources filters" modules section. You can also set many miscellaneous subpictures options.
+   On Screen Display:
+      --spu, --no-spu            Enable sub-pictures
+                                 (default enabled)
+          You can completely disable the sub-picture processing.
+      --osd, --no-osd            On Screen Display
+                                 (default enabled)
+          VLC can display messages on the video. This is called OSD (On Screen
+          Display).
+      --text-renderer={any,freetype,tdummy,sapi,none} 
+                                 Text rendering module
+          VLC normally uses Freetype for rendering, but this allows you to use
+          svg for instance.
+   Subtitles:
+      --sub-file=<string>        Use subtitle file
+          Load this subtitle file. To be used when autodetect cannot detect
+          your subtitle file.
+      --sub-autodetect-file, --no-sub-autodetect-file 
+                                 Autodetect subtitle files
+                                 (default enabled)
+          Automatically detect a subtitle file, if no subtitle filename is
+          specified (based on the filename of the movie).
+      --sub-autodetect-fuzzy=<integer> 
+                                 Subtitle autodetection fuzziness
+          This determines how fuzzy subtitle and movie filename matching will
+          be. Options are: 0 = no subtitles autodetected 1 = any subtitle file
+          2 = any subtitle file containing the movie name 3 = subtitle file
+          matching the movie name with additional chars 4 = subtitle file
+          matching the movie name exactly
+      --sub-autodetect-path=<string> 
+                                 Subtitle autodetection paths
+          Look for a subtitle file in those paths too, if your subtitle file
+          was not found in the current directory.
+      --sub-margin=<integer>     Force subtitle position
+          You can use this option to place the subtitles under the movie,
+          instead of over the movie. Try several positions.
+      --sub-text-scale=<integer [10 .. 500]> 
+                                 Subtitles text scaling factor
+          Changes the subtitles size where possible
+   Overlays:
+      --sub-source=<string>      Subpictures source module
+          This adds so-called "subpicture sources". These filters overlay some
+          images or text over the video (like a logo, arbitrary text, ...).
+      --sub-filter=<string>      Subpictures filter module
+          This adds so-called "subpicture filters". These filter subpictures
+          created by subtitle decoders or other subpictures sources.
+   Track settings:
+      --program=<integer>        Program
+          Choose the program to select by giving its Service ID. Only use this
+          option if you want to read a multi-program stream (like DVB streams
+          for example).
+      --programs=<string>        Programs
+          Choose the programs to select by giving a comma-separated list of
+          Service IDs (SIDs). Only use this option if you want to read a
+          multi-program stream (like DVB streams for example).
+      --audio-track=<integer>    Audio track
+          Stream number of the audio track to use (from 0 to n).
+      --sub-track=<integer>      Subtitle track
+          Stream number of the subtitle track to use (from 0 to n).
+      --audio-language=<string>  Audio language
+          Language of the audio track you want to use (comma separated, two or
+          three letter country code, you may use 'none' to avoid a fallback to
+          another language).
+      --sub-language=<string>    Subtitle language
+          Language of the subtitle track you want to use (comma separated, two
+          or three letters country code, you may use 'any' as a fallback).
+      --menu-language=<string>   Menu language
+          Language of the menus you want to use with DVD/BluRay (comma
+          separated, two or three letters country code, you may use 'any' as a
+          fallback).
+      --audio-track-id=<integer> Audio track ID
+          Stream ID of the audio track to use.
+      --sub-track-id=<integer>   Subtitle track ID
+          Stream ID of the subtitle track to use.
+      --captions={608 (EIA/CEA 608), 708 (CEA 708)} 
+                                 Preferred Closed Captions decoder
+          Preferred Closed Captions decoder
+      --preferred-resolution={-1 (Best available), 1080 (Full HD (1080p)), 720 (HD (720p)), 576 (Standard Definition (576 or 480 lines)), 360 (Low Definition (360 lines)), 240 (Very Low Definition (240 lines))} 
+                                 Preferred video resolution
+          When several video formats are available, select one whose resolution
+          is closest to (but not higher than) this setting, in number of lines.
+          Use this option if you don't have enough CPU power or network
+          bandwidth to play higher resolutions.
+   Playback control:
+      --input-repeat=<integer [0 .. 65535]> 
+                                 Input repetitions
+          Number of time the same input will be repeated
+      --start-time=<float>       Start time
+          The stream will start at this position (in seconds).
+      --stop-time=<float>        Stop time
+          The stream will stop at this position (in seconds).
+      --run-time=<float>         Run time
+          The stream will run this duration (in seconds).
+      --input-fast-seek, --no-input-fast-seek 
+                                 Fast seek
+                                 (default disabled)
+          Favor speed over precision while seeking
+      --rate=<float>             Playback speed
+          This defines the playback speed (nominal speed is 1.0).
+      --input-list=<string>      Input list
+          You can give a comma-separated list of inputs that will be
+          concatenated together after the normal one.
+      --input-slave=<string>     Input slave (experimental)
+          This allows you to play from several inputs at the same time. This
+          feature is experimental, not all formats are supported. Use a '#'
+          separated list of inputs.
+      --bookmarks=<string>       Bookmarks list for a stream
+          You can manually give a list of bookmarks for a stream in the form
+          "{name=bookmark-name,time=optional-time-offset,bytes=optional-byte-of
+          fset},{...}"
+   Default devices:
+      --dvd=<string>             DVD device
+          This is the default DVD drive (or file) to use. Don't forget the
+          colon after the drive letter (e.g. D:)
+      --vcd=<string>             VCD device
+          This is the default VCD drive (or file) to use. Don't forget the
+          colon after the drive letter (e.g. D:)
+   Network settings:
+      --mtu=<integer>            MTU of the network interface
+          This is the maximum application-layer packet size that can be
+          transmitted over the network (in bytes).
+      --ipv4-timeout=<integer [0 .. 2147483647]> 
+                                 TCP connection timeout
+          Default TCP connection timeout (in milliseconds).
+      --http-host=<string>       HTTP server address
+          By default, the server will listen on any local IP address. Specify
+          an IP address (e.g. ::1 or 127.0.0.1) or a host name (e.g. localhost)
+          to restrict them to a specific network interface.
+      --http-port=<integer [1 .. 65535]> 
+                                 HTTP server port
+          The HTTP server will listen on this TCP port. The standard HTTP port
+          number is 80. However allocation of port numbers below 1025 is
+          usually restricted by the operating system.
+      --https-port=<integer [1 .. 65535]> 
+                                 HTTPS server port
+          The HTTPS server will listen on this TCP port. The standard HTTPS
+          port number is 443. However allocation of port numbers below 1025 is
+          usually restricted by the operating system.
+      --rtsp-host=<string>       RTSP server address
+          This defines the address the RTSP server will listen on, along with
+          the base path of the RTSP VOD media. Syntax is address/path. By
+          default, the server will listen on any local IP address. Specify an
+          IP address (e.g. ::1 or 127.0.0.1) or a host name (e.g. localhost) to
+          restrict them to a specific network interface.
+      --rtsp-port=<integer [1 .. 65535]> 
+                                 RTSP server port
+          The RTSP server will listen on this TCP port. The standard RTSP port
+          number is 554. However allocation of port numbers below 1025 is
+          usually restricted by the operating system.
+      --http-cert=<string>       HTTP/TLS server certificate
+          This X.509 certicate file (PEM format) is used for server-side TLS.
+          On OS X, the string is used as a label to search the certificate in
+          the keychain.
+      --http-key=<string>        HTTP/TLS server private key
+          This private key file (PEM format) is used for server-side TLS.
+      --http-proxy=<string>      HTTP proxy
+          HTTP proxy to be used It must be of the form
+          http://[user@]myproxy.mydomain:myport/ ; if empty, the http_proxy
+          environment variable will be tried.
+      --http-proxy-pwd=<string>  HTTP proxy password
+          If your HTTP proxy requires a password, set it here.
+   Socks proxy:
+      --socks=<string>           SOCKS server
+          SOCKS proxy server to use. This must be of the form address:port. It
+          will be used for all TCP connections
+      --socks-user=<string>      SOCKS user name
+          User name to be used for connection to the SOCKS proxy.
+      --socks-pwd=<string>       SOCKS password
+          Password to be used for connection to the SOCKS proxy.
+   Metadata:
+      --meta-title=<string>      Title metadata
+          Allows you to specify a "title" metadata for an input.
+      --meta-author=<string>     Author metadata
+          Allows you to specify an "author" metadata for an input.
+      --meta-artist=<string>     Artist metadata
+          Allows you to specify an "artist" metadata for an input.
+      --meta-genre=<string>      Genre metadata
+          Allows you to specify a "genre" metadata for an input.
+      --meta-copyright=<string>  Copyright metadata
+          Allows you to specify a "copyright" metadata for an input.
+      --meta-description=<string> 
+                                 Description metadata
+          Allows you to specify a "description" metadata for an input.
+      --meta-date=<string>       Date metadata
+          Allows you to specify a "date" metadata for an input.
+      --meta-url=<string>        URL metadata
+          Allows you to specify a "url" metadata for an input.
+   Advanced:
+      --file-caching=<integer [0 .. 60000]> 
+                                 File caching (ms)
+          Caching value for local files, in milliseconds.
+      --live-caching=<integer [0 .. 60000]> 
+                                 Live capture caching (ms)
+          Caching value for cameras and microphones, in milliseconds.
+      --disc-caching=<integer [0 .. 60000]> 
+                                 Disc caching (ms)
+          Caching value for optical media, in milliseconds.
+      --network-caching=<integer [0 .. 60000]> 
+                                 Network caching (ms)
+          Caching value for network resources, in milliseconds.
+      --cr-average=<integer>     Clock reference average counter
+          When using the PVR input (or a very irregular source), you should set
+          this to 10000.
+      --clock-synchro={-1 (Default), 0 (Disable), 1 (Enable)} 
+                                 Clock synchronisation
+          It is possible to disable the input clock synchronisation for
+          real-time sources. Use this if you experience jerky playback of
+          network streams.
+      --clock-jitter=<integer>   Clock jitter
+          This defines the maximum input delay jitter that the synchronization
+          algorithms should try to compensate (in milliseconds).
+      --network-synchronisation, --no-network-synchronisation 
+                                 Network synchronisation
+                                 (default disabled)
+          This allows you to remotely synchronise clocks for server and client.
+          The detailed settings are available in Advanced / Network Sync.
+      --input-record-path=<string> 
+                                 Record directory
+          Directory where the records will be stored
+      --input-record-native, --no-input-record-native 
+                                 Prefer native stream recording
+                                 (default enabled)
+          When possible, the input stream will be recorded instead of using the
+          stream output module
+      --input-timeshift-path=<string> 
+                                 Timeshift directory
+          Directory used to store the timeshift temporary files.
+      --input-timeshift-granularity=<integer> 
+                                 Timeshift granularity
+          This is the maximum size in bytes of the temporary files that will be
+          used to store the timeshifted streams.
+      --input-title-format=<string> 
+                                 Change title according to current media
+          This option allows you to set the title according to what's being
+          played<br>$a: Artist<br>$b: Album<br>$c: Copyright<br>$t:
+          Title<br>$g: Genre<br>$n: Track num<br>$p: Now playing<br>$A:
+          Date<br>$D: Duration<br>$Z: "Now playing" (Fall back on Title -
+          Artist)
+      --lua, --no-lua            Disable all lua plugins
+                                 (default enabled)
+          Disable all lua plugins
+
+ Decoders
+ This option can be used to alter the way VLC selects its codecs (decompression methods). Only advanced users should alter this option as it can break playback of all your streams.
+      --codec=<string>           Preferred decoders list
+          List of codecs that VLC will use in priority. For instance,
+          'dummy,a52' will try the dummy and a52 codecs before trying the other
+          ones. Only advanced users should alter this option as it can break
+          playback of all your streams.
+      --encoder=<string>         Preferred encoders list
+          This allows you to select a list of encoders that VLC will use in
+          priority.
+
+ Input
+ These options allow you to modify the behavior of the input subsystem, such as the DVD or VCD device, the network interface settings or the subtitle channel.
+      --access={any,satip,vdr,vcd,filesystem,filesystem,rist,cdda,nfs,access,dtv,ftp,dshow,http,imem_access,attachment,access_srt,imem,sdp,sftp,smb,tcp,udp,concat,upnp,avcodec,access_mms,none} 
+                                 Access module
+          This allows you to force an access module. You can use it if the
+          correct access is not automatically detected. You should not set this
+          as a global option unless you really know what you are doing.
+      --demux={any,mp4,avi,asf,es,flacsys,tta,nuv,mpc,wav,caf,sid,sap,diracsys,mkv,ogg,live555,smf,dmxmus,adaptive,webvtt,ttml,voc,gme,directory,pva,image,ts,aiff,mod,rawvid,xa,au,nsv,ps,ty,h26x,h26x,mjpeg,mpgv,dvdnav,libbluray,rawdv,demux_cdg,nsc,avcodec,ps,vobsub,demux_stl,vc1,demuxdump,webvtt,real,subtitle,stats,es,rawaud,none} 
+                                 Demux module
+          Demultiplexers are used to separate the "elementary" streams (like
+          audio and video streams). You can use it if the correct demuxer is
+          not automatically detected. You should not set this as a global
+          option unless you really know what you are doing.
+      --stream-filter=<string>   Stream filter module
+          Stream filters are used to modify the stream that is being read.
+      --demux-filter=<string>    Demux filter module
+          Demux filters are used to modify/control the stream that is being
+          read.
+
+ Stream output
+ These options allow you to set default global options for the stream output subsystem.
+      --sout=<string>            Default stream output chain
+          You can enter here a default stream output chain. Refer to the
+          documentation to learn how to build such chains. Warning: this chain
+          will be enabled for all streams.
+      --sout-display, --no-sout-display 
+                                 Display while streaming
+                                 (default disabled)
+          Play locally the stream while streaming it.
+      --sout-keep, --no-sout-keep 
+                                 Keep stream output open
+                                 (default disabled)
+          This allows you to keep an unique stream output instance across
+          multiple playlist item (automatically insert the gather stream output
+          if not specified)
+      --sout-all, --no-sout-all  Enable streaming of all ES
+                                 (default enabled)
+          Stream all elementary streams (video, audio and subtitles)
+      --sout-audio, --no-sout-audio 
+                                 Enable audio stream output
+                                 (default enabled)
+          Choose whether the audio stream should be redirected to the stream
+          output facility when this last one is enabled.
+      --sout-video, --no-sout-video 
+                                 Enable video stream output
+                                 (default enabled)
+          Choose whether the video stream should be redirected to the stream
+          output facility when this last one is enabled.
+      --sout-spu, --no-sout-spu  Enable SPU stream output
+                                 (default enabled)
+          Choose whether the SPU streams should be redirected to the stream
+          output facility when this last one is enabled.
+      --sout-mux-caching=<integer> 
+                                 Stream output muxer caching (ms)
+          This allow you to configure the initial caching amount for stream
+          output muxer. This value should be set in milliseconds.
+   VLM:
+      --vlm-conf=<string>        VLM configuration file
+          Read a VLM configuration file as soon as VLM is started.
+      --sap-interval=<integer>   SAP announcement interval
+          When the SAP flow control is disabled, this lets you set the fixed
+          interval between SAP announcements.
+      --mux={any,mux_ts,ps,mux_ogg,asf,wav,mpjpeg,dummy,mp4,avi,avcodec,mp4,none} 
+                                 Mux module
+          This is a legacy entry to let you configure mux modules
+      --access_output={any,file,access_output_rist,dummy,http,access_output_livehttp,ftp,access_output_shout,access_output_srt,udp,stream_out_chromecast,avcodec,none} 
+                                 Access output module
+          This is a legacy entry to let you configure access output modules
+      --ttl=<integer>            Hop limit (TTL)
+          This is the hop limit (also known as "Time-To-Live" or TTL) of the
+          multicast packets sent by the stream output (-1 = use operating
+          system built-in default).
+      --miface=<string>          Multicast output interface
+          Default multicast interface. This overrides the routing table.
+      --dscp=<integer>           DiffServ Code Point
+          Differentiated Services Code Point for outgoing UDP streams (or IPv4
+          Type Of Service, or IPv6 Traffic Class). This is used for network
+          Quality of Service.
+      --packetizer={any,aes3,theora,speex,lpcm,rawvideo,vorbis,spudec,svcdsub,mpegvideo,cvdsub,mpeg4video,mpeg4audio,av1,mlp,dirac,hevc,flac,h264,vc1,avcodec,oggspots,mpegaudio,a52,dts,copy,none} 
+                                 Preferred packetizer list
+          This allows you to select the order in which VLC will choose its
+          packetizers.
+
+ Miscellaneous
+ These options allow you to select default modules. Leave these alone unless you really know what you are doing.
+   Special modules:
+      --vod-server={any,stream_out_rtp,rtsp,none} 
+                                 VoD server module
+          You can select which VoD server module you want to use. Set this to
+          'vod_rtsp' to switch back to the old, legacy module.
+   Plugins:
+      --plugins-cache, --no-plugins-cache 
+                                 Use a plugins cache
+                                 (default enabled)
+          Use a plugins cache which will greatly improve the startup time of
+          VLC.
+      --plugins-scan, --no-plugins-scan 
+                                 Scan for new plugins
+                                 (default enabled)
+          Scan plugin directories for new plugins at startup. This increases
+          the startup time of VLC.
+      --keystore=<string>        Preferred keystore list
+          List of keystores that VLC will use in priority.
+   Performance options:
+      --high-priority, --no-high-priority 
+                                 Increase the priority of the process
+                                 (default disabled)
+          Increasing the priority of the process will very likely improve your
+          playing experience as it allows VLC not to be disturbed by other
+          applications that could otherwise take too much processor time.
+          However be advised that in certain circumstances (bugs) VLC could
+          take all the processor time and render the whole system unresponsive
+          which might require a reboot of your machine.
+      --clock-source={,interrupt,tick,multimedia,perf,wall} 
+                                 Clock source
+          Clock source
+
+ Playlist
+ These options define the behavior of the playlist. Some of them can be overridden in the playlist dialog box.
+  -Z, --random, --no-random      Play files randomly forever
+                                 (default disabled)
+          VLC will randomly play files in the playlist until interrupted.
+  -L, --loop, --no-loop          Repeat all
+                                 (default disabled)
+          VLC will keep playing the playlist indefinitely.
+  -R, --repeat, --no-repeat      Repeat current item
+                                 (default disabled)
+          VLC will keep playing the current playlist item.
+      --play-and-exit, --no-play-and-exit 
+                                 Play and exit
+                                 (default disabled)
+          Exit if there are no more items in the playlist.
+      --play-and-stop, --no-play-and-stop 
+                                 Play and stop
+                                 (default disabled)
+          Stop the playlist after each played playlist item.
+      --play-and-pause, --no-play-and-pause 
+                                 Play and pause
+                                 (default disabled)
+          Pause each item in the playlist on the last frame.
+      --start-paused, --no-start-paused 
+                                 Start paused
+                                 (default disabled)
+          Pause each item in the playlist on the first frame.
+      --playlist-autostart, --no-playlist-autostart 
+                                 Auto start
+                                 (default enabled)
+          Automatically start playing the playlist content once it's loaded.
+      --playlist-cork, --no-playlist-cork 
+                                 Pause on audio communication
+                                 (default enabled)
+          If pending audio communication is detected, playback will be paused
+          automatically.
+      --one-instance, --no-one-instance 
+                                 Allow only one running instance
+                                 (default disabled)
+          Allowing only one running instance of VLC can sometimes be useful,
+          for example if you associated VLC with some media types and you don't
+          want a new instance of VLC to be opened each time you open a file in
+          your file manager. This option will allow you to play the file with
+          the already running instance or enqueue it.
+      --started-from-file, --no-started-from-file 
+                                 VLC is started from file association
+                                 (default disabled)
+          Tell VLC that it is being launched due to a file association in the
+          OS
+      --one-instance-when-started-from-file, --no-one-instance-when-started-from-file 
+                                 Use only one instance when started from file
+                                 manager
+                                 (default enabled)
+          Use only one instance when started from file manager
+      --playlist-enqueue, --no-playlist-enqueue 
+                                 Enqueue items into playlist in one instance
+                                 mode
+                                 (default disabled)
+          When using the one instance only option, enqueue items to playlist
+          and keep playing current item.
+      --media-library, --no-media-library 
+                                 Use media library
+                                 (default disabled)
+          The media library is automatically saved and reloaded each time you
+          start VLC.
+      --playlist-tree, --no-playlist-tree 
+                                 Display playlist tree
+                                 (default disabled)
+          The playlist can use a tree to categorize some items, like the
+          contents of a directory.
+      --open=<string>            Default stream
+          This stream will always be opened at VLC startup.
+      --auto-preparse, --no-auto-preparse 
+                                 Automatically preparse items
+                                 (default enabled)
+          Automatically preparse items added to the playlist (to retrieve some
+          metadata).
+      --preparse-timeout=<integer> 
+                                 Preparsing timeout
+          Maximum time allowed to preparse an item, in milliseconds
+      --metadata-network-access, --no-metadata-network-access 
+                                 Allow metadata network access
+                                 (default enabled)
+          Allow metadata network access
+      --recursive={none,collapse,expand} 
+                                 Subdirectory behavior
+          Select whether subdirectories must be expanded. none: subdirectories
+          do not appear in the playlist. collapse: subdirectories appear but
+          are expanded on first play. expand: all subdirectories are expanded. 
+      --ignore-filetypes=<string> 
+                                 Ignored extensions
+          Files with these extensions will not be added to playlist when
+          opening a directory. This is useful if you add directories that
+          contain playlist files for instance. Use a comma-separated list of
+          extensions.
+      --show-hiddenfiles, --no-show-hiddenfiles 
+                                 Show hidden files
+                                 (default disabled)
+          Ignore files starting with '.'
+      --extractor-flatten, --no-extractor-flatten 
+                                 Flatten files listed by extractors (archive)
+                                 (default disabled)
+  -S, --services-discovery=<string> 
+                                 Services discovery modules
+          Specifies the services discovery modules to preload, separated by
+          colons. Typical value is "sap".
+  -v, --verbose=<integer>        Verbosity (0,1,2)
+          This is the verbosity level (0=only errors and standard messages,
+          1=warnings, 2=debug).
+      --color, --no-color        Color messages
+                                 (default enabled)
+          This enables colorization of the messages sent to the console. Your
+          terminal needs Linux color support for this to work.
+      --advanced, --no-advanced  Show advanced options
+                                 (default disabled)
+          When this is enabled, the preferences and/or interfaces will show all
+          available options, including those that most users should never
+          touch.
+      --interact, --no-interact  Interface interaction
+                                 (default enabled)
+          When this is enabled, the interface will show a dialog box each time
+          some user input is required.
+      --stats, --no-stats        Locally collect statistics
+                                 (default enabled)
+          Collect miscellaneous local statistics about the playing media.
+  -I, --intf=<string>            Interface module
+          This is the main interface used by VLC. The default behavior is to
+          automatically select the best module available.
+      --extraintf=<string>       Extra interface modules
+          You can select "additional interfaces" for VLC. They will be launched
+          in the background in addition to the default interface. Use a colon
+          separated list of interface modules. (common values are "rc" (remote
+          control), "http", "gestures" ...)
+      --control=<string>         Control interfaces
+          You can select control interfaces for VLC.
+
+ Hot keys
+ These settings are the global VLC key bindings, known as "hotkeys".
+      --hotkeys-y-wheel-mode={-1 (Ignore), 0 (Volume control), 2 (Position control), 3 (Position control reversed)} 
+                                 Mouse wheel vertical axis control
+          The mouse wheel vertical (up/down) axis can control volume, position
+          or be ignored.
+      --hotkeys-x-wheel-mode={-1 (Ignore), 0 (Volume control), 2 (Position control), 3 (Position control reversed)} 
+                                 Mouse wheel horizontal axis control
+          The mouse wheel horizontal (left/right) axis can control volume,
+          position or be ignored.
+      --global-key-toggle-fullscreen=<string> 
+                                 Fullscreen
+          Select the hotkey to use to swap fullscreen state.
+      --key-toggle-fullscreen=<string> 
+                                 Fullscreen
+          Select the hotkey to use to swap fullscreen state.
+      --global-key-leave-fullscreen=<string> 
+                                 Exit fullscreen
+          Select the hotkey to use to exit fullscreen state.
+      --key-leave-fullscreen=<string> 
+                                 Exit fullscreen
+          Select the hotkey to use to exit fullscreen state.
+      --global-key-play-pause=<string> 
+                                 Play/Pause
+          Select the hotkey to use to swap paused state.
+      --key-play-pause=<string>  Play/Pause
+          Select the hotkey to use to swap paused state.
+      --global-key-pause=<string> 
+                                 Pause only
+          Select the hotkey to use to pause.
+      --key-pause=<string>       Pause only
+          Select the hotkey to use to pause.
+      --global-key-play=<string> Play only
+          Select the hotkey to use to play.
+      --key-play=<string>        Play only
+          Select the hotkey to use to play.
+      --global-key-faster=<string> 
+                                 Faster
+          Select the hotkey to use for fast forward playback.
+      --key-faster=<string>      Faster
+          Select the hotkey to use for fast forward playback.
+      --global-key-slower=<string> 
+                                 Slower
+          Select the hotkey to use for slow motion playback.
+      --key-slower=<string>      Slower
+          Select the hotkey to use for slow motion playback.
+      --global-key-rate-normal=<string> 
+                                 Normal rate
+          Select the hotkey to set the playback rate back to normal.
+      --key-rate-normal=<string> Normal rate
+          Select the hotkey to set the playback rate back to normal.
+      --global-key-rate-faster-fine=<string> 
+                                 Faster (fine)
+          Select the hotkey to use for fast forward playback.
+      --key-rate-faster-fine=<string> 
+                                 Faster (fine)
+          Select the hotkey to use for fast forward playback.
+      --global-key-rate-slower-fine=<string> 
+                                 Slower (fine)
+          Select the hotkey to use for slow motion playback.
+      --key-rate-slower-fine=<string> 
+                                 Slower (fine)
+          Select the hotkey to use for slow motion playback.
+      --global-key-next=<string> Next
+          Select the hotkey to use to skip to the next item in the playlist.
+      --key-next=<string>        Next
+          Select the hotkey to use to skip to the next item in the playlist.
+      --global-key-prev=<string> Previous
+          Select the hotkey to use to skip to the previous item in the
+          playlist.
+      --key-prev=<string>        Previous
+          Select the hotkey to use to skip to the previous item in the
+          playlist.
+      --global-key-stop=<string> Stop
+          Select the hotkey to stop playback.
+      --key-stop=<string>        Stop
+          Select the hotkey to stop playback.
+      --global-key-position=<string> 
+                                 Position
+          Select the hotkey to display the position.
+      --key-position=<string>    Position
+          Select the hotkey to display the position.
+      --global-key-jump-extrashort=<string> 
+                                 Very short backwards jump
+          Select the hotkey to make a very short backwards jump.
+      --key-jump-extrashort=<string> 
+                                 Very short backwards jump
+          Select the hotkey to make a very short backwards jump.
+      --global-key-jump+extrashort=<string> 
+                                 Very short forward jump
+          Select the hotkey to make a very short forward jump.
+      --key-jump+extrashort=<string> 
+                                 Very short forward jump
+          Select the hotkey to make a very short forward jump.
+      --global-key-jump-short=<string> 
+                                 Short backwards jump
+          Select the hotkey to make a short backwards jump.
+      --key-jump-short=<string>  Short backwards jump
+          Select the hotkey to make a short backwards jump.
+      --global-key-jump+short=<string> 
+                                 Short forward jump
+          Select the hotkey to make a short forward jump.
+      --key-jump+short=<string>  Short forward jump
+          Select the hotkey to make a short forward jump.
+      --global-key-jump-medium=<string> 
+                                 Medium backwards jump
+          Select the hotkey to make a medium backwards jump.
+      --key-jump-medium=<string> Medium backwards jump
+          Select the hotkey to make a medium backwards jump.
+      --global-key-jump+medium=<string> 
+                                 Medium forward jump
+          Select the hotkey to make a medium forward jump.
+      --key-jump+medium=<string> Medium forward jump
+          Select the hotkey to make a medium forward jump.
+      --global-key-jump-long=<string> 
+                                 Long backwards jump
+          Select the hotkey to make a long backwards jump.
+      --key-jump-long=<string>   Long backwards jump
+          Select the hotkey to make a long backwards jump.
+      --global-key-jump+long=<string> 
+                                 Long forward jump
+          Select the hotkey to make a long forward jump.
+      --key-jump+long=<string>   Long forward jump
+          Select the hotkey to make a long forward jump.
+      --global-key-frame-next=<string> 
+                                 Next frame
+          Select the hotkey to got to the next video frame.
+      --key-frame-next=<string>  Next frame
+          Select the hotkey to got to the next video frame.
+      --global-key-nav-activate=<string> 
+                                 Activate
+          Select the key to activate selected item in DVD menus.
+      --key-nav-activate=<string> 
+                                 Activate
+          Select the key to activate selected item in DVD menus.
+      --global-key-nav-up=<string> 
+                                 Navigate up
+          Select the key to move the selector up in DVD menus / Move viewpoint
+          to up (pitch).
+      --key-nav-up=<string>      Navigate up
+          Select the key to move the selector up in DVD menus / Move viewpoint
+          to up (pitch).
+      --global-key-nav-down=<string> 
+                                 Navigate down
+          Select the key to move the selector down in DVD menus / Move
+          viewpoint to down (pitch).
+      --key-nav-down=<string>    Navigate down
+          Select the key to move the selector down in DVD menus / Move
+          viewpoint to down (pitch).
+      --global-key-nav-left=<string> 
+                                 Navigate left
+          Select the key to move the selector left in DVD menus / Move
+          viewpoint to left (yaw).
+      --key-nav-left=<string>    Navigate left
+          Select the key to move the selector left in DVD menus / Move
+          viewpoint to left (yaw).
+      --global-key-nav-right=<string> 
+                                 Navigate right
+          Select the key to move the selector right in DVD menus / Move
+          viewpoint to right (yaw).
+      --key-nav-right=<string>   Navigate right
+          Select the key to move the selector right in DVD menus / Move
+          viewpoint to right (yaw).
+      --global-key-disc-menu=<string> 
+                                 Go to the DVD menu
+          Select the key to take you to the DVD menu
+      --key-disc-menu=<string>   Go to the DVD menu
+          Select the key to take you to the DVD menu
+      --global-key-title-prev=<string> 
+                                 Select previous DVD title
+          Select the key to choose the previous title from the DVD
+      --key-title-prev=<string>  Select previous DVD title
+          Select the key to choose the previous title from the DVD
+      --global-key-title-next=<string> 
+                                 Select next DVD title
+          Select the key to choose the next title from the DVD
+      --key-title-next=<string>  Select next DVD title
+          Select the key to choose the next title from the DVD
+      --global-key-chapter-prev=<string> 
+                                 Select prev DVD chapter
+          Select the key to choose the previous chapter from the DVD
+      --key-chapter-prev=<string> 
+                                 Select prev DVD chapter
+          Select the key to choose the previous chapter from the DVD
+      --global-key-chapter-next=<string> 
+                                 Select next DVD chapter
+          Select the key to choose the next chapter from the DVD
+      --key-chapter-next=<string> 
+                                 Select next DVD chapter
+          Select the key to choose the next chapter from the DVD
+      --global-key-quit=<string> Quit
+          Select the hotkey to quit the application.
+      --key-quit=<string>        Quit
+          Select the hotkey to quit the application.
+      --global-key-vol-up=<string> 
+                                 Volume up
+          Select the key to increase audio volume.
+      --key-vol-up=<string>      Volume up
+          Select the key to increase audio volume.
+      --global-key-vol-down=<string> 
+                                 Volume down
+          Select the key to decrease audio volume.
+      --key-vol-down=<string>    Volume down
+          Select the key to decrease audio volume.
+      --global-key-vol-mute=<string> 
+                                 Mute
+          Select the key to mute audio.
+      --key-vol-mute=<string>    Mute
+          Select the key to mute audio.
+      --global-key-subdelay-up=<string> 
+                                 Subtitle delay up
+          Select the key to increase the subtitle delay.
+      --key-subdelay-up=<string> Subtitle delay up
+          Select the key to increase the subtitle delay.
+      --global-key-subdelay-down=<string> 
+                                 Subtitle delay down
+          Select the key to decrease the subtitle delay.
+      --key-subdelay-down=<string> 
+                                 Subtitle delay down
+          Select the key to decrease the subtitle delay.
+      --global-key-subsync-markaudio=<string> 
+                                 Subtitle sync / bookmark audio timestamp
+          Select the key to bookmark audio timestamp when syncing subtitles.
+      --key-subsync-markaudio=<string> 
+                                 Subtitle sync / bookmark audio timestamp
+          Select the key to bookmark audio timestamp when syncing subtitles.
+      --global-key-subsync-marksub=<string> 
+                                 Subtitle sync / bookmark subtitle timestamp
+          Select the key to bookmark subtitle timestamp when syncing subtitles.
+      --key-subsync-marksub=<string> 
+                                 Subtitle sync / bookmark subtitle timestamp
+          Select the key to bookmark subtitle timestamp when syncing subtitles.
+      --global-key-subsync-apply=<string> 
+                                 Subtitle sync / synchronize audio & subtitle
+                                 timestamps
+          Select the key to synchronize bookmarked audio & subtitle timestamps.
+      --key-subsync-apply=<string> 
+                                 Subtitle sync / synchronize audio & subtitle
+                                 timestamps
+          Select the key to synchronize bookmarked audio & subtitle timestamps.
+      --global-key-subsync-reset=<string> 
+                                 Subtitle sync / reset audio & subtitle
+                                 synchronization
+          Select the key to reset synchronization of audio & subtitle
+          timestamps.
+      --key-subsync-reset=<string> 
+                                 Subtitle sync / reset audio & subtitle
+                                 synchronization
+          Select the key to reset synchronization of audio & subtitle
+          timestamps.
+      --global-key-subpos-up=<string> 
+                                 Subtitle position up
+          Select the key to move subtitles higher.
+      --key-subpos-up=<string>   Subtitle position up
+          Select the key to move subtitles higher.
+      --global-key-subpos-down=<string> 
+                                 Subtitle position down
+          Select the key to move subtitles lower.
+      --key-subpos-down=<string> Subtitle position down
+          Select the key to move subtitles lower.
+      --global-key-audiodelay-up=<string> 
+                                 Audio delay up
+          Select the key to increase the audio delay.
+      --key-audiodelay-up=<string> 
+                                 Audio delay up
+          Select the key to increase the audio delay.
+      --global-key-audiodelay-down=<string> 
+                                 Audio delay down
+          Select the key to decrease the audio delay.
+      --key-audiodelay-down=<string> 
+                                 Audio delay down
+          Select the key to decrease the audio delay.
+      --global-key-audio-track=<string> 
+                                 Cycle audio track
+          Cycle through the available audio tracks(languages).
+      --key-audio-track=<string> Cycle audio track
+          Cycle through the available audio tracks(languages).
+      --global-key-audiodevice-cycle=<string> 
+                                 Cycle through audio devices
+          Cycle through available audio devices
+      --key-audiodevice-cycle=<string> 
+                                 Cycle through audio devices
+          Cycle through available audio devices
+      --global-key-subtitle-revtrack=<string> 
+                                 Cycle subtitle track in reverse order
+          Cycle through the available subtitle tracks in reverse order.
+      --key-subtitle-revtrack=<string> 
+                                 Cycle subtitle track in reverse order
+          Cycle through the available subtitle tracks in reverse order.
+      --global-key-subtitle-track=<string> 
+                                 Cycle subtitle track
+          Cycle through the available subtitle tracks.
+      --key-subtitle-track=<string> 
+                                 Cycle subtitle track
+          Cycle through the available subtitle tracks.
+      --global-key-subtitle-toggle=<string> 
+                                 Toggle subtitles
+          Toggle subtitle track visibility.
+      --key-subtitle-toggle=<string> 
+                                 Toggle subtitles
+          Toggle subtitle track visibility.
+      --global-key-program-sid-next=<string> 
+                                 Cycle next program Service ID
+          Cycle through the available next program Service IDs (SIDs).
+      --key-program-sid-next=<string> 
+                                 Cycle next program Service ID
+          Cycle through the available next program Service IDs (SIDs).
+      --global-key-program-sid-prev=<string> 
+                                 Cycle previous program Service ID
+          Cycle through the available previous program Service IDs (SIDs).
+      --key-program-sid-prev=<string> 
+                                 Cycle previous program Service ID
+          Cycle through the available previous program Service IDs (SIDs).
+      --global-key-aspect-ratio=<string> 
+                                 Cycle source aspect ratio
+          Cycle through a predefined list of source aspect ratios.
+      --key-aspect-ratio=<string> 
+                                 Cycle source aspect ratio
+          Cycle through a predefined list of source aspect ratios.
+      --global-key-crop=<string> Cycle video crop
+          Cycle through a predefined list of crop formats.
+      --key-crop=<string>        Cycle video crop
+          Cycle through a predefined list of crop formats.
+      --global-key-toggle-autoscale=<string> 
+                                 Toggle autoscaling
+          Activate or deactivate autoscaling.
+      --key-toggle-autoscale=<string> 
+                                 Toggle autoscaling
+          Activate or deactivate autoscaling.
+      --global-key-incr-scalefactor=<string> 
+                                 Increase scale factor
+          Increase scale factor
+      --key-incr-scalefactor=<string> 
+                                 Increase scale factor
+          Increase scale factor
+      --global-key-decr-scalefactor=<string> 
+                                 Decrease scale factor
+          Decrease scale factor
+      --key-decr-scalefactor=<string> 
+                                 Decrease scale factor
+          Decrease scale factor
+      --global-key-deinterlace=<string> 
+                                 Toggle deinterlacing
+          Activate or deactivate deinterlacing.
+      --key-deinterlace=<string> Toggle deinterlacing
+          Activate or deactivate deinterlacing.
+      --global-key-deinterlace-mode=<string> 
+                                 Cycle deinterlace modes
+          Cycle through available deinterlace modes.
+      --key-deinterlace-mode=<string> 
+                                 Cycle deinterlace modes
+          Cycle through available deinterlace modes.
+      --global-key-intf-show=<string> 
+                                 Show controller in fullscreen
+          Show controller in fullscreen
+      --key-intf-show=<string>   Show controller in fullscreen
+          Show controller in fullscreen
+      --global-key-intf-boss=<string> 
+                                 Boss key
+          Hide the interface and pause playback.
+      --key-intf-boss=<string>   Boss key
+          Hide the interface and pause playback.
+      --global-key-intf-popup-menu=<string> 
+                                 Context menu
+          Show the contextual popup menu.
+      --key-intf-popup-menu=<string> 
+                                 Context menu
+          Show the contextual popup menu.
+      --global-key-snapshot=<string> 
+                                 Take video snapshot
+          Takes a video snapshot and writes it to disk.
+      --key-snapshot=<string>    Take video snapshot
+          Takes a video snapshot and writes it to disk.
+      --global-key-record=<string> 
+                                 Record
+          Record access filter start/stop.
+      --key-record=<string>      Record
+          Record access filter start/stop.
+      --global-key-zoom=<string> Zoom
+          Zoom
+      --key-zoom=<string>        Zoom
+          Zoom
+      --global-key-unzoom=<string> 
+                                 Un-Zoom
+          Un-Zoom
+      --key-unzoom=<string>      Un-Zoom
+          Un-Zoom
+      --global-key-wallpaper=<string> 
+                                 Toggle wallpaper mode in video output
+          Toggle wallpaper mode in video output.
+      --key-wallpaper=<string>   Toggle wallpaper mode in video output
+          Toggle wallpaper mode in video output.
+      --global-key-crop-top=<string> 
+                                 Crop one pixel from the top of the video
+          Crop one pixel from the top of the video
+      --key-crop-top=<string>    Crop one pixel from the top of the video
+          Crop one pixel from the top of the video
+      --global-key-uncrop-top=<string> 
+                                 Uncrop one pixel from the top of the video
+          Uncrop one pixel from the top of the video
+      --key-uncrop-top=<string>  Uncrop one pixel from the top of the video
+          Uncrop one pixel from the top of the video
+      --global-key-crop-left=<string> 
+                                 Crop one pixel from the left of the video
+          Crop one pixel from the left of the video
+      --key-crop-left=<string>   Crop one pixel from the left of the video
+          Crop one pixel from the left of the video
+      --global-key-uncrop-left=<string> 
+                                 Uncrop one pixel from the left of the video
+          Uncrop one pixel from the left of the video
+      --key-uncrop-left=<string> Uncrop one pixel from the left of the video
+          Uncrop one pixel from the left of the video
+      --global-key-crop-bottom=<string> 
+                                 Crop one pixel from the bottom of the video
+          Crop one pixel from the bottom of the video
+      --key-crop-bottom=<string> Crop one pixel from the bottom of the video
+          Crop one pixel from the bottom of the video
+      --global-key-uncrop-bottom=<string> 
+                                 Uncrop one pixel from the bottom of the video
+          Uncrop one pixel from the bottom of the video
+      --key-uncrop-bottom=<string> 
+                                 Uncrop one pixel from the bottom of the video
+          Uncrop one pixel from the bottom of the video
+      --global-key-crop-right=<string> 
+                                 Crop one pixel from the right of the video
+          Crop one pixel from the right of the video
+      --key-crop-right=<string>  Crop one pixel from the right of the video
+          Crop one pixel from the right of the video
+      --global-key-uncrop-right=<string> 
+                                 Uncrop one pixel from the right of the video
+          Uncrop one pixel from the right of the video
+      --key-uncrop-right=<string> 
+                                 Uncrop one pixel from the right of the video
+          Uncrop one pixel from the right of the video
+      --global-key-random=<string> 
+                                 Random
+          Toggle random playlist playback
+      --key-random=<string>      Random
+          Toggle random playlist playback
+      --global-key-loop=<string> Normal/Loop/Repeat
+          Toggle Normal/Loop/Repeat playlist modes
+      --key-loop=<string>        Normal/Loop/Repeat
+          Toggle Normal/Loop/Repeat playlist modes
+      --global-key-viewpoint-fov-in=<string> 
+                                 Shrink the viewpoint field of view (360°)
+          Shrink the viewpoint field of view (360°)
+      --key-viewpoint-fov-in=<string> 
+                                 Shrink the viewpoint field of view (360°)
+          Shrink the viewpoint field of view (360°)
+      --global-key-viewpoint-fov-out=<string> 
+                                 Expand the viewpoint field of view (360°)
+          Expand the viewpoint field of view (360°)
+      --key-viewpoint-fov-out=<string> 
+                                 Expand the viewpoint field of view (360°)
+          Expand the viewpoint field of view (360°)
+      --global-key-viewpoint-roll-clock=<string> 
+                                 Roll the viewpoint clockwise (360°)
+          Roll the viewpoint clockwise (360°)
+      --key-viewpoint-roll-clock=<string> 
+                                 Roll the viewpoint clockwise (360°)
+          Roll the viewpoint clockwise (360°)
+      --global-key-viewpoint-roll-anticlock=<string> 
+                                 Roll the viewpoint anti-clockwise (360°)
+          Roll the viewpoint anti-clockwise (360°)
+      --key-viewpoint-roll-anticlock=<string> 
+                                 Roll the viewpoint anti-clockwise (360°)
+          Roll the viewpoint anti-clockwise (360°)
+      --global-key-zoom-quarter=<string> 
+                                 1:4 Quarter
+      --key-zoom-quarter=<string> 
+                                 1:4 Quarter
+      --global-key-zoom-half=<string> 
+                                 1:2 Half
+      --key-zoom-half=<string>   1:2 Half
+      --global-key-zoom-original=<string> 
+                                 1:1 Original
+      --key-zoom-original=<string> 
+                                 1:1 Original
+      --global-key-zoom-double=<string> 
+                                 2:1 Double
+      --key-zoom-double=<string> 2:1 Double
+   Jump sizes:
+      --extrashort-jump-size=<integer> 
+                                 Very short jump length
+          Very short jump length, in seconds.
+      --short-jump-size=<integer> 
+                                 Short jump length
+          Short jump length, in seconds.
+      --medium-jump-size=<integer> 
+                                 Medium jump length
+          Medium jump length, in seconds.
+      --long-jump-size=<integer> Long jump length
+          Long jump length, in seconds.
+      --global-key-set-bookmark1=<string> 
+                                 Set playlist bookmark 1
+          Select the key to set this playlist bookmark.
+      --key-set-bookmark1=<string> 
+                                 Set playlist bookmark 1
+          Select the key to set this playlist bookmark.
+      --global-key-set-bookmark2=<string> 
+                                 Set playlist bookmark 2
+          Select the key to set this playlist bookmark.
+      --key-set-bookmark2=<string> 
+                                 Set playlist bookmark 2
+          Select the key to set this playlist bookmark.
+      --global-key-set-bookmark3=<string> 
+                                 Set playlist bookmark 3
+          Select the key to set this playlist bookmark.
+      --key-set-bookmark3=<string> 
+                                 Set playlist bookmark 3
+          Select the key to set this playlist bookmark.
+      --global-key-set-bookmark4=<string> 
+                                 Set playlist bookmark 4
+          Select the key to set this playlist bookmark.
+      --key-set-bookmark4=<string> 
+                                 Set playlist bookmark 4
+          Select the key to set this playlist bookmark.
+      --global-key-set-bookmark5=<string> 
+                                 Set playlist bookmark 5
+          Select the key to set this playlist bookmark.
+      --key-set-bookmark5=<string> 
+                                 Set playlist bookmark 5
+          Select the key to set this playlist bookmark.
+      --global-key-set-bookmark6=<string> 
+                                 Set playlist bookmark 6
+          Select the key to set this playlist bookmark.
+      --key-set-bookmark6=<string> 
+                                 Set playlist bookmark 6
+          Select the key to set this playlist bookmark.
+      --global-key-set-bookmark7=<string> 
+                                 Set playlist bookmark 7
+          Select the key to set this playlist bookmark.
+      --key-set-bookmark7=<string> 
+                                 Set playlist bookmark 7
+          Select the key to set this playlist bookmark.
+      --global-key-set-bookmark8=<string> 
+                                 Set playlist bookmark 8
+          Select the key to set this playlist bookmark.
+      --key-set-bookmark8=<string> 
+                                 Set playlist bookmark 8
+          Select the key to set this playlist bookmark.
+      --global-key-set-bookmark9=<string> 
+                                 Set playlist bookmark 9
+          Select the key to set this playlist bookmark.
+      --key-set-bookmark9=<string> 
+                                 Set playlist bookmark 9
+          Select the key to set this playlist bookmark.
+      --global-key-set-bookmark10=<string> 
+                                 Set playlist bookmark 10
+          Select the key to set this playlist bookmark.
+      --key-set-bookmark10=<string> 
+                                 Set playlist bookmark 10
+          Select the key to set this playlist bookmark.
+      --global-key-play-bookmark1=<string> 
+                                 Play playlist bookmark 1
+          Select the key to play this bookmark.
+      --key-play-bookmark1=<string> 
+                                 Play playlist bookmark 1
+          Select the key to play this bookmark.
+      --global-key-play-bookmark2=<string> 
+                                 Play playlist bookmark 2
+          Select the key to play this bookmark.
+      --key-play-bookmark2=<string> 
+                                 Play playlist bookmark 2
+          Select the key to play this bookmark.
+      --global-key-play-bookmark3=<string> 
+                                 Play playlist bookmark 3
+          Select the key to play this bookmark.
+      --key-play-bookmark3=<string> 
+                                 Play playlist bookmark 3
+          Select the key to play this bookmark.
+      --global-key-play-bookmark4=<string> 
+                                 Play playlist bookmark 4
+          Select the key to play this bookmark.
+      --key-play-bookmark4=<string> 
+                                 Play playlist bookmark 4
+          Select the key to play this bookmark.
+      --global-key-play-bookmark5=<string> 
+                                 Play playlist bookmark 5
+          Select the key to play this bookmark.
+      --key-play-bookmark5=<string> 
+                                 Play playlist bookmark 5
+          Select the key to play this bookmark.
+      --global-key-play-bookmark6=<string> 
+                                 Play playlist bookmark 6
+          Select the key to play this bookmark.
+      --key-play-bookmark6=<string> 
+                                 Play playlist bookmark 6
+          Select the key to play this bookmark.
+      --global-key-play-bookmark7=<string> 
+                                 Play playlist bookmark 7
+          Select the key to play this bookmark.
+      --key-play-bookmark7=<string> 
+                                 Play playlist bookmark 7
+          Select the key to play this bookmark.
+      --global-key-play-bookmark8=<string> 
+                                 Play playlist bookmark 8
+          Select the key to play this bookmark.
+      --key-play-bookmark8=<string> 
+                                 Play playlist bookmark 8
+          Select the key to play this bookmark.
+      --global-key-play-bookmark9=<string> 
+                                 Play playlist bookmark 9
+          Select the key to play this bookmark.
+      --key-play-bookmark9=<string> 
+                                 Play playlist bookmark 9
+          Select the key to play this bookmark.
+      --global-key-play-bookmark10=<string> 
+                                 Play playlist bookmark 10
+          Select the key to play this bookmark.
+      --key-play-bookmark10=<string> 
+                                 Play playlist bookmark 10
+          Select the key to play this bookmark.
+      --global-key-clear-playlist=<string> 
+                                 Clear the playlist
+          Select the key to clear the current playlist.
+      --key-clear-playlist=<string> 
+                                 Clear the playlist
+          Select the key to clear the current playlist.
+      --global-key-subtitle-text-scale-normal=<string> 
+                                 Reset subtitles text scale
+          Select the key to change subtitles text scaling
+      --key-subtitle-text-scale-normal=<string> 
+                                 Reset subtitles text scale
+          Select the key to change subtitles text scaling
+      --global-key-subtitle-text-scale-up=<string> 
+                                 Scale down subtitles text
+          Select the key to change subtitles text scaling
+      --key-subtitle-text-scale-up=<string> 
+                                 Scale down subtitles text
+          Select the key to change subtitles text scaling
+      --global-key-subtitle-text-scale-down=<string> 
+                                 Scale up subtitles text
+          Select the key to change subtitles text scaling
+      --key-subtitle-text-scale-down=<string> 
+                                 Scale up subtitles text
+          Select the key to change subtitles text scaling
+      --bookmark1=<string>       Playlist bookmark 1
+          This allows you to define playlist bookmarks.
+      --bookmark2=<string>       Playlist bookmark 2
+          This allows you to define playlist bookmarks.
+      --bookmark3=<string>       Playlist bookmark 3
+          This allows you to define playlist bookmarks.
+      --bookmark4=<string>       Playlist bookmark 4
+          This allows you
