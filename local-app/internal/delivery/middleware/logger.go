@@ -54,7 +54,10 @@ func LoggerAndTraceMiddleware() gin.HandlerFunc {
 		case c.Writer.Status() >= 400:
 			log.Warn("HTTP Request Client Error", fields...)
 		default:
-			log.Info("HTTP Request", fields...)
+			isPolling := path == "/api/v1/metrics" || path == "/api/v1/local/status" || path == "/api/v1/desktop/cloud" || path == "/api/v1/media/sessions/current" || path == "/api/v1/channels"
+			if !isPolling {
+				log.Info("HTTP Request", fields...)
+			}
 		}
 	}
 }

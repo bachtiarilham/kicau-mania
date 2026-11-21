@@ -113,9 +113,11 @@ func (m *Coordinator) Restore() {
 		return
 	}
 	c, e := m.settings.Load(m.ctx)
+	configSource := "setup.json"
 	if errors.Is(e, apperror.ErrNotFound) {
 		if len(m.initial.Channels) > 0 {
 			c = m.initial
+			configSource = ".env"
 		} else {
 			return
 		}
@@ -124,6 +126,17 @@ func (m *Coordinator) Restore() {
 		m.errorCode = "CONFIGURATION_UNAVAILABLE"
 		m.mu.Unlock()
 		return
+	}
+	logger.Info("loaded active configuration",
+		zap.String("source", configSource),
+		zap.Int("channel_count", len(c.Channels)),
+		zap.String("nvr_ip", c.NVRIP),
+	)
+	for _, ch := range c.Channels {
+		logger.Info("channel configured in engine",
+			zap.String("id", ch.ID),
+			zap.String("ip", ch.IP),
+		)
 	}
 	m.ops.Lock()
 	defer m.ops.Unlock()

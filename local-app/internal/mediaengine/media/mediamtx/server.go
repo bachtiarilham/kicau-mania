@@ -7,11 +7,37 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 	"sync"
 
+	"go.uber.org/zap"
+
+	"kicau.local/edge/internal/infra/logger"
 	"kicau.local/edge/internal/infra/runtime/subprocess"
 	"kicau.local/edge/internal/mediaengine/media"
 )
+
+var credsRegex = regexp.MustCompile(`://([^:]+):([^@]+)@`)
+
+type mediaMTXLogger struct{}
+
+func (m *mediaMTXLogger) Write(p []byte) (n int, err error) {
+	lines := strings.Split(string(p), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		sanitized := credsRegex.ReplaceAllString(line, "://$1:***@")
+		if strings.Contains(line, "ERR") || strings.Contains(line, "WAR") {
+			logger.Warn("mediamtx", zap.String("log", sanitized))
+		} else {
+			logger.Info("mediamtx", zap.String("log", sanitized))
+		}
+	}
+	return len(p), nil
+}
 
 type Source struct {
 	ID, URL string
@@ -32,8 +58,9 @@ type Server struct {
 
 func New(opts Options) *Server {
 	opts.Sources = append([]Source(nil), opts.Sources...)
+	logWriter := &mediaMTXLogger{}
 	return &Server{opts: opts, launch: func(ctx context.Context, binary string, args []string) (media.Process, error) {
-		return subprocess.StartMediaServer(ctx, binary, args, nil)
+		return subprocess.StartMediaServer(ctx, binary, args, logWriter)
 	}}
 }
 func (s *Server) MediaStatus() media.Status {
@@ -74,7 +101,7 @@ func (s *Server) Render() error {
 			}},
 	}
 	cfg := map[string]any{
-		"logLevel":          "warn",
+		"logLevel":          "info",
 		"rtsp":              true,
 		"rtspAddress":       s.opts.RTSPListen,
 		"rtspTransports":    []string{"tcp"},

@@ -95,13 +95,22 @@ func NewContainer(ctx context.Context, c config.Config) (*Container, error) {
 			if err == nil {
 				hasAudio := p.HasAudio
 				c.Channels[idx].HasAudio = &hasAudio
+				logger.Info("camera online / probe success",
+					zap.String("channel_id", c.Channels[idx].ID),
+					zap.String("ip", c.Channels[idx].IP),
+					zap.String("video_codec", p.VideoCodec),
+					zap.String("audio_codec", p.AudioCodec),
+					zap.Bool("has_audio", p.HasAudio))
 			} else {
 				var failure *setup.Failure
 				if errors.As(err, &failure) && failure.Code == "UNSUPPORTED_VIDEO_CODEC" {
 					errCh <- err
 					return
 				}
-				logger.Warn("channel probe unreached during startup, continuing with fallback", zap.String("channel_id", c.Channels[idx].ID), zap.Error(err))
+				logger.Warn("camera offline / probe unreachable",
+					zap.String("channel_id", c.Channels[idx].ID),
+					zap.String("ip", c.Channels[idx].IP),
+					zap.Error(err))
 			}
 		}(i)
 	}
