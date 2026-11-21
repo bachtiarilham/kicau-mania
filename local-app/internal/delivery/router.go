@@ -98,6 +98,8 @@ func Router(c config.Config, handlers Handlers) *gin.Engine {
 	}
 	if handlers.WebSocket != nil {
 		websocket.RegisterRoutes(read, handlers.WebSocket)
+	} else {
+		read.GET("/metrics", func(c *gin.Context) { response.Success(c, "No metrics active", nil) })
 	}
 	if handlers.Streaming != nil {
 		streamingDelivery.RegisterRoutes(g, handlers.Streaming)
@@ -107,6 +109,9 @@ func Router(c config.Config, handlers Handlers) *gin.Engine {
 	}
 	if handlers.Sessions != nil {
 		sessionDelivery.RegisterRoutes(g, handlers.Sessions)
+	} else {
+		g.GET("/media/sessions/current", func(c *gin.Context) { response.Success(c, "No session active", nil) })
+		g.GET("/media/sessions/:id", func(c *gin.Context) { response.Success(c, "No session active", nil) })
 	}
 	if handlers.Zoom != nil {
 		handlers.Zoom.Routes(g)

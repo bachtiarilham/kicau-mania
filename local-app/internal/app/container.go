@@ -5,6 +5,8 @@ import (
 	"context"
 	"errors"
 	"path/filepath"
+	"sync"
+	"time"
 
 	"go.uber.org/zap"
 	cloudMedia "kicau.local/edge/internal/cloudmedia/service"
@@ -76,22 +78,37 @@ func NewMedia(c config.Config) (*channelRepo.Catalog, *mediamtx.Server, error) {
 	return catalog, mediaServer, nil
 }
 func NewContainer(ctx context.Context, c config.Config) (*Container, error) {
+	var wg sync.WaitGroup
+	errCh := make(chan error, len(c.Channels))
+	probeCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+
 	for i := range c.Channels {
-		hasAudio := true
-		if c.Channels[i].HasAudio != nil {
-			hasAudio = *c.Channels[i].HasAudio
+		if c.Channels[i].HasAudio == nil {
+			hasAudio := true
+			c.Channels[i].HasAudio = &hasAudio
 		}
-		p, err := (ffmpeg.Inspector{ProbeBinary: c.FFprobe}).Probe(ctx, c.Channels[i].Source)
-		if err == nil {
-			hasAudio = p.HasAudio
-		} else {
-			var failure *setup.Failure
-			if errors.As(err, &failure) && failure.Code == "UNSUPPORTED_VIDEO_CODEC" {
-				return nil, err
+		wg.Add(1)
+		go func(idx int) {
+			defer wg.Done()
+			p, err := (ffmpeg.Inspector{ProbeBinary: c.FFprobe}).Probe(probeCtx, c.Channels[idx].Source)
+			if err == nil {
+				hasAudio := p.HasAudio
+				c.Channels[idx].HasAudio = &hasAudio
+			} else {
+				var failure *setup.Failure
+				if errors.As(err, &failure) && failure.Code == "UNSUPPORTED_VIDEO_CODEC" {
+					errCh <- err
+					return
+				}
+				logger.Warn("channel probe unreached during startup, continuing with fallback", zap.String("channel_id", c.Channels[idx].ID), zap.Error(err))
 			}
-			logger.Warn("channel probe unreached during startup, continuing with fallback", zap.String("channel_id", c.Channels[i].ID), zap.Error(err))
-		}
-		c.Channels[i].HasAudio = &hasAudio
+		}(i)
+	}
+	wg.Wait()
+	close(errCh)
+	if err, ok := <-errCh; ok {
+		return nil, err
 	}
 	sources, mediaServer, e := NewMedia(c)
 	if e != nil {

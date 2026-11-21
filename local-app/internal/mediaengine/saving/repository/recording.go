@@ -92,10 +92,10 @@ func (r *Files) List(ctx context.Context) ([]model.Recording, error) {
 		}
 		var v model.Recording
 		if e = json.Unmarshal(b, &v); e != nil {
-			return nil, fmt.Errorf("corrupt recording manifest %s", f.Name())
+			continue
 		}
 		if !strings.EqualFold(filepath.Ext(v.File), ".mkv") || !strings.HasSuffix(strings.ToLower(v.Key), ".mkv") {
-			return nil, fmt.Errorf("unsupported recording format in %s", f.Name())
+			continue
 		}
 		out = append(out, v)
 	}
