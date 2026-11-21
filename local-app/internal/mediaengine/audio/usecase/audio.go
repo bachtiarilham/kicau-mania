@@ -110,9 +110,6 @@ func (u *UseCase) SubscribeAudio(channelID string) (<-chan []byte, func(), error
 func (u *UseCase) SubscribeMetrics() (<-chan []byte, func(), error) {
 	u.mu.Lock()
 	defer u.mu.Unlock()
-	if len(u.active) == 0 {
-		return nil, nil, apperror.ErrConflict
-	}
 	messages, cancel := u.broadcaster.Subscribe("metrics:")
 	return messages, cancel, nil
 }
