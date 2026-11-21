@@ -114,7 +114,7 @@ func (m *Coordinator) Restore() {
 	}
 	c, e := m.settings.Load(m.ctx)
 	configSource := "setup.json"
-	if errors.Is(e, apperror.ErrNotFound) {
+	if errors.Is(e, apperror.ErrNotFound) || len(c.Channels) == 0 {
 		if len(m.initial.Channels) > 0 {
 			c = m.initial
 			configSource = ".env"
@@ -126,6 +126,10 @@ func (m *Coordinator) Restore() {
 		m.errorCode = "CONFIGURATION_UNAVAILABLE"
 		m.mu.Unlock()
 		return
+	}
+	if len(m.initial.Channels) > len(c.Channels) {
+		c = m.initial
+		configSource = ".env (overriding older setup.json)"
 	}
 	logger.Info("loaded active configuration",
 		zap.String("source", configSource),
