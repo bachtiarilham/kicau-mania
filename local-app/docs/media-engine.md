@@ -1,8 +1,10 @@
 # Media engine
 
-NVR HEVC/H.265 → MediaMTX RTSP/TCP → libVLC desktop. Relay read-only loopback tidak memerlukan publisher pipeline. HTTP untuk kontrol, WebSocket untuk metrik.
+NVR HEVC/H.265 → MediaMTX RTSP/TCP → libVLC desktop. HTTP untuk kontrol dan WebSocket untuk metrik.
 
-Capture memvalidasi HEVC setiap mulai/reconnect, menyalin video/audio ke MKV dan mendecode PCM terpisah untuk metrik. Audio yang tidak dapat dimuat ke MKV menghasilkan error. Tidak ada resize, perubahan FPS atau encoder.
+Slider zoom desktop mengatur crop tengah 100–300% pada player yang sama. Untuk konsumen RTSP, path `zoom/<id-kamera>_zoom` menyediakan crop tengah 2×. MediaMTX menjalankan FFmpeg saat path itu dibuka. Path zoom memakai H.264 dan membawa audio AAC jika tersedia. Kalibrasi gantangan dengan kamera yang terdaftar tersedia di path `<id-gantangan>_zoom`. Restart backend setelah mengubah kalibrasi untuk memuat crop baru.
+
+Capture memvalidasi HEVC setiap mulai atau reconnect, menyalin video ke MKV, dan mendekode PCM untuk metrik. `AUDIO_FILTER_ENABLED` mengontrol filter PCM dan audio stream zoom. `AUDIO_GATE_DBFS` mengatur ambang gate (default −55 dBFS), sedangkan `AUDIO_ACTIVE_DBFS` mengatur deteksi aktivitas. Audio rekaman disalin dari sumber secara default. Aktifkan `AUDIO_FILTER_APPLY_RECORDING` bersama filter untuk memfilter dan menyimpan audio rekaman sebagai AAC.
 
 STARTING → RUNNING/DEGRADED → STOPPING → terminal. Reconnect membuat segmen MKV dan gap. Finalizer memeriksa packet/durasi/kecocokan codec sebelum concat copy dan rename atomik. PTS kosong dapat diisi dari DTS tanpa mengubah payload. Partial tidak READY hanya karena byte positif.
 

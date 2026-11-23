@@ -4,12 +4,18 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
 	"kicau.local/edge/internal/mediaengine/media"
+	"kicau.local/edge/internal/mediaengine/media/ffmpeg"
+	zoomModel "kicau.local/edge/internal/mediaengine/zoom/model"
+	zoomService "kicau.local/edge/internal/mediaengine/zoom/service"
 )
 
 func TestGeneratedConfigPreservesUpstreamMapping(t *testing.T) {
@@ -162,6 +168,101 @@ func TestStartPreservesLaunchErrorAndAllowsRetry(t *testing.T) {
 		t.Fatal(err)
 	}
 	mediaServer.Close()
+}
+
+func TestOnDemandZoomPublishesVideoAndAudio(t *testing.T) {
+	bin := os.Getenv("KICAU_TEST_MEDIA_BIN")
+	if bin == "" {
+		t.Skip("set KICAU_TEST_MEDIA_BIN to the directory containing MediaMTX, FFmpeg and ffprobe")
+	}
+	binary := func(name string) string {
+		if runtime.GOOS == "windows" {
+			name += ".exe"
+		}
+		return filepath.Join(bin, name)
+	}
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	addr := listener.Addr().String()
+	listener.Close()
+	base := "rtsp://" + addr
+	ffmpegBinary := binary("ffmpeg")
+	builder := zoomService.NewBuilder(ffmpegBinary)
+	builder.AudioFilter = "highpass=f=100,agate=threshold=-55dB"
+	server := New(Options{
+		Binary: binary("mediamtx"), ConfigFile: filepath.Join(t.TempDir(), "mediamtx.yml"), RTSPListen: addr,
+		Sources: []Source{
+			{ID: "camera", OnDemand: []string{ffmpegBinary, "-nostdin", "-loglevel", "error",
+				"-re", "-f", "lavfi", "-i", "testsrc2=size=640x360:rate=25",
+				"-re", "-f", "lavfi", "-i", "sine=f=1000:r=48000",
+				"-c:v", "libx264", "-preset", "ultrafast", "-tune", "zerolatency",
+				"-c:a", "aac", "-f", "rtsp", "-rtsp_transport", "tcp", base + "/camera"}},
+			{ID: "zoom/camera_zoom", OnDemand: append([]string{ffmpegBinary},
+				builder.BuildArgs(zoomModel.ZoomChannel{}, base+"/camera", base+"/zoom/camera_zoom")...)},
+		},
+	})
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	if err := server.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
+	defer server.Close()
+	for {
+		conn, err := net.DialTimeout("tcp", addr, 100*time.Millisecond)
+		if err == nil {
+			conn.Close()
+			break
+		}
+		select {
+		case <-time.After(50 * time.Millisecond):
+		case <-server.Done():
+			t.Fatal("MediaMTX stopped before opening RTSP")
+		case <-ctx.Done():
+			t.Fatal(ctx.Err())
+		}
+	}
+	output, err := exec.CommandContext(ctx, binary("ffprobe"), "-v", "error", "-rtsp_transport", "tcp",
+		"-show_entries", "stream=codec_name,width,height", "-of", "json", base+"/zoom/camera_zoom").CombinedOutput()
+	if err != nil {
+		t.Fatalf("probe zoom: %v\n%s", err, output)
+	}
+	var probe struct {
+		Streams []struct {
+			Codec  string `json:"codec_name"`
+			Width  int    `json:"width"`
+			Height int    `json:"height"`
+		}
+	}
+	if err := json.Unmarshal(output, &probe); err != nil {
+		t.Fatal(err)
+	}
+	var video, audio bool
+	for _, stream := range probe.Streams {
+		video = video || stream.Codec == "h264" && stream.Width == 640 && stream.Height == 360
+		audio = audio || stream.Codec == "aac"
+	}
+	if !video || !audio {
+		t.Fatalf("expected H.264 video and AAC audio, got %s", output)
+	}
+
+	previewCtx, stopPreview := context.WithTimeout(ctx, 10*time.Second)
+	defer stopPreview()
+	received := false
+	pipeline := ffmpeg.Pipeline{Binary: ffmpegBinary, AudioFilter: ffmpeg.AudioFilterOptions{Enabled: true}}
+	_ = pipeline.RunPreviewAudio(previewCtx, base+"/camera", func(pcm []byte) {
+		for _, sample := range pcm {
+			if sample != 0 {
+				received = true
+				stopPreview()
+				break
+			}
+		}
+	})
+	if !received {
+		t.Fatal("audio-only preview did not extract PCM from RTSP")
+	}
 }
 
 func newTestServer(opts Options, sources []Source) *Server {

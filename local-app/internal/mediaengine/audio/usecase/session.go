@@ -14,6 +14,7 @@ func (u *UseCase) Activate(channels []string) error {
 	if !u.started || u.closing || len(u.active) > 0 {
 		return apperror.ErrConflict
 	}
+	u.stopPreview()
 	u.active = map[string]bool{}
 	for _, id := range channels {
 		u.active[id] = true
@@ -50,6 +51,7 @@ func (u *UseCase) Ingest(id string, pcm []byte) {
 	}
 	u.broadcaster.Publish("audio:"+id, pcm)
 	u.broadcaster.Publish("metrics:", b)
+	u.broadcaster.Publish("preview-metrics:", b)
 	if u.backend != nil {
 		u.executor.EnqueueMetric(b)
 	}

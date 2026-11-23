@@ -42,7 +42,7 @@ func TestAudioFilterString(t *testing.T) {
 		if !strings.Contains(got, "highpass=f=100") {
 			t.Errorf("expected default highpass=100 in %q", got)
 		}
-		if !strings.Contains(got, "threshold=-35.0dB") {
+		if !strings.Contains(got, "threshold=-55.0dB") {
 			t.Errorf("expected default threshold=-35.0dB in %q", got)
 		}
 		if !strings.Contains(got, "ratio=4.0") {

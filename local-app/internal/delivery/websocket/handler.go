@@ -11,6 +11,7 @@ import (
 type AudioUseCase interface {
 	SubscribeAudio(string) (<-chan []byte, func(), error)
 	SubscribeMetrics() (<-chan []byte, func(), error)
+	SubscribePreviewMetrics() (<-chan []byte, func(), error)
 }
 
 type Handler struct {
@@ -55,6 +56,17 @@ func (h *Handler) audio(c *gin.Context) {
 func (h *Handler) metrics(c *gin.Context) {
 	generation := h.stream.generation()
 	messages, cancel, err := h.uc.SubscribeMetrics()
+	if err != nil {
+		response.WriteError(c, err)
+		return
+	}
+	defer cancel()
+	h.stream.serve(c.Writer, c.Request, messages, gorillaws.TextMessage, generation)
+}
+
+func (h *Handler) PreviewMetrics(c *gin.Context) {
+	generation := h.stream.generation()
+	messages, cancel, err := h.uc.SubscribePreviewMetrics()
 	if err != nil {
 		response.WriteError(c, err)
 		return

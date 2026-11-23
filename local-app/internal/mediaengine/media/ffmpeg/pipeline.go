@@ -49,7 +49,7 @@ func (f Pipeline) AudioFilterString() string {
 	}
 	thresh := f.AudioFilter.GateThreshold
 	if thresh == 0 {
-		thresh = -35.0
+		thresh = -55.0
 	}
 	return fmt.Sprintf("highpass=f=%d,agate=threshold=%.1fdB:ratio=%.1f:attack=%.1f:release=%.1f",
 		freq, thresh, ratio, attack, release)

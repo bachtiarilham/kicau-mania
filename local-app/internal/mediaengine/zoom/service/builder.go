@@ -9,6 +9,7 @@ import (
 
 type Builder struct {
 	FFmpegBinary string
+	AudioFilter  string
 }
 
 func NewBuilder(ffmpegBinary string) *Builder {
@@ -26,6 +27,10 @@ func (b *Builder) BuildFilterGraph(ch model.ZoomChannel) string {
 
 	if ch.Perspective.Enabled {
 		pts := ch.Perspective.SrcPoints
+		for i := range pts {
+			pts[i][0] -= ch.Crop.X
+			pts[i][1] -= ch.Crop.Y
+		}
 		pFilter := fmt.Sprintf("perspective=x0=%d:y0=%d:x1=%d:y1=%d:x2=%d:y2=%d:x3=%d:y3=%d:interpol=linear",
 			pts[0][0], pts[0][1],
 			pts[1][0], pts[1][1],
@@ -41,34 +46,28 @@ func (b *Builder) BuildFilterGraph(ch model.ZoomChannel) string {
 	return strings.Join(filters, ",")
 }
 
-// BuildArgs constructs the full argument slice for hardware-accelerated zero-delay zoom streaming.
+// BuildArgs publishes a calibrated crop or a centered 2x zoom.
 func (b *Builder) BuildArgs(ch model.ZoomChannel, sourceRTSP, targetRTSP string) []string {
-	filterGraph := b.BuildFilterGraph(ch)
+	filter := "crop=trunc(iw/4)*2:trunc(ih/4)*2,scale=iw*2:ih*2"
+	if ch.Crop.Width > 0 {
+		filter = b.BuildFilterGraph(ch) + ",scale=trunc(iw/2)*2:trunc(ih/2)*2"
+	}
 
 	args := []string{
 		"-nostdin",
 		"-hide_banner",
 		"-loglevel", "error",
-		"-hwaccel", "cuda",
 		"-rtsp_transport", "tcp",
+		"-timeout", "10000000",
 		"-i", sourceRTSP,
-		"-filter_complex", fmt.Sprintf("[0:v]%s[outv]", filterGraph),
-		"-map", "[outv]",
-		"-an",
-		"-c:v", "hevc_nvenc",
-		"-preset", "p1",
-		"-tune", "ull",
-		"-zerolatency", "1",
-		"-rc", "cbr",
-		"-b:v", "2500k",
-		"-maxrate", "2500k",
-		"-bufsize", "500k",
+		"-map", "0:v:0", "-map", "0:a:0?", "-vf", filter,
+		"-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "ultrafast",
+		"-tune", "zerolatency", "-c:a", "aac", "-b:a", "128k",
 		"-g", "25",
 		"-bf", "0",
-		"-f", "rtsp",
-		"-rtsp_transport", "tcp",
-		targetRTSP,
 	}
-
-	return args
+	if b.AudioFilter != "" {
+		args = append(args, "-af", b.AudioFilter)
+	}
+	return append(args, "-f", "rtsp", "-rtsp_transport", "tcp", targetRTSP)
 }

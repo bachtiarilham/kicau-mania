@@ -10,8 +10,10 @@ import (
 )
 
 type Options struct {
-	SampleRate int
-	Threshold  float64
+	SampleRate     int
+	Threshold      float64
+	PreviewSources map[string]string
+	PreviewCapture func(context.Context, string, func([]byte)) error
 }
 
 type ChannelRepository interface {
@@ -40,16 +42,19 @@ type UseCase struct {
 	opts    Options
 	sources ChannelRepository
 
-	broadcaster      Broadcaster
-	backend          MetricSender
-	executor         Executor
-	mu               sync.Mutex
-	active           map[string]bool
-	activeAt         time.Time
-	activeContext    context.Context
-	activeCancel     context.CancelFunc
-	started, closing bool
-	closeOnce        sync.Once
+	broadcaster        Broadcaster
+	backend            MetricSender
+	executor           Executor
+	mu                 sync.Mutex
+	active             map[string]bool
+	activeAt           time.Time
+	activeContext      context.Context
+	activeCancel       context.CancelFunc
+	started, closing   bool
+	closeOnce          sync.Once
+	previewSubscribers int
+	previewCancel      context.CancelFunc
+	previewWorkers     sync.WaitGroup
 }
 
 func New(
@@ -116,5 +121,12 @@ func (u *UseCase) SubscribeMetrics() (<-chan []byte, func(), error) {
 
 func (u *UseCase) Close() {
 	u.Deactivate()
-	u.closeOnce.Do(func() { u.mu.Lock(); u.closing = true; u.mu.Unlock(); u.executor.Close() })
+	u.closeOnce.Do(func() {
+		u.mu.Lock()
+		u.closing = true
+		u.stopPreview()
+		u.mu.Unlock()
+		u.previewWorkers.Wait()
+		u.executor.Close()
+	})
 }

@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -40,7 +41,8 @@ func (m *mediaMTXLogger) Write(p []byte) (n int, err error) {
 }
 
 type Source struct {
-	ID, URL string
+	ID, URL  string
+	OnDemand []string
 }
 
 type Options struct {
@@ -58,6 +60,9 @@ type Server struct {
 
 func New(opts Options) *Server {
 	opts.Sources = append([]Source(nil), opts.Sources...)
+	for i := range opts.Sources {
+		opts.Sources[i].OnDemand = append([]string(nil), opts.Sources[i].OnDemand...)
+	}
 	logWriter := &mediaMTXLogger{}
 	return &Server{opts: opts, launch: func(ctx context.Context, binary string, args []string) (media.Process, error) {
 		return subprocess.StartMediaServer(ctx, binary, args, logWriter)
@@ -80,7 +85,21 @@ func (s *Server) MediaStatus() media.Status {
 // Render keeps the existing JSON-compatible YAML schema and filesystem location.
 func (s *Server) Render() error {
 	paths := map[string]any{}
+	permissions := []any{map[string]any{"action": "read", "path": ""}}
 	for _, in := range s.opts.Sources {
+		if len(in.OnDemand) > 0 {
+			command := make([]string, len(in.OnDemand))
+			for i, arg := range in.OnDemand {
+				command[i] = strconv.Quote(arg)
+			}
+			paths[in.ID] = map[string]any{
+				"source": "publisher", "overridePublisher": false,
+				"runOnDemand":             strings.Join(command, " "),
+				"runOnDemandStartTimeout": "20s",
+			}
+			permissions = append(permissions, map[string]any{"action": "publish", "path": in.ID})
+			continue
+		}
 		if in.URL == "" {
 			paths[in.ID] = map[string]any{"source": "publisher", "overridePublisher": false}
 			continue
@@ -94,11 +113,9 @@ func (s *Server) Render() error {
 	}
 	authUsers := []any{
 		map[string]any{
-			"user": "any",
-			"ips":  []string{"127.0.0.1/32", "::1/128"},
-			"permissions": []any{
-				map[string]any{"action": "read", "path": ""},
-			}},
+			"user":        "any",
+			"ips":         []string{"127.0.0.1/32", "::1/128"},
+			"permissions": permissions},
 	}
 	cfg := map[string]any{
 		"logLevel":          "info",

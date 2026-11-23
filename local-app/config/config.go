@@ -60,6 +60,7 @@ type Config struct {
 	Threshold                 float64
 	AudioFilterEnabled        bool
 	AudioHighpassFreq         int
+	AudioGateThreshold        float64
 	AudioGateRatio            float64
 	AudioGateAttack           float64
 	AudioGateRelease          float64
@@ -102,6 +103,10 @@ func Load(path string) (Config, error) {
 	}
 	audioFilterEnabled := getEnvAsBool("AUDIO_FILTER_ENABLED", true)
 	highpassFreq, err := getEnvAsInt("AUDIO_HIGHPASS_FREQ", 100)
+	if err != nil {
+		return Config{}, err
+	}
+	gateThreshold, err := getEnvAsFloat64("AUDIO_GATE_DBFS", "-55")
 	if err != nil {
 		return Config{}, err
 	}
@@ -197,6 +202,7 @@ func Load(path string) (Config, error) {
 		Threshold:                 threshold,
 		AudioFilterEnabled:        audioFilterEnabled,
 		AudioHighpassFreq:         highpassFreq,
+		AudioGateThreshold:        gateThreshold,
 		AudioGateRatio:            gateRatio,
 		AudioGateAttack:           gateAttack,
 		AudioGateRelease:          gateRelease,
@@ -297,6 +303,9 @@ func validate(c Config) error {
 	}
 	if c.AudioHighpassFreq < 20 || c.AudioHighpassFreq > 1000 {
 		return fmt.Errorf("AUDIO_HIGHPASS_FREQ must be 20..1000 Hz")
+	}
+	if !(c.AudioGateThreshold >= -120 && c.AudioGateThreshold <= 0) {
+		return fmt.Errorf("AUDIO_GATE_DBFS must be -120..0")
 	}
 	if c.AudioGateRatio < 1 || c.AudioGateRatio > 100 {
 		return fmt.Errorf("AUDIO_GATE_RATIO must be 1..100")

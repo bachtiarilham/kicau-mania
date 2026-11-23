@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"kicau.local/edge/config"
@@ -43,7 +44,8 @@ func TestNewMediaMapsChannelSnapshotWithoutStartingProcesses(t *testing.T) {
 	}
 	var rendered struct {
 		Paths map[string]struct {
-			Source string `json:"source"`
+			Source      string `json:"source"`
+			RunOnDemand string `json:"runOnDemand"`
 		} `json:"paths"`
 		UDP    string `json:"webrtcLocalUDPAddress"`
 		WebRTC bool   `json:"webrtc"`
@@ -51,11 +53,15 @@ func TestNewMediaMapsChannelSnapshotWithoutStartingProcesses(t *testing.T) {
 	if err := json.Unmarshal(b, &rendered); err != nil {
 		t.Fatal(err)
 	}
-	if rendered.WebRTC || len(rendered.Paths) != 1 || rendered.Paths["one"].Source != "rtsp://operator:secret@192.0.2.1/feed" {
+	if rendered.WebRTC || len(rendered.Paths) != 2 || rendered.Paths["one"].Source != "rtsp://operator:secret@192.0.2.1/feed" {
 		t.Fatal("builder lost upstream mapping")
 	}
 	if server.Done() != nil {
 		t.Fatal("render started a media process")
+	}
+	zoom := rendered.Paths["zoom/one_zoom"]
+	if zoom.Source != "publisher" || !strings.Contains(zoom.RunOnDemand, "rtsp://127.0.0.1:8554/zoom/one_zoom") || strings.Contains(zoom.RunOnDemand, "secret") {
+		t.Fatal("zoom must publish from the local hub without upstream credentials")
 	}
 	server.Close()
 }

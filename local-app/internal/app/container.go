@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -25,8 +26,8 @@ import (
 	savingDelivery "kicau.local/edge/internal/delivery/rest/saving"
 	sessionDelivery "kicau.local/edge/internal/delivery/rest/session"
 	streamingDelivery "kicau.local/edge/internal/delivery/rest/streaming"
-	websocketDelivery "kicau.local/edge/internal/delivery/websocket"
 	zoomDelivery "kicau.local/edge/internal/delivery/rest/zoom"
+	websocketDelivery "kicau.local/edge/internal/delivery/websocket"
 	"kicau.local/edge/internal/infra/storage/filesystem"
 	"kicau.local/edge/internal/infra/storage/s3"
 	audioService "kicau.local/edge/internal/mediaengine/audio/service"
@@ -44,6 +45,7 @@ import (
 	sessionWorker "kicau.local/edge/internal/mediaengine/session/worker"
 	streamingUC "kicau.local/edge/internal/mediaengine/streaming/usecase"
 	streamingWorker "kicau.local/edge/internal/mediaengine/streaming/worker"
+	zoomModel "kicau.local/edge/internal/mediaengine/zoom/model"
 	zoomRepository "kicau.local/edge/internal/mediaengine/zoom/repository"
 	zoomService "kicau.local/edge/internal/mediaengine/zoom/service"
 	zoomUsecase "kicau.local/edge/internal/mediaengine/zoom/usecase"
@@ -74,7 +76,11 @@ func NewMedia(c config.Config) (*channelRepo.Catalog, *mediamtx.Server, error) {
 	if e != nil {
 		return nil, nil, e
 	}
-	mediaServer := mediamtx.New(mediamtx.Options{Binary: c.MediaMTX, ConfigFile: c.MediaConfig, RTSPListen: c.RTSPListen, ReadCIDRs: c.ReadCIDRs, Sources: mediaSources(catalog)})
+	mediaSources, err := mediaSources(c, catalog)
+	if err != nil {
+		return nil, nil, err
+	}
+	mediaServer := mediamtx.New(mediamtx.Options{Binary: c.MediaMTX, ConfigFile: c.MediaConfig, RTSPListen: c.RTSPListen, ReadCIDRs: c.ReadCIDRs, Sources: mediaSources})
 	return catalog, mediaServer, nil
 }
 func NewContainer(ctx context.Context, c config.Config) (*Container, error) {
@@ -150,25 +156,22 @@ func NewContainer(ctx context.Context, c config.Config) (*Container, error) {
 	audioJobs := audioWorker.New()
 	streamingJobs := streamingWorker.New()
 	savingJobs := savingWorker.New()
-	audio := audioUC.New(audioUC.Options{SampleRate: c.SampleRate, Threshold: c.Threshold}, sources, audioService.NewBroadcaster(), remote, audioJobs)
+	previewSources := make(map[string]string, len(c.Channels))
+	for _, ch := range c.Channels {
+		if ch.HasAudio == nil || *ch.HasAudio {
+			previewSources[ch.ID], _ = sources.HubRTSP(ch.ID)
+		}
+	}
+	pipeline := ffmpeg.Pipeline{Binary: c.FFmpeg, Probe: c.FFprobe, AudioFilter: audioFilterOptions(c)}
+	audio := audioUC.New(audioUC.Options{
+		SampleRate: c.SampleRate, Threshold: c.Threshold,
+		PreviewSources: previewSources, PreviewCapture: pipeline.RunPreviewAudio,
+	}, sources, audioService.NewBroadcaster(), remote, audioJobs)
 	streaming := streamingUC.New(sources, ffmpeg.Restreamer{Binary: c.FFmpeg, Probe: c.FFprobe}, c.Destinations, streamingJobs)
 	saving := savingUC.New(repo, objectStorage, savingJobs)
 	sessionJournal, err := sessionRepo.New(filepath.Join(c.DataDir, "media-sessions"))
 	if err != nil {
 		return nil, err
-	}
-	pipeline := ffmpeg.Pipeline{
-		Binary: c.FFmpeg,
-		Probe:  c.FFprobe,
-		AudioFilter: ffmpeg.AudioFilterOptions{
-			Enabled:        c.AudioFilterEnabled,
-			HighpassFreq:   c.AudioHighpassFreq,
-			GateThreshold:  c.Threshold,
-			GateRatio:      c.AudioGateRatio,
-			GateAttack:     c.AudioGateAttack,
-			GateRelease:    c.AudioGateRelease,
-			ApplyRecording: c.AudioFilterApplyRecording,
-		},
 	}
 	sessions := sessionUC.New(sessionUC.Options{DataDir: c.DataDir, MaxDuration: c.MaxRound, MinFreeBytes: c.MinFreeBytes, Targets: c.Destinations}, sessionJournal, repo, sources, pipeline, ffmpeg.Finalizer{Binary: c.FFmpeg, Probe: c.FFprobe}, audio, streaming, filesystem.Disk{}, sessionWorker.New(), mediaServer)
 	engine := cloudUC.NewEngine(cloudUC.EngineOptions{
@@ -196,7 +199,7 @@ func NewContainer(ctx context.Context, c config.Config) (*Container, error) {
 		Background: cloudWorker.New(), Engine: engine,
 		Commands:       cloudUC.NewCommands(journal, commands, cloudUC.NewCommandExecutor(sessions), c.ArenaID, c.EngineID),
 		ChannelCatalog: sources, MediaServer: mediaServer, Channels: channels, Audio: audio, Streaming: streaming, Saving: saving, Sessions: sessions,
-		Zoom:           zoomUC,
+		Zoom: zoomUC,
 		Handlers: delivery.Handlers{
 			Desktop:   &desktopDelivery.Handler{Cloud: bridge, Saving: saving},
 			Engine:    engineDelivery.New(engine),
@@ -217,11 +220,48 @@ func cloudEndpoint(endpoint, token string) cloudUC.Poster {
 	return cloudClient.New(endpoint, token)
 }
 
-func mediaSources(catalog *channelRepo.Catalog) []mediamtx.Source {
+func audioFilterOptions(c config.Config) ffmpeg.AudioFilterOptions {
+	return ffmpeg.AudioFilterOptions{
+		Enabled: c.AudioFilterEnabled, HighpassFreq: c.AudioHighpassFreq,
+		GateThreshold: c.AudioGateThreshold, GateRatio: c.AudioGateRatio,
+		GateAttack: c.AudioGateAttack, GateRelease: c.AudioGateRelease,
+		ApplyRecording: c.AudioFilterApplyRecording,
+	}
+}
+
+func mediaSources(c config.Config, catalog *channelRepo.Catalog) ([]mediamtx.Source, error) {
+	mapping, err := zoomRepository.NewFileRepository(filepath.Join(c.DataDir, "channels_zoom.json")).Load()
+	if err != nil {
+		return nil, err
+	}
+	builder := zoomService.NewBuilder(c.FFmpeg)
+	builder.AudioFilter = (ffmpeg.Pipeline{AudioFilter: audioFilterOptions(c)}).AudioFilterString()
+	base := strings.TrimRight(c.RTSPBase, "/")
+
 	inputs := catalog.Inputs()
 	sources := make([]mediamtx.Source, 0, len(inputs))
 	for _, in := range inputs {
 		sources = append(sources, mediamtx.Source{ID: in.ID, URL: in.Source})
 	}
-	return sources
+	for _, in := range inputs {
+		source, _ := catalog.HubRTSP(in.ID)
+		id := "zoom/" + in.ID + "_zoom"
+		sources = append(sources, mediamtx.Source{ID: id,
+			OnDemand: append([]string{builder.FFmpegBinary}, builder.BuildArgs(zoomModel.ZoomChannel{}, source, base+"/"+id)...),
+		})
+	}
+	for _, ch := range mapping.ActiveChannels {
+		source, err := catalog.HubRTSP(ch.SourceCamera)
+		if !ch.Active || err != nil || ch.Validate() != nil {
+			continue
+		}
+		id := ch.ChannelID + "_zoom"
+		if _, err := catalog.HubRTSP(id); err == nil {
+			continue
+		}
+		sources = append(sources, mediamtx.Source{ID: id,
+			OnDemand: append([]string{builder.FFmpegBinary}, builder.BuildArgs(ch, source, base+"/"+id)...),
+		})
+	}
+	return sources, nil
 }

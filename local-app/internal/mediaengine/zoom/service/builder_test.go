@@ -50,7 +50,7 @@ func TestBuildFilterGraph(t *testing.T) {
 		if !strings.Contains(filter, "crop=640:640:1420:850") {
 			t.Errorf("expected crop, got %s", filter)
 		}
-		if !strings.Contains(filter, "perspective=x0=1450:y0=860:x1=2040:y1=880:x2=1430:y2=1460:x3=2020:y3=1480") {
+		if !strings.Contains(filter, "perspective=x0=30:y0=10:x1=620:y1=30:x2=10:y2=610:x3=600:y3=630") {
 			t.Errorf("expected perspective coordinates, got %s", filter)
 		}
 	})
@@ -67,11 +67,11 @@ func TestBuildArgsZeroLatency(t *testing.T) {
 	full := strings.Join(args, " ")
 
 	expectedFlags := []string{
-		"-hwaccel cuda",
-		"-c:v hevc_nvenc",
-		"-preset p1",
-		"-tune ull",
-		"-zerolatency 1",
+		"-c:v libx264",
+		"-preset ultrafast",
+		"-tune zerolatency",
+		"-map 0:a:0?",
+		"-c:a aac",
 		"-bf 0",
 		"-g 25",
 		"-f rtsp",

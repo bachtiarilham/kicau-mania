@@ -98,6 +98,9 @@ func Router(c config.Config, handlers Handlers) *gin.Engine {
 	}
 	if handlers.WebSocket != nil {
 		websocket.RegisterRoutes(read, handlers.WebSocket)
+		if c.AccessMode == "lan" {
+			r.GET("/api/v1/local/preview-metrics", middleware.LocalControl(c.LocalControlToken, c.Origins), handlers.WebSocket.PreviewMetrics)
+		}
 	} else {
 		read.GET("/metrics", func(c *gin.Context) { response.Success(c, "No metrics active", nil) })
 	}
