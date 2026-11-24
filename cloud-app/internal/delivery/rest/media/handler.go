@@ -95,9 +95,9 @@ func (h *Handler) Routes(users, engine *gin.RouterGroup) {
 		r, e := h.UC.DeliverWhatsApp(c.Request.Context(), request.Actor(c), c.Param("id"), baseURL)
 		send(c, r, e)
 	})
-	users.POST("/arenas/:arena/rounds/:round_id/deliveries/whatsapp", func(c *gin.Context) {
+	users.POST("/arenas/:arena/rounds/:id/deliveries/whatsapp", func(c *gin.Context) {
 		baseURL := getBaseURL(c)
-		r, e := h.UC.BroadcastRoundWhatsApp(c.Request.Context(), request.Actor(c), c.Param("arena"), c.Param("round_id"), baseURL)
+		r, e := h.UC.BroadcastRoundWhatsApp(c.Request.Context(), request.Actor(c), c.Param("arena"), c.Param("id"), baseURL)
 		send(c, r, e)
 	})
 	engine.Use(func(c *gin.Context) {
