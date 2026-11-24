@@ -76,7 +76,7 @@ func Run(c config.Config) error {
 	defer func() { stopMedia(); <-mediaDone }()
 	stop := startIndependentModules(container.Saving, container.Audio, container.Streaming)
 	defer stop()
-	defer container.Handlers.WebSocket.Close()
+	defer container.Handlers.Streaming.Close()
 	if err := container.Sessions.Start(); err != nil {
 		return err
 	}

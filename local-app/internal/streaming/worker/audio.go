@@ -2,15 +2,40 @@ package worker
 
 import (
 	"context"
+	"sync"
 
 	"go.uber.org/zap"
-
 	"kicau.local/edge/internal/apperror"
 	"kicau.local/edge/internal/infra/logger"
+	"kicau.local/edge/internal/infra/runtime/jobgroup"
 )
 
-// StartMetricDeliveryLoop starts one background consumer for queued metrics.
-func (w *Worker) StartMetricDeliveryLoop(send func(context.Context, []byte) error) error {
+type AudioWorker struct {
+	jobs                    *jobgroup.Group
+	mu                      sync.Mutex
+	closing, backendStarted bool
+	queue                   chan []byte
+}
+
+func NewAudioWorker() *AudioWorker {
+	return &AudioWorker{
+		jobs:  jobgroup.New(),
+		queue: make(chan []byte, 128),
+	}
+}
+
+func (w *AudioWorker) Start() error {
+	return w.jobs.Start()
+}
+
+func (w *AudioWorker) Close() {
+	w.mu.Lock()
+	w.closing = true
+	w.mu.Unlock()
+	w.jobs.Close()
+}
+
+func (w *AudioWorker) StartMetricDeliveryLoop(send func(context.Context, []byte) error) error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	if w.closing {
@@ -40,15 +65,14 @@ func (w *Worker) StartMetricDeliveryLoop(send func(context.Context, []byte) erro
 	return e
 }
 
-// EnqueueMetric is best effort; a slow backend never blocks PCM capture.
-func (w *Worker) EnqueueMetric(b []byte) bool {
+func (w *AudioWorker) EnqueueMetric(b []byte) bool {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	if w.closing {
 		return false
 	}
 	select {
-	case w.queue <- append([]byte(nil), b...):
+	case w.queue <- b:
 		return true
 	default:
 		return false

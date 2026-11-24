@@ -7,11 +7,10 @@ import (
 	"time"
 
 	"kicau.local/edge/internal/apperror"
-	"kicau.local/edge/internal/mediaengine/audio/model"
+	"kicau.local/edge/internal/streaming/model"
 )
 
-// SubscribePreviewMetrics supplies the local desktop with levels before a recording session.
-func (u *UseCase) SubscribePreviewMetrics() (<-chan []byte, func(), error) {
+func (u *AudioUseCase) SubscribePreviewMetrics() (<-chan []byte, func(), error) {
 	u.mu.Lock()
 	defer u.mu.Unlock()
 	if !u.started || u.closing {
@@ -31,13 +30,15 @@ func (u *UseCase) SubscribePreviewMetrics() (<-chan []byte, func(), error) {
 	}), nil
 }
 
-func (u *UseCase) startPreview() {
+func (u *AudioUseCase) startPreview() {
 	if u.previewCancel != nil || len(u.active) > 0 || len(u.opts.PreviewSources) == 0 || u.opts.PreviewCapture == nil {
 		return
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	u.previewCancel = cancel
 	for id, source := range u.opts.PreviewSources {
+		id := id
+		source := source
 		u.previewWorkers.Go(func() {
 			for ctx.Err() == nil {
 				_ = u.opts.PreviewCapture(ctx, source, func(pcm []byte) {
@@ -62,7 +63,7 @@ func (u *UseCase) startPreview() {
 	}
 }
 
-func (u *UseCase) stopPreview() {
+func (u *AudioUseCase) stopPreview() {
 	if u.previewCancel != nil {
 		u.previewCancel()
 		u.previewCancel = nil

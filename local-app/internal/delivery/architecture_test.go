@@ -16,7 +16,7 @@ import (
 const modulePath = "kicau.local/edge/"
 
 func isAdapter(pkg string) bool {
-	for _, prefix := range []string{"internal/mediaengine/media/ffmpeg", "internal/mediaengine/media/mediamtx", "internal/mediaengine/audio/service", "internal/infra/storage/", "internal/infra/runtime/", "internal/infra/network/", "internal/cloud/client"} {
+	for _, prefix := range []string{"internal/mediaengine/media/ffmpeg", "internal/mediaengine/media/mediamtx", "internal/mediaengine/audio/service", "internal/streaming/service", "internal/infra/storage/", "internal/infra/runtime/", "internal/infra/network/", "internal/cloud/client"} {
 		if strings.HasPrefix(pkg, prefix) {
 			return true
 		}
@@ -80,7 +80,7 @@ func dependencyViolation(from, imported string) string {
 	if to == "internal/edge" || strings.HasPrefix(to, "internal/edge/") {
 		return "legacy edge grouping import"
 	}
-	for _, old := range []string{"arena", "identifier", "channel", "video", "audio", "streaming", "saving", "media", "synchronization", "exchange", "operation", "network", "storage", "runtime"} {
+	for _, old := range []string{"arena", "video", "media", "synchronization", "exchange", "operation", "network", "storage", "runtime"} {
 		if to == "internal/"+old || strings.HasPrefix(to, "internal/"+old+"/") {
 			return "legacy ungrouped internal import"
 		}
@@ -122,7 +122,7 @@ func dependencyViolation(from, imported string) string {
 func TestDomainDependencyBoundaries(t *testing.T) {
 	_, file, _, _ := runtime.Caller(0)
 	root := filepath.Clean(filepath.Join(filepath.Dir(file), "..", ".."))
-	for _, old := range []string{"internal/edgetocloud", "internal/delivery/http", "internal/mediaengine/audio/delivery", "internal/mediaengine/video", "internal/delivery/rest/video", "internal/mediaengine/audio/pubsub", "internal/mediaengine/audio/metricsclient", "internal/mediaengine/saving/delivery", "internal/mediaengine/streaming/delivery", "internal/mediaengine/channel", "internal/mediaengine/zoom", "internal/delivery/rest/channel", "internal/delivery/rest/zoom", "internal/mediaengine/saving", "internal/mediaengine/session", "internal/delivery/rest/saving", "internal/delivery/rest/session"} {
+	for _, old := range []string{"internal/edgetocloud", "internal/delivery/http", "internal/mediaengine/audio/delivery", "internal/mediaengine/video", "internal/delivery/rest/video", "internal/mediaengine/audio/pubsub", "internal/mediaengine/audio/metricsclient", "internal/mediaengine/saving/delivery", "internal/mediaengine/streaming/delivery", "internal/mediaengine/channel", "internal/mediaengine/zoom", "internal/delivery/rest/channel", "internal/delivery/rest/zoom", "internal/mediaengine/saving", "internal/mediaengine/session", "internal/delivery/rest/saving", "internal/delivery/rest/session", "internal/mediaengine/streaming", "internal/mediaengine/audio", "internal/delivery/rest/streaming", "internal/delivery/websocket"} {
 		if _, err := os.Stat(filepath.Join(root, filepath.FromSlash(old))); !os.IsNotExist(err) {
 			t.Fatalf("legacy protocol delivery location still exists: %s", old)
 		}
@@ -206,7 +206,7 @@ func TestDependencyRules(t *testing.T) {
 		{"internal/app", "internal/mediaengine/audio/delivery", false},
 		{"internal/app", "internal/delivery/http", false},
 		{"internal/app", "internal/mediaengine/video/delivery", false},
-		{"internal/delivery", "internal/delivery/websocket", true},
+		{"internal/delivery", "internal/streaming/delivery", true},
 		{"internal/cloud/usecase", "internal/cloud/client", false},
 		{"internal/cloud/usecase", "internal/cloud/model", true},
 		{"internal/cloud/usecase", "internal/mediaengine/saving/model", true},

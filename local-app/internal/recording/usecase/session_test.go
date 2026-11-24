@@ -11,7 +11,7 @@ import (
 
 	"kicau.local/edge/internal/apperror"
 	"kicau.local/edge/internal/mediaengine/media"
-	streaming "kicau.local/edge/internal/mediaengine/streaming/model"
+	streaming "kicau.local/edge/internal/streaming/model"
 	"kicau.local/edge/internal/recording/model"
 	"kicau.local/edge/internal/recording/repository"
 	"kicau.local/edge/internal/recording/worker"

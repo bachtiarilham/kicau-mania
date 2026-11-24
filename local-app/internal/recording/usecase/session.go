@@ -17,7 +17,7 @@ import (
 	"kicau.local/edge/internal/core/identifier"
 	"kicau.local/edge/internal/infra/logger"
 	"kicau.local/edge/internal/recording/model"
-	streaming "kicau.local/edge/internal/mediaengine/streaming/model"
+	streaming "kicau.local/edge/internal/streaming/model"
 )
 
 type Journal interface {

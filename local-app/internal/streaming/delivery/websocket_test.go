@@ -1,4 +1,4 @@
-package websocket
+package delivery
 
 import (
 	"net/http"

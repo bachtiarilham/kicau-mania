@@ -3,12 +3,13 @@ package usecase
 import (
 	"context"
 	"encoding/json"
-	"kicau.local/edge/internal/apperror"
-	"kicau.local/edge/internal/mediaengine/audio/model"
 	"time"
+
+	"kicau.local/edge/internal/apperror"
+	"kicau.local/edge/internal/streaming/model"
 )
 
-func (u *UseCase) Activate(channels []string) error {
+func (u *AudioUseCase) Activate(channels []string) error {
 	u.mu.Lock()
 	defer u.mu.Unlock()
 	if !u.started || u.closing || len(u.active) > 0 {
@@ -23,7 +24,8 @@ func (u *UseCase) Activate(channels []string) error {
 	u.activeContext, u.activeCancel = context.WithCancel(context.Background())
 	return nil
 }
-func (u *UseCase) Deactivate() {
+
+func (u *AudioUseCase) Deactivate() {
 	u.mu.Lock()
 	defer u.mu.Unlock()
 	if u.activeCancel != nil {
@@ -33,8 +35,7 @@ func (u *UseCase) Deactivate() {
 	u.broadcaster.Reset()
 }
 
-// Ingest is called only by the shared A/V pipeline; no audio process is spawned here.
-func (u *UseCase) Ingest(id string, pcm []byte) {
+func (u *AudioUseCase) Ingest(id string, pcm []byte) {
 	u.mu.Lock()
 	defer u.mu.Unlock()
 	if !u.active[id] || u.closing {
@@ -56,7 +57,8 @@ func (u *UseCase) Ingest(id string, pcm []byte) {
 		u.executor.EnqueueMetric(b)
 	}
 }
-func (u *UseCase) sendMetric(ctx context.Context, b []byte) error {
+
+func (u *AudioUseCase) sendMetric(ctx context.Context, b []byte) error {
 	var metric model.Metric
 	if json.Unmarshal(b, &metric) != nil {
 		return apperror.ErrInvalid

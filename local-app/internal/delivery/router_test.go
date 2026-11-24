@@ -24,16 +24,13 @@ import (
 	recordingRepo "kicau.local/edge/internal/recording/repository"
 	recordingUC "kicau.local/edge/internal/recording/usecase"
 	recordingWorker "kicau.local/edge/internal/recording/worker"
-	streamingDelivery "kicau.local/edge/internal/delivery/rest/streaming"
-	websocketDelivery "kicau.local/edge/internal/delivery/websocket"
+	streamingDelivery "kicau.local/edge/internal/streaming/delivery"
+	streamingService "kicau.local/edge/internal/streaming/service"
+	streamingUC "kicau.local/edge/internal/streaming/usecase"
+	streamingWorker "kicau.local/edge/internal/streaming/worker"
 	"kicau.local/edge/internal/infra/storage/filesystem"
-	audioService "kicau.local/edge/internal/mediaengine/audio/service"
-	audioUC "kicau.local/edge/internal/mediaengine/audio/usecase"
-	audioWorker "kicau.local/edge/internal/mediaengine/audio/worker"
 	"kicau.local/edge/internal/mediaengine/media"
 	"kicau.local/edge/internal/mediaengine/media/mediamtx"
-	streamingUC "kicau.local/edge/internal/mediaengine/streaming/usecase"
-	streamingWorker "kicau.local/edge/internal/mediaengine/streaming/worker"
 )
 
 type observed struct {
@@ -99,8 +96,8 @@ type testDisk struct{ filesystem.Disk }
 
 type testContainer struct {
 	Camera    *cameraUC.CameraUseCase
-	Audio     *audioUC.UseCase
-	Streaming *streamingUC.UseCase
+	Audio     *streamingUC.AudioUseCase
+	Streaming *streamingUC.RestreamUseCase
 	Saving    *recordingUC.SavingUseCase
 	Sessions  *recordingUC.SessionUseCase
 	Handlers  Handlers
@@ -123,21 +120,21 @@ func fixture(t *testing.T) (*testContainer, config.Config, *fakeMedia) {
 	}
 	media := &fakeMedia{events: make(chan observed, 10)}
 	v := cameraUC.NewCameraUseCase(catalog, catalog)
-	a := audioUC.New(audioUC.Options{SampleRate: 16000, Threshold: -35}, catalog, audioService.NewBroadcaster(), nil, audioWorker.New())
-	s := streamingUC.New(catalog, media, map[string]string{"youtube": "rtmps://example.test/live/key"}, streamingWorker.New())
+	a := streamingUC.NewAudioUseCase(streamingUC.AudioOptions{SampleRate: 16000, Threshold: -35}, catalog, streamingService.NewBroadcaster(), nil, streamingWorker.NewAudioWorker())
+	s := streamingUC.NewRestreamUseCase(catalog, media, map[string]string{"youtube": "rtmps://example.test/live/key"}, streamingWorker.NewRestreamWorker())
 	save := recordingUC.NewSavingUseCase(repo, nil, recordingWorker.NewUploadWorker())
 	journal, e := recordingRepo.NewJournal(filepath.Join(dir, "sessions"))
 	if e != nil {
 		t.Fatal(e)
 	}
 	sessions := recordingUC.NewSessionUseCase(recordingUC.SessionOptions{DataDir: dir, MaxDuration: time.Hour, MinFreeBytes: 100, Targets: map[string]string{"youtube": "configured"}}, journal, repo, catalog, media, media, a, s, testDisk{}, recordingWorker.NewSessionWorker(), mediaServer)
-	sockets := websocketDelivery.New(a, cfg.Origins)
-	sessions.BindConnections(nil, sockets)
-	c := &testContainer{Camera: v, Audio: a, Streaming: s, Saving: save, Sessions: sessions, Handlers: Handlers{Camera: cameraDelivery.NewHandler(v, nil), Recording: recordingDelivery.NewHandler(sessions, save), WebSocket: sockets, Streaming: streamingDelivery.New(s)}}
+	streamHandler := streamingDelivery.NewHandler(s, a, cfg.Origins)
+	sessions.BindConnections(nil, streamHandler)
+	c := &testContainer{Camera: v, Audio: a, Streaming: s, Saving: save, Sessions: sessions, Handlers: Handlers{Camera: cameraDelivery.NewHandler(v, nil), Recording: recordingDelivery.NewHandler(sessions, save), Streaming: streamHandler}}
 
 	t.Cleanup(func() {
 		sessions.Close()
-		c.Handlers.WebSocket.Close()
+		c.Handlers.Streaming.Close()
 		save.Close()
 		s.Close()
 		a.Close()

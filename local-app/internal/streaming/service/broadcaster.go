@@ -1,4 +1,3 @@
-// Package service provides audio broadcasting and outbound metric delivery.
 package service
 
 import "sync"
@@ -8,7 +7,10 @@ type Broadcaster struct {
 	subs map[string]map[chan []byte]struct{}
 }
 
-func NewBroadcaster() *Broadcaster { return &Broadcaster{subs: map[string]map[chan []byte]struct{}{}} }
+func NewBroadcaster() *Broadcaster {
+	return &Broadcaster{subs: map[string]map[chan []byte]struct{}{}}
+}
+
 func (b *Broadcaster) Subscribe(topic string) (<-chan []byte, func()) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -38,7 +40,6 @@ func (b *Broadcaster) Publish(topic string, payload []byte) {
 	}
 }
 
-// Reset closes all old session subscriptions while keeping the broadcaster reusable.
 func (b *Broadcaster) Reset() {
 	b.mu.Lock()
 	defer b.mu.Unlock()

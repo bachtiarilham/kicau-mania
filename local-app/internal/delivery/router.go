@@ -15,11 +15,10 @@ import (
 	"kicau.local/edge/internal/delivery/rest/apidocs"
 	cameraDelivery "kicau.local/edge/internal/camera/delivery"
 	recordingDelivery "kicau.local/edge/internal/recording/delivery"
+	streamingDelivery "kicau.local/edge/internal/streaming/delivery"
 	engineDelivery "kicau.local/edge/internal/delivery/rest/engine"
 	"kicau.local/edge/internal/delivery/rest/response"
 	setupDelivery "kicau.local/edge/internal/delivery/rest/setup"
-	streamingDelivery "kicau.local/edge/internal/delivery/rest/streaming"
-	"kicau.local/edge/internal/delivery/websocket"
 	"kicau.local/edge/internal/infra/logger"
 )
 
@@ -29,7 +28,6 @@ type Handlers struct {
 	Engine    *engineDelivery.Handler
 	Camera    *cameraDelivery.Handler
 	Recording *recordingDelivery.Handler
-	WebSocket *websocket.Handler
 	Streaming *streamingDelivery.Handler
 }
 
@@ -92,16 +90,13 @@ func Router(c config.Config, handlers Handlers) *gin.Engine {
 	if handlers.Camera != nil {
 		handlers.Camera.Routes(read, g)
 	}
-	if handlers.WebSocket != nil {
-		websocket.RegisterRoutes(read, handlers.WebSocket)
+	if handlers.Streaming != nil {
+		handlers.Streaming.Routes(read, g)
 		if c.AccessMode == "lan" {
-			r.GET("/api/v1/local/preview-metrics", middleware.LocalControl(c.LocalControlToken, c.Origins), handlers.WebSocket.PreviewMetrics)
+			r.GET("/api/v1/local/preview-metrics", middleware.LocalControl(c.LocalControlToken, c.Origins), handlers.Streaming.PreviewMetrics)
 		}
 	} else {
 		read.GET("/metrics", func(c *gin.Context) { response.Success(c, "No metrics active", nil) })
-	}
-	if handlers.Streaming != nil {
-		streamingDelivery.RegisterRoutes(g, handlers.Streaming)
 	}
 	if handlers.Recording != nil {
 		handlers.Recording.Routes(g)

@@ -435,7 +435,7 @@ func startRuntime(parent context.Context, c config.Config) (*engineRuntime, erro
 func (r *engineRuntime) close() {
 	r.container.Background.Close()
 	r.container.Sessions.Close()
-	r.container.Handlers.WebSocket.Close()
+	r.container.Handlers.Streaming.Close()
 	for i := len(r.started) - 1; i >= 0; i-- {
 		r.started[i].Close()
 	}

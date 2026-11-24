@@ -27,7 +27,6 @@ func TestAudioEnergy(t *testing.T) {
 	}
 
 	t.Run("proximity distance rejection", func(t *testing.T) {
-		// Distant noise (~5 meters away, e.g. amplitude 300 = ~-40.7 dBFS < threshold -35 dBFS)
 		distantNoise := make([]byte, 6400)
 		for i := 0; i < len(distantNoise); i += 2 {
 			binary.LittleEndian.PutUint16(distantNoise[i:], 300)
@@ -37,7 +36,6 @@ func TestAudioEnergy(t *testing.T) {
 			t.Errorf("expected distant noise (< -35dB) to be inactive, got ActiveMS = %d", distMetric.ActiveMS)
 		}
 
-		// Close vocalization (< 1.5 meters away, e.g. amplitude 3000 = ~-20.7 dBFS >= threshold -35 dBFS)
 		closeVocal := make([]byte, 6400)
 		for i := 0; i < len(closeVocal); i += 2 {
 			binary.LittleEndian.PutUint16(closeVocal[i:], 3000)

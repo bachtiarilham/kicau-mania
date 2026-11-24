@@ -1,4 +1,3 @@
-// MetricsClient delivers audio metrics to the configured backend.
 package service
 
 import (
@@ -16,8 +15,18 @@ type MetricsClient struct {
 }
 
 func NewMetricsClient(url, token string) *MetricsClient {
-	return &MetricsClient{url, token, &http.Client{Timeout: 5 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}}
+	return &MetricsClient{
+		URL:   url,
+		Token: token,
+		HTTP: &http.Client{
+			Timeout: 5 * time.Second,
+			CheckRedirect: func(*http.Request, []*http.Request) error {
+				return http.ErrUseLastResponse
+			},
+		},
+	}
 }
+
 func (c *MetricsClient) Send(ctx context.Context, b []byte) error {
 	r, e := http.NewRequestWithContext(ctx, "POST", c.URL, bytes.NewReader(b))
 	if e != nil {

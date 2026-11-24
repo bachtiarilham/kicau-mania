@@ -6,31 +6,33 @@ import (
 
 	"kicau.local/edge/internal/apperror"
 	"kicau.local/edge/internal/mediaengine/media"
-	"kicau.local/edge/internal/mediaengine/streaming/model"
+	"kicau.local/edge/internal/streaming/model"
 )
 
 type ChannelRepository interface {
 	HubRTSP(string) (string, error)
 }
+
 type Restreamer interface {
 	Restream(context.Context, string, string) (media.Process, error)
 }
+
 type relay struct {
 	view model.RestreamView
 }
 
-type Executor interface {
+type RestreamExecutor interface {
 	Start() error
 	Launch(string, func(context.Context) (media.Process, error), func(bool)) error
 	Stop(string) error
 	Close()
 }
 
-type UseCase struct {
+type RestreamUseCase struct {
 	sources          ChannelRepository
 	restreamer       Restreamer
 	targets          map[string]string
-	executor         Executor
+	executor         RestreamExecutor
 	ops              sync.Mutex
 	mu               sync.Mutex
 	relays           map[string]*relay
@@ -38,17 +40,17 @@ type UseCase struct {
 	closeOnce        sync.Once
 }
 
-func New(
+func NewRestreamUseCase(
 	sources ChannelRepository,
 	restreamer Restreamer,
 	targets map[string]string,
-	executor Executor,
-) *UseCase {
+	executor RestreamExecutor,
+) *RestreamUseCase {
 	copyTargets := map[string]string{}
 	for k, v := range targets {
 		copyTargets[k] = v
 	}
-	return &UseCase{
+	return &RestreamUseCase{
 		sources:    sources,
 		restreamer: restreamer,
 		targets:    copyTargets,
@@ -57,7 +59,7 @@ func New(
 	}
 }
 
-func (u *UseCase) Start() error {
+func (u *RestreamUseCase) Start() error {
 	u.ops.Lock()
 	defer u.ops.Unlock()
 	u.mu.Lock()
@@ -75,7 +77,7 @@ func (u *UseCase) Start() error {
 	return nil
 }
 
-func (u *UseCase) StartRestream(id, target string) error {
+func (u *RestreamUseCase) StartRestream(id, target string) error {
 	u.ops.Lock()
 	defer u.ops.Unlock()
 	source, e := u.sources.HubRTSP(id)
@@ -98,7 +100,11 @@ func (u *UseCase) StartRestream(id, target string) error {
 	r := &relay{view: model.RestreamView{Target: target, Channel: id, State: "CONNECTING"}}
 	u.relays[target] = r
 	u.mu.Unlock()
-	if e := u.executor.Launch(target, func(ctx context.Context) (media.Process, error) { return u.restreamer.Restream(ctx, source, dest) }, func(running bool) { u.observe(r, running) }); e != nil {
+	if e := u.executor.Launch(target, func(ctx context.Context) (media.Process, error) {
+		return u.restreamer.Restream(ctx, source, dest)
+	}, func(running bool) {
+		u.observe(r, running)
+	}); e != nil {
 		u.mu.Lock()
 		delete(u.relays, target)
 		u.mu.Unlock()
@@ -107,7 +113,7 @@ func (u *UseCase) StartRestream(id, target string) error {
 	return nil
 }
 
-func (u *UseCase) observe(r *relay, running bool) {
+func (u *RestreamUseCase) observe(r *relay, running bool) {
 	u.mu.Lock()
 	defer u.mu.Unlock()
 	if running {
@@ -117,7 +123,7 @@ func (u *UseCase) observe(r *relay, running bool) {
 	}
 }
 
-func (u *UseCase) StopRestream(target string) error {
+func (u *RestreamUseCase) StopRestream(target string) error {
 	u.ops.Lock()
 	defer u.ops.Unlock()
 	u.mu.Lock()
@@ -138,7 +144,7 @@ func (u *UseCase) StopRestream(target string) error {
 	return nil
 }
 
-func (u *UseCase) Restreams() []model.RestreamView {
+func (u *RestreamUseCase) Restreams() []model.RestreamView {
 	u.mu.Lock()
 	defer u.mu.Unlock()
 	out := []model.RestreamView{}
@@ -148,7 +154,7 @@ func (u *UseCase) Restreams() []model.RestreamView {
 	return out
 }
 
-func (u *UseCase) Close() {
+func (u *RestreamUseCase) Close() {
 	u.closeOnce.Do(func() {
 		u.ops.Lock()
 		defer u.ops.Unlock()

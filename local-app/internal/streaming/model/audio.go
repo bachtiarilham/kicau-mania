@@ -6,6 +6,15 @@ import (
 	"time"
 )
 
+type Metric struct {
+	ChannelID string    `json:"channel_id"`
+	At        time.Time `json:"at"`
+	PeakDBFS  float64   `json:"peak_dbfs"`
+	RMSDBFS   float64   `json:"rms_dbfs"`
+	ActiveMS  int64     `json:"active_ms"`
+	WindowMS  int64     `json:"window_ms"`
+}
+
 func Analyze(id string, pcm []byte, sampleRate int, threshold float64, at time.Time) Metric {
 	var peak, sum float64
 	n := len(pcm) / 2
@@ -29,5 +38,12 @@ func Analyze(id string, pcm []byte, sampleRate int, threshold float64, at time.T
 	if db(rms) >= threshold {
 		active = window
 	}
-	return Metric{id, at, db(peak), db(rms), active, window}
+	return Metric{
+		ChannelID: id,
+		At:        at,
+		PeakDBFS:  db(peak),
+		RMSDBFS:   db(rms),
+		ActiveMS:  active,
+		WindowMS:  window,
+	}
 }

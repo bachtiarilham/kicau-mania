@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"kicau.local/edge/internal/apperror"
@@ -9,8 +10,42 @@ import (
 	"kicau.local/edge/internal/mediaengine/media"
 )
 
-// notify reports process observations. The usecase translates them to domain states.
-func (w *Worker) Launch(target string, start func(context.Context) (media.Process, error), notify func(bool)) error {
+type restreamTask struct {
+	cancel context.CancelFunc
+	done   chan struct{}
+}
+
+type RestreamWorker struct {
+	jobs    *jobgroup.Group
+	wait    func(context.Context, time.Duration) bool
+	mu      sync.Mutex
+	tasks   map[string]*restreamTask
+	closing bool
+}
+
+func NewRestreamWorker() *RestreamWorker {
+	return &RestreamWorker{
+		jobs:  jobgroup.New(),
+		wait:  jobgroup.Wait,
+		tasks: map[string]*restreamTask{},
+	}
+}
+
+func (w *RestreamWorker) Start() error {
+	return w.jobs.Start()
+}
+
+func (w *RestreamWorker) Close() {
+	w.mu.Lock()
+	w.closing = true
+	w.mu.Unlock()
+	w.jobs.Close()
+	w.mu.Lock()
+	clear(w.tasks)
+	w.mu.Unlock()
+}
+
+func (w *RestreamWorker) Launch(target string, start func(context.Context) (media.Process, error), notify func(bool)) error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	if w.closing {
@@ -20,7 +55,7 @@ func (w *Worker) Launch(target string, start func(context.Context) (media.Proces
 		return apperror.ErrConflict
 	}
 	ctx, cancel := context.WithCancel(w.jobs.Context())
-	t := &task{cancel: cancel, done: make(chan struct{})}
+	t := &restreamTask{cancel: cancel, done: make(chan struct{})}
 	e := w.jobs.Go(func(context.Context) {
 		defer close(t.done)
 		for ctx.Err() == nil {
@@ -45,7 +80,8 @@ func (w *Worker) Launch(target string, start func(context.Context) (media.Proces
 	w.tasks[target] = t
 	return nil
 }
-func (w *Worker) Stop(target string) error {
+
+func (w *RestreamWorker) Stop(target string) error {
 	w.mu.Lock()
 	t, ok := w.tasks[target]
 	if !ok {

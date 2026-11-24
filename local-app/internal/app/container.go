@@ -27,21 +27,18 @@ import (
 	cloudWorker "kicau.local/edge/internal/cloud/worker"
 	delivery "kicau.local/edge/internal/delivery"
 	engineDelivery "kicau.local/edge/internal/delivery/rest/engine"
-	streamingDelivery "kicau.local/edge/internal/delivery/rest/streaming"
-	websocketDelivery "kicau.local/edge/internal/delivery/websocket"
 	"kicau.local/edge/internal/infra/storage/filesystem"
 	"kicau.local/edge/internal/infra/storage/s3"
-	audioService "kicau.local/edge/internal/mediaengine/audio/service"
-	audioUC "kicau.local/edge/internal/mediaengine/audio/usecase"
-	audioWorker "kicau.local/edge/internal/mediaengine/audio/worker"
 	recordingDelivery "kicau.local/edge/internal/recording/delivery"
 	recordingRepo "kicau.local/edge/internal/recording/repository"
 	recordingUC "kicau.local/edge/internal/recording/usecase"
 	recordingWorker "kicau.local/edge/internal/recording/worker"
+	streamingDelivery "kicau.local/edge/internal/streaming/delivery"
+	streamingService "kicau.local/edge/internal/streaming/service"
+	streamingUC "kicau.local/edge/internal/streaming/usecase"
+	streamingWorker "kicau.local/edge/internal/streaming/worker"
 	"kicau.local/edge/internal/mediaengine/media/ffmpeg"
 	"kicau.local/edge/internal/mediaengine/media/mediamtx"
-	streamingUC "kicau.local/edge/internal/mediaengine/streaming/usecase"
-	streamingWorker "kicau.local/edge/internal/mediaengine/streaming/worker"
 )
 
 type Container struct {
@@ -51,8 +48,8 @@ type Container struct {
 	ChannelCatalog *cameraRepo.Catalog
 	MediaServer    *mediamtx.Server
 	Channels       *cameraUC.CameraUseCase
-	Audio          *audioUC.UseCase
-	Streaming      *streamingUC.UseCase
+	Audio          *streamingUC.AudioUseCase
+	Streaming      *streamingUC.RestreamUseCase
 	Saving         *recordingUC.SavingUseCase
 	Sessions       *recordingUC.SessionUseCase
 	Zoom           *cameraUC.ZoomUseCase
@@ -141,13 +138,13 @@ func NewContainer(ctx context.Context, c config.Config) (*Container, error) {
 	if c.S3Bucket != "" && c.AccessMode != "lan" {
 		objectStorage = s3.NewLazy(s3.Options{Endpoint: c.S3Endpoint, Region: c.S3Region, Bucket: c.S3Bucket, AccessKey: c.S3AccessKey, SecretKey: c.S3SecretKey})
 	}
-	var remote audioUC.MetricSender
+	var remote streamingUC.MetricSender
 	if c.BackendURL != "" {
-		remote = audioService.NewMetricsClient(c.BackendURL, c.BackendToken)
+		remote = streamingService.NewMetricsClient(c.BackendURL, c.BackendToken)
 	}
 	channels := cameraUC.NewCameraUseCase(sources, sources)
-	audioJobs := audioWorker.New()
-	streamingJobs := streamingWorker.New()
+	audioJobs := streamingWorker.NewAudioWorker()
+	streamingJobs := streamingWorker.NewRestreamWorker()
 	savingJobs := recordingWorker.NewUploadWorker()
 	previewSources := make(map[string]string, len(c.Channels))
 	for _, ch := range c.Channels {
@@ -156,11 +153,11 @@ func NewContainer(ctx context.Context, c config.Config) (*Container, error) {
 		}
 	}
 	pipeline := ffmpeg.Pipeline{Binary: c.FFmpeg, Probe: c.FFprobe, AudioFilter: audioFilterOptions(c)}
-	audio := audioUC.New(audioUC.Options{
+	audio := streamingUC.NewAudioUseCase(streamingUC.AudioOptions{
 		SampleRate: c.SampleRate, Threshold: c.Threshold,
 		PreviewSources: previewSources, PreviewCapture: pipeline.RunPreviewAudio,
-	}, sources, audioService.NewBroadcaster(), remote, audioJobs)
-	streaming := streamingUC.New(sources, ffmpeg.Restreamer{Binary: c.FFmpeg, Probe: c.FFprobe}, c.Destinations, streamingJobs)
+	}, sources, streamingService.NewBroadcaster(), remote, audioJobs)
+	streaming := streamingUC.NewRestreamUseCase(sources, ffmpeg.Restreamer{Binary: c.FFmpeg, Probe: c.FFprobe}, c.Destinations, streamingJobs)
 	saving := recordingUC.NewSavingUseCase(repo, objectStorage, savingJobs)
 	sessionJournal, err := recordingRepo.NewJournal(filepath.Join(c.DataDir, "media-sessions"))
 	if err != nil {
@@ -173,8 +170,9 @@ func NewContainer(ctx context.Context, c config.Config) (*Container, error) {
 		LAN: c.AccessMode == "lan",
 	}, sources, mediaServer, saving, streaming, journal,
 		cloudEndpoint(c.CloudHeartbeatURL, c.CloudToken), cloudEndpoint(c.CloudMediaUpdatesURL, c.CloudToken))
-	sockets := websocketDelivery.New(audio, c.Origins)
-	sessions.BindConnections(nil, sockets)
+
+	streamingHandler := streamingDelivery.NewHandler(streaming, audio, c.Origins)
+	sessions.BindConnections(nil, streamingHandler)
 	var commands cloudUC.CommandCloud
 	if c.CloudCommandsURL != "" {
 		commands = cloudClient.New(c.CloudCommandsURL, c.CloudToken)
@@ -199,8 +197,7 @@ func NewContainer(ctx context.Context, c config.Config) (*Container, error) {
 			Engine:    engineDelivery.New(engine),
 			Camera:    cameraHandler,
 			Recording: recordingHandler,
-			WebSocket: sockets,
-			Streaming: streamingDelivery.New(streaming),
+			Streaming: streamingHandler,
 		},
 	}, nil
 }

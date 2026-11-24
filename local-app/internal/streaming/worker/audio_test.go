@@ -10,7 +10,7 @@ import (
 )
 
 func TestMetricQueueIsBoundedAndBestEffort(t *testing.T) {
-	w := New()
+	w := NewAudioWorker()
 	defer w.Close()
 	if e := w.Start(); e != nil {
 		t.Fatal(e)
@@ -30,7 +30,7 @@ func TestMetricQueueIsBoundedAndBestEffort(t *testing.T) {
 }
 
 func TestBackendFailuresConsumeOnceAndShutdownCancelsSend(t *testing.T) {
-	w := New()
+	w := NewAudioWorker()
 	defer w.Close()
 	if e := w.Start(); e != nil {
 		t.Fatal(e)

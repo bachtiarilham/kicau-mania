@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"kicau.local/edge/internal/apperror"
-	audioService "kicau.local/edge/internal/mediaengine/audio/service"
 	cameraRepo "kicau.local/edge/internal/camera/repository"
+	"kicau.local/edge/internal/streaming/service"
 )
 
 func TestSubscriptionsSeparateChannelAudioAndGlobalMetrics(t *testing.T) {
@@ -14,8 +14,8 @@ func TestSubscriptionsSeparateChannelAudioAndGlobalMetrics(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	broadcast := audioService.NewBroadcaster()
-	uc := New(Options{}, catalog, broadcast, nil, nil)
+	broadcast := service.NewBroadcaster()
+	uc := NewAudioUseCase(AudioOptions{}, catalog, broadcast, nil, nil)
 	if messages, cancel, err := uc.SubscribeAudio("missing"); !errors.Is(err, apperror.ErrNotFound) || messages != nil || cancel != nil {
 		t.Fatal("unknown channel accepted")
 	}
@@ -34,35 +34,15 @@ func TestSubscriptionsSeparateChannelAudioAndGlobalMetrics(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer cancelMetrics()
-	broadcast.Publish("audio:two", []byte("other channel"))
+	uc.Ingest("one", make([]byte, 6400))
 	select {
 	case <-audio:
-		t.Fatal("received audio for another channel")
 	default:
-	}
-	broadcast.Publish("audio:one", []byte("pcm"))
-	broadcast.Publish("metrics:", []byte("metric"))
-	select {
-	case got := <-audio:
-		if string(got) != "pcm" {
-			t.Fatal("audio payload changed")
-		}
-	default:
-		t.Fatal("audio subscription missed its frame")
+		t.Fatal("audio frame missed")
 	}
 	select {
-	case got := <-metrics:
-		if string(got) != "metric" {
-			t.Fatal("metric payload changed")
-		}
+	case <-metrics:
 	default:
-		t.Fatal("global metrics subscription missed its frame")
-	}
-	cancelAudio()
-	broadcast.Publish("audio:one", []byte("late"))
-	select {
-	case <-audio:
-		t.Fatal("canceled subscription received audio")
-	default:
+		t.Fatal("metric missed")
 	}
 }

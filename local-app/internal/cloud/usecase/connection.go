@@ -7,7 +7,7 @@ import (
 	channel "kicau.local/edge/internal/camera/model"
 	"kicau.local/edge/internal/mediaengine/media"
 	saving "kicau.local/edge/internal/recording/model"
-	streaming "kicau.local/edge/internal/mediaengine/streaming/model"
+	streaming "kicau.local/edge/internal/streaming/model"
 	"sync"
 	"time"
 )
