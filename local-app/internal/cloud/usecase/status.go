@@ -2,7 +2,7 @@
 package usecase
 
 import (
-	"kicau.local/edge/internal/mediaengine/media"
+	"kicau.local/edge/internal/infra/media"
 	"time"
 )
 

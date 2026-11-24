@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"kicau.local/edge/internal/apperror"
-	"kicau.local/edge/internal/mediaengine/media"
+	"kicau.local/edge/internal/infra/media"
 )
 
 type fakeProcess struct {

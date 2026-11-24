@@ -37,8 +37,8 @@ import (
 	streamingService "kicau.local/edge/internal/streaming/service"
 	streamingUC "kicau.local/edge/internal/streaming/usecase"
 	streamingWorker "kicau.local/edge/internal/streaming/worker"
-	"kicau.local/edge/internal/mediaengine/media/ffmpeg"
-	"kicau.local/edge/internal/mediaengine/media/mediamtx"
+	"kicau.local/edge/internal/infra/ffmpeg"
+	"kicau.local/edge/internal/infra/mediamtx"
 )
 
 type Container struct {

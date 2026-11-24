@@ -9,7 +9,7 @@ import (
 
 	"kicau.local/edge/internal/apperror"
 	cameraRepo "kicau.local/edge/internal/camera/repository"
-	"kicau.local/edge/internal/mediaengine/media"
+	"kicau.local/edge/internal/infra/media"
 	"kicau.local/edge/internal/streaming/worker"
 )
 

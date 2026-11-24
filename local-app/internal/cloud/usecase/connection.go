@@ -5,7 +5,7 @@ import (
 	"context"
 	cloudmodel "kicau.local/edge/internal/cloud/model"
 	channel "kicau.local/edge/internal/camera/model"
-	"kicau.local/edge/internal/mediaengine/media"
+	"kicau.local/edge/internal/infra/media"
 	saving "kicau.local/edge/internal/recording/model"
 	streaming "kicau.local/edge/internal/streaming/model"
 	"sync"

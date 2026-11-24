@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"kicau.local/edge/internal/infra/runtime/subprocess"
-	"kicau.local/edge/internal/mediaengine/media"
+	"kicau.local/edge/internal/infra/media"
 )
 
 type Restreamer struct{ Binary, Probe string }

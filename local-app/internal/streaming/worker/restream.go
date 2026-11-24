@@ -7,7 +7,7 @@ import (
 
 	"kicau.local/edge/internal/apperror"
 	"kicau.local/edge/internal/infra/runtime/jobgroup"
-	"kicau.local/edge/internal/mediaengine/media"
+	"kicau.local/edge/internal/infra/media"
 )
 
 type restreamTask struct {

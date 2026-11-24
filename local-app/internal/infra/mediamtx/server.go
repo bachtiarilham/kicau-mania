@@ -16,7 +16,7 @@ import (
 
 	"kicau.local/edge/internal/infra/logger"
 	"kicau.local/edge/internal/infra/runtime/subprocess"
-	"kicau.local/edge/internal/mediaengine/media"
+	"kicau.local/edge/internal/infra/media"
 )
 
 var credsRegex = regexp.MustCompile(`://([^:]+):([^@]+)@`)

@@ -16,7 +16,7 @@ import (
 const modulePath = "kicau.local/edge/"
 
 func isAdapter(pkg string) bool {
-	for _, prefix := range []string{"internal/mediaengine/media/ffmpeg", "internal/mediaengine/media/mediamtx", "internal/mediaengine/audio/service", "internal/streaming/service", "internal/cloud/service", "internal/infra/storage/", "internal/infra/runtime/", "internal/infra/network/", "internal/cloud/client"} {
+	for _, prefix := range []string{"internal/infra/ffmpeg", "internal/infra/mediamtx", "internal/streaming/service", "internal/cloud/service", "internal/infra/storage/", "internal/infra/runtime/", "internal/infra/network/", "internal/cloud/client"} {
 		if strings.HasPrefix(pkg, prefix) {
 			return true
 		}
@@ -31,10 +31,6 @@ func domainOf(pkg string) string {
 	}
 	if parts[1] == "cloud" || parts[1] == "setup" || parts[1] == "camera" || parts[1] == "recording" || parts[1] == "streaming" {
 		return parts[1]
-	}
-	switch parts[1] + "/" + parts[2] {
-	case "mediaengine/session", "mediaengine/channel", "mediaengine/audio", "mediaengine/saving", "mediaengine/streaming":
-		return parts[1] + "/" + parts[2]
 	}
 	return ""
 }
@@ -80,7 +76,7 @@ func dependencyViolation(from, imported string) string {
 	if to == "internal/edge" || strings.HasPrefix(to, "internal/edge/") {
 		return "legacy edge grouping import"
 	}
-	for _, old := range []string{"arena", "video", "media", "synchronization", "exchange", "operation", "network", "storage", "runtime", "cloudmedia"} {
+	for _, old := range []string{"arena", "video", "media", "synchronization", "exchange", "operation", "network", "storage", "runtime", "cloudmedia", "mediaengine"} {
 		if to == "internal/"+old || strings.HasPrefix(to, "internal/"+old+"/") {
 			return "legacy ungrouped internal import"
 		}
@@ -90,7 +86,7 @@ func dependencyViolation(from, imported string) string {
 			return "dependency points back to application wiring"
 		}
 	}
-	if usecase && to != "internal/apperror" && to != "internal/infra/logger" && to != "internal/core/identifier" && to != "internal/mediaengine/media" && !strings.HasSuffix(to, "/model") && !strings.HasSuffix(to, "/contract") {
+	if usecase && to != "internal/apperror" && to != "internal/infra/logger" && to != "internal/core/identifier" && to != "internal/infra/media" && !strings.HasSuffix(to, "/model") && !strings.HasSuffix(to, "/contract") {
 		return "usecase imports implementation instead of contract/model"
 	}
 	if from == "config" && to != "internal/core/identifier" {
@@ -113,7 +109,7 @@ func dependencyViolation(from, imported string) string {
 			return "cross-domain access outside usecase contracts/models"
 		}
 	}
-	if from == "internal/mediaengine/media" || from == "internal/apperror" || from == "internal/core/identifier" || strings.HasSuffix(from, "/model") {
+	if from == "internal/infra/media" || from == "internal/apperror" || from == "internal/core/identifier" || strings.HasSuffix(from, "/model") {
 		return "shared contract/model depends on implementation"
 	}
 	return ""
@@ -122,7 +118,7 @@ func dependencyViolation(from, imported string) string {
 func TestDomainDependencyBoundaries(t *testing.T) {
 	_, file, _, _ := runtime.Caller(0)
 	root := filepath.Clean(filepath.Join(filepath.Dir(file), "..", ".."))
-	for _, old := range []string{"internal/edgetocloud", "internal/delivery/http", "internal/mediaengine/audio/delivery", "internal/mediaengine/video", "internal/delivery/rest/video", "internal/mediaengine/audio/pubsub", "internal/mediaengine/audio/metricsclient", "internal/mediaengine/saving/delivery", "internal/mediaengine/streaming/delivery", "internal/mediaengine/channel", "internal/mediaengine/zoom", "internal/delivery/rest/channel", "internal/delivery/rest/zoom", "internal/mediaengine/saving", "internal/mediaengine/session", "internal/delivery/rest/saving", "internal/delivery/rest/session", "internal/mediaengine/streaming", "internal/mediaengine/audio", "internal/delivery/rest/streaming", "internal/delivery/websocket", "internal/cloudmedia"} {
+	for _, old := range []string{"internal/edgetocloud", "internal/delivery/http", "internal/mediaengine/audio/delivery", "internal/mediaengine/video", "internal/delivery/rest/video", "internal/mediaengine/audio/pubsub", "internal/mediaengine/audio/metricsclient", "internal/mediaengine/saving/delivery", "internal/mediaengine/streaming/delivery", "internal/mediaengine/channel", "internal/mediaengine/zoom", "internal/delivery/rest/channel", "internal/delivery/rest/zoom", "internal/mediaengine/saving", "internal/mediaengine/session", "internal/delivery/rest/saving", "internal/delivery/rest/session", "internal/mediaengine/streaming", "internal/mediaengine/audio", "internal/delivery/rest/streaming", "internal/delivery/websocket", "internal/cloudmedia", "internal/mediaengine"} {
 		if _, err := os.Stat(filepath.Join(root, filepath.FromSlash(old))); !os.IsNotExist(err) {
 			t.Fatalf("legacy protocol delivery location still exists: %s", old)
 		}
@@ -182,23 +178,23 @@ func TestDependencyRules(t *testing.T) {
 		from, to string
 		allowed  bool
 	}{
-		{"internal/mediaengine/audio/usecase", "internal/mediaengine/channel/model", true},
-		{"internal/mediaengine/saving/usecase", "internal/mediaengine/media", true},
-		{"internal/app", "internal/mediaengine/channel/repository", true},
-		{"internal/app", "internal/mediaengine/media/ffmpeg", true},
-		{"internal/mediaengine/media/ffmpeg", "internal/infra/runtime/subprocess", true},
-		{"internal/mediaengine/audio/worker", "internal/infra/runtime/jobgroup", true},
-		{"internal/mediaengine/saving/repository", "internal/infra/storage/filesystem", true},
+		{"internal/streaming/usecase", "internal/camera/model", true},
+		{"internal/recording/usecase", "internal/infra/media", true},
+		{"internal/app", "internal/camera/repository", true},
+		{"internal/app", "internal/infra/ffmpeg", true},
+		{"internal/infra/ffmpeg", "internal/infra/runtime/subprocess", true},
+		{"internal/streaming/worker", "internal/infra/runtime/jobgroup", true},
+		{"internal/recording/repository", "internal/infra/storage/filesystem", true},
 		{"config", "internal/core/identifier", true},
-		{"internal/mediaengine/audio/usecase", "internal/mediaengine/audio/service", false},
-		{"internal/mediaengine/audio/usecase", "internal/mediaengine/media/ffmpeg", false},
-		{"internal/mediaengine/saving/usecase", "internal/infra/runtime/subprocess", false},
-		{"internal/mediaengine/channel/usecase", "internal/mediaengine/channel/repository", false},
-		{"internal/mediaengine/channel/repository", "internal/mediaengine/saving/repository", false},
-		{"internal/mediaengine/media/mediamtx", "internal/mediaengine/channel/repository", false},
-		{"internal/mediaengine/audio/service", "internal/mediaengine/audio/usecase", false},
-		{"internal/mediaengine/audio/service", "config", false},
-		{"internal/app", "internal/mediaengine/audio/service", true},
+		{"internal/streaming/usecase", "internal/streaming/service", false},
+		{"internal/streaming/usecase", "internal/infra/ffmpeg", false},
+		{"internal/recording/usecase", "internal/infra/runtime/subprocess", false},
+		{"internal/camera/usecase", "internal/camera/repository", false},
+		{"internal/camera/repository", "internal/recording/repository", false},
+		{"internal/infra/mediamtx", "internal/camera/repository", false},
+		{"internal/streaming/service", "internal/streaming/usecase", false},
+		{"internal/streaming/service", "config", false},
+		{"internal/app", "internal/streaming/service", true},
 		{"internal/app", "internal/mediaengine/video/usecase", false},
 		{"internal/app", "internal/mediaengine/audio/pubsub", false},
 		{"internal/app", "internal/mediaengine/audio/metricsclient", false},
@@ -209,14 +205,14 @@ func TestDependencyRules(t *testing.T) {
 		{"internal/delivery", "internal/streaming/delivery", true},
 		{"internal/cloud/usecase", "internal/cloud/client", false},
 		{"internal/cloud/usecase", "internal/cloud/model", true},
-		{"internal/cloud/usecase", "internal/mediaengine/saving/model", true},
+		{"internal/cloud/usecase", "internal/recording/model", true},
 		{"internal/cloud/client", "internal/cloud/usecase", false},
 		{"internal/app", "internal/edgetocloud/synchronization/usecase", false},
-		{"internal/delivery/websocket", "internal/mediaengine/audio/usecase", false},
+		{"internal/delivery/websocket", "internal/streaming/usecase", false},
 		{"internal/delivery", "internal/infra/storage/s3", false},
-		{"internal/mediaengine/audio/worker", "internal/mediaengine/video/model", false},
-		{"internal/mediaengine/media", "internal/infra/runtime/subprocess", false},
-		{"internal/mediaengine/audio/usecase", "pkg/nvr", false},
+		{"internal/streaming/worker", "internal/mediaengine/video/model", false},
+		{"internal/infra/media", "internal/infra/runtime/subprocess", false},
+		{"internal/streaming/usecase", "pkg/nvr", false},
 		{"internal/app", "internal/core/arena/repository", false},
 	} {
 		t.Run(tc.from+"->"+tc.to, func(t *testing.T) {
@@ -226,7 +222,7 @@ func TestDependencyRules(t *testing.T) {
 			}
 		})
 	}
-	if dependencyViolation("internal/mediaengine/audio/usecase", "net/http") == "" {
+	if dependencyViolation("internal/streaming/usecase", "net/http") == "" {
 		t.Fatal("usecase can import HTTP")
 	}
 }

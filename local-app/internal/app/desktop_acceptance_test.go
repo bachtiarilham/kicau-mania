@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"kicau.local/edge/config"
 	"kicau.local/edge/internal/infra/storage/credentials"
-	ffmpegMedia "kicau.local/edge/internal/mediaengine/media/ffmpeg"
+	ffmpegMedia "kicau.local/edge/internal/infra/ffmpeg"
 	session "kicau.local/edge/internal/recording/model"
 	setupRepo "kicau.local/edge/internal/setup/repository"
 	"math"

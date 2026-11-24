@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"kicau.local/edge/internal/mediaengine/media"
+	"kicau.local/edge/internal/infra/media"
 )
 
 type process struct {

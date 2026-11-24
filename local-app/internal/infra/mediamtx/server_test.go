@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"kicau.local/edge/internal/mediaengine/media"
-	"kicau.local/edge/internal/mediaengine/media/ffmpeg"
+	"kicau.local/edge/internal/infra/media"
+	"kicau.local/edge/internal/infra/ffmpeg"
 	cameraModel "kicau.local/edge/internal/camera/model"
 	cameraService "kicau.local/edge/internal/camera/service"
 )

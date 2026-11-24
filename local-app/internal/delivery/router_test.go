@@ -29,8 +29,8 @@ import (
 	streamingUC "kicau.local/edge/internal/streaming/usecase"
 	streamingWorker "kicau.local/edge/internal/streaming/worker"
 	"kicau.local/edge/internal/infra/storage/filesystem"
-	"kicau.local/edge/internal/mediaengine/media"
-	"kicau.local/edge/internal/mediaengine/media/mediamtx"
+	"kicau.local/edge/internal/infra/media"
+	"kicau.local/edge/internal/infra/mediamtx"
 )
 
 type observed struct {

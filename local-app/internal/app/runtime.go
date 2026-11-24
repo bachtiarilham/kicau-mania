@@ -23,7 +23,7 @@ import (
 	"kicau.local/edge/internal/infra/logger"
 	"kicau.local/edge/internal/infra/network/onvif"
 	"kicau.local/edge/internal/infra/storage/credentials"
-	"kicau.local/edge/internal/mediaengine/media/ffmpeg"
+	"kicau.local/edge/internal/infra/ffmpeg"
 	"kicau.local/edge/internal/setup/model"
 	setupRepo "kicau.local/edge/internal/setup/repository"
 	setupUC "kicau.local/edge/internal/setup/usecase"

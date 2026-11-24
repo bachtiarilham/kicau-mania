@@ -13,7 +13,7 @@ import (
 	"go.uber.org/zap"
 	"kicau.local/edge/internal/apperror"
 	"kicau.local/edge/internal/infra/logger"
-	"kicau.local/edge/internal/mediaengine/media"
+	"kicau.local/edge/internal/infra/media"
 	"kicau.local/edge/internal/recording/model"
 )
 
