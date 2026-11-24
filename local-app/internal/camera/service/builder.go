@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"kicau.local/edge/internal/mediaengine/zoom/model"
+	"kicau.local/edge/internal/camera/model"
 )
 
 type Builder struct {
@@ -19,7 +19,6 @@ func NewBuilder(ffmpegBinary string) *Builder {
 	return &Builder{FFmpegBinary: ffmpegBinary}
 }
 
-// BuildFilterGraph generates the FFmpeg video filter chain for crop, perspective warp, and unsharp.
 func (b *Builder) BuildFilterGraph(ch model.ZoomChannel) string {
 	filters := []string{
 		fmt.Sprintf("crop=%d:%d:%d:%d", ch.Crop.Width, ch.Crop.Height, ch.Crop.X, ch.Crop.Y),
@@ -40,13 +39,10 @@ func (b *Builder) BuildFilterGraph(ch model.ZoomChannel) string {
 		filters = append(filters, pFilter)
 	}
 
-	// CAS / Unsharp sharpening filter for feather and eye clarity
 	filters = append(filters, "unsharp=5:5:1.0:5:5:0.0")
-
 	return strings.Join(filters, ",")
 }
 
-// BuildArgs publishes a calibrated crop or a centered 2x zoom.
 func (b *Builder) BuildArgs(ch model.ZoomChannel, sourceRTSP, targetRTSP string) []string {
 	filter := "crop=trunc(iw/4)*2:trunc(ih/4)*2,scale=iw*2:ih*2"
 	if ch.Crop.Width > 0 {

@@ -6,11 +6,11 @@ import (
 
 	"kicau.local/edge/internal/apperror"
 	audioService "kicau.local/edge/internal/mediaengine/audio/service"
-	channelRepo "kicau.local/edge/internal/mediaengine/channel/repository"
+	cameraRepo "kicau.local/edge/internal/camera/repository"
 )
 
 func TestSubscriptionsSeparateChannelAudioAndGlobalMetrics(t *testing.T) {
-	catalog, err := channelRepo.New([]channelRepo.Input{{ID: "one", Source: "rtsp://192.0.2.1/a"}, {ID: "two", Source: "rtsp://192.0.2.1/b"}}, "rtsp://127.0.0.1:8554")
+	catalog, err := cameraRepo.New([]cameraRepo.Input{{ID: "one", Source: "rtsp://192.0.2.1/a"}, {ID: "two", Source: "rtsp://192.0.2.1/b"}}, "rtsp://127.0.0.1:8554")
 	if err != nil {
 		t.Fatal(err)
 	}

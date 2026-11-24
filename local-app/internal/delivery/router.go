@@ -13,14 +13,13 @@ import (
 	"kicau.local/edge/internal/delivery/middleware"
 	"kicau.local/edge/internal/delivery/rest"
 	"kicau.local/edge/internal/delivery/rest/apidocs"
-	channelDelivery "kicau.local/edge/internal/delivery/rest/channel"
+	cameraDelivery "kicau.local/edge/internal/camera/delivery"
 	engineDelivery "kicau.local/edge/internal/delivery/rest/engine"
 	"kicau.local/edge/internal/delivery/rest/response"
 	savingDelivery "kicau.local/edge/internal/delivery/rest/saving"
 	sessionDelivery "kicau.local/edge/internal/delivery/rest/session"
 	setupDelivery "kicau.local/edge/internal/delivery/rest/setup"
 	streamingDelivery "kicau.local/edge/internal/delivery/rest/streaming"
-	zoomDelivery "kicau.local/edge/internal/delivery/rest/zoom"
 	"kicau.local/edge/internal/delivery/websocket"
 	"kicau.local/edge/internal/infra/logger"
 )
@@ -29,12 +28,11 @@ type Handlers struct {
 	Desktop   *desktopDelivery.Handler
 	Setup     *setupDelivery.Handler
 	Engine    *engineDelivery.Handler
-	Channels  *channelDelivery.Handler
+	Camera    *cameraDelivery.Handler
 	WebSocket *websocket.Handler
 	Streaming *streamingDelivery.Handler
 	Saving    *savingDelivery.Handler
 	Sessions  *sessionDelivery.Handler
-	Zoom      *zoomDelivery.Handler
 }
 
 // Router godoc
@@ -93,8 +91,8 @@ func Router(c config.Config, handlers Handlers) *gin.Engine {
 	if c.AccessMode == "lan" {
 		read = r.Group("/api/v1", middleware.LANViewer(c.ReadCIDRs))
 	}
-	if handlers.Channels != nil {
-		channelDelivery.RegisterRoutes(read, handlers.Channels)
+	if handlers.Camera != nil {
+		handlers.Camera.Routes(read, g)
 	}
 	if handlers.WebSocket != nil {
 		websocket.RegisterRoutes(read, handlers.WebSocket)
@@ -116,9 +114,7 @@ func Router(c config.Config, handlers Handlers) *gin.Engine {
 		g.GET("/media/sessions/current", func(c *gin.Context) { response.Success(c, "No session active", nil) })
 		g.GET("/media/sessions/:id", func(c *gin.Context) { response.Success(c, "No session active", nil) })
 	}
-	if handlers.Zoom != nil {
-		handlers.Zoom.Routes(g)
-	}
+
 	r.NoRoute(func(c *gin.Context) { response.WriteError(c, apperror.ErrNotFound) })
 	r.NoMethod(func(c *gin.Context) { response.JSON(c, 405, false, "method not allowed", nil, nil) })
 	return r

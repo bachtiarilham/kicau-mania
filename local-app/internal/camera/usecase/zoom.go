@@ -6,14 +6,14 @@ import (
 	"fmt"
 	"sync"
 
-	"kicau.local/edge/internal/mediaengine/zoom/model"
+	"kicau.local/edge/internal/camera/model"
 )
 
 var (
 	ErrNotFound = errors.New("zoom channel not found")
 )
 
-type Repository interface {
+type ZoomRepository interface {
 	Load() (model.ZoomMapping, error)
 	Save(model.ZoomMapping) error
 }
@@ -22,26 +22,26 @@ type CommandBuilder interface {
 	BuildArgs(ch model.ZoomChannel, sourceRTSP, targetRTSP string) []string
 }
 
-type UseCase struct {
+type ZoomUseCase struct {
 	mu      sync.RWMutex
-	repo    Repository
+	repo    ZoomRepository
 	builder CommandBuilder
 	mapping model.ZoomMapping
 }
 
-func New(repo Repository, builder CommandBuilder) (*UseCase, error) {
+func NewZoomUseCase(repo ZoomRepository, builder CommandBuilder) (*ZoomUseCase, error) {
 	mapping, err := repo.Load()
 	if err != nil {
 		return nil, fmt.Errorf("load zoom mapping: %w", err)
 	}
-	return &UseCase{
+	return &ZoomUseCase{
 		repo:    repo,
 		builder: builder,
 		mapping: mapping,
 	}, nil
 }
 
-func (u *UseCase) ListActiveChannels(ctx context.Context) []model.ZoomChannel {
+func (u *ZoomUseCase) ListActiveChannels(ctx context.Context) []model.ZoomChannel {
 	u.mu.RLock()
 	defer u.mu.RUnlock()
 
@@ -54,7 +54,7 @@ func (u *UseCase) ListActiveChannels(ctx context.Context) []model.ZoomChannel {
 	return active
 }
 
-func (u *UseCase) GetChannel(ctx context.Context, id string) (model.ZoomChannel, error) {
+func (u *ZoomUseCase) GetChannel(ctx context.Context, id string) (model.ZoomChannel, error) {
 	u.mu.RLock()
 	defer u.mu.RUnlock()
 
@@ -66,7 +66,7 @@ func (u *UseCase) GetChannel(ctx context.Context, id string) (model.ZoomChannel,
 	return model.ZoomChannel{}, ErrNotFound
 }
 
-func (u *UseCase) UpdateCalibration(ctx context.Context, id string, crop model.CropConfig, perspective model.PerspectiveConfig) error {
+func (u *ZoomUseCase) UpdateCalibration(ctx context.Context, id string, crop model.CropConfig, perspective model.PerspectiveConfig) error {
 	u.mu.Lock()
 	defer u.mu.Unlock()
 
@@ -94,7 +94,7 @@ func (u *UseCase) UpdateCalibration(ctx context.Context, id string, crop model.C
 	return u.repo.Save(u.mapping)
 }
 
-func (u *UseCase) BuildArgs(ctx context.Context, id string, baseRTSP string) ([]string, error) {
+func (u *ZoomUseCase) BuildArgs(ctx context.Context, id string, baseRTSP string) ([]string, error) {
 	ch, err := u.GetChannel(ctx, id)
 	if err != nil {
 		return nil, err

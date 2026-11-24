@@ -1,7 +1,3 @@
-// Package repository provides the configured channel catalog and local RTSP resolution.
-//
-// The catalog initializes configured channels. MediaMTX owns the actual
-// upstream RTSP sessions; consumers receive only local hub addresses.
 package repository
 
 import (
@@ -11,21 +7,20 @@ import (
 
 	"kicau.local/edge/internal/apperror"
 	"kicau.local/edge/internal/core/identifier"
-	"kicau.local/edge/internal/mediaengine/channel/model"
+	"kicau.local/edge/internal/camera/model"
 )
 
 type Input struct {
 	ID     string
 	Source string
 }
+
 type Catalog struct {
 	inputs []Input
 	byID   map[string]Input
 	base   string
 }
 
-// catalogURLError retains the parser cause for errors.As without printing the
-// original URL or parser fragments, which can include upstream credentials.
 type catalogURLError struct {
 	message string
 	cause   error
@@ -84,4 +79,12 @@ func (c *Catalog) HubRTSP(id string) (string, error) {
 		return "", apperror.ErrNotFound
 	}
 	return c.base + "/" + id, nil
+}
+
+func (c *Catalog) Source(id string) (string, error) {
+	in, ok := c.byID[id]
+	if !ok {
+		return "", apperror.ErrNotFound
+	}
+	return in.Source, nil
 }

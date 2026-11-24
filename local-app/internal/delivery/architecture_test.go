@@ -29,7 +29,7 @@ func domainOf(pkg string) string {
 	if len(parts) < 3 || parts[0] != "internal" {
 		return ""
 	}
-	if parts[1] == "cloud" || parts[1] == "setup" {
+	if parts[1] == "cloud" || parts[1] == "setup" || parts[1] == "camera" || parts[1] == "recording" || parts[1] == "streaming" {
 		return parts[1]
 	}
 	switch parts[1] + "/" + parts[2] {
@@ -122,7 +122,7 @@ func dependencyViolation(from, imported string) string {
 func TestDomainDependencyBoundaries(t *testing.T) {
 	_, file, _, _ := runtime.Caller(0)
 	root := filepath.Clean(filepath.Join(filepath.Dir(file), "..", ".."))
-	for _, old := range []string{"internal/edgetocloud", "internal/delivery/http", "internal/mediaengine/audio/delivery", "internal/mediaengine/video", "internal/delivery/rest/video", "internal/mediaengine/audio/pubsub", "internal/mediaengine/audio/metricsclient", "internal/mediaengine/saving/delivery", "internal/mediaengine/streaming/delivery"} {
+	for _, old := range []string{"internal/edgetocloud", "internal/delivery/http", "internal/mediaengine/audio/delivery", "internal/mediaengine/video", "internal/delivery/rest/video", "internal/mediaengine/audio/pubsub", "internal/mediaengine/audio/metricsclient", "internal/mediaengine/saving/delivery", "internal/mediaengine/streaming/delivery", "internal/mediaengine/channel", "internal/mediaengine/zoom", "internal/delivery/rest/channel", "internal/delivery/rest/zoom"} {
 		if _, err := os.Stat(filepath.Join(root, filepath.FromSlash(old))); !os.IsNotExist(err) {
 			t.Fatalf("legacy protocol delivery location still exists: %s", old)
 		}

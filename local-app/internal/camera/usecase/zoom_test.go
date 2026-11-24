@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"kicau.local/edge/internal/mediaengine/zoom/model"
-	"kicau.local/edge/internal/mediaengine/zoom/service"
+	"kicau.local/edge/internal/camera/model"
+	"kicau.local/edge/internal/camera/service"
 )
 
 type memoryRepo struct {
@@ -43,20 +43,18 @@ func TestUseCaseListAndCalibration(t *testing.T) {
 		},
 	}
 
-	uc, err := New(repo, service.NewBuilder("ffmpeg"))
+	uc, err := NewZoomUseCase(repo, service.NewBuilder("ffmpeg"))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
 	ctx := context.Background()
 
-	// Ensure only active channels are returned
 	active := uc.ListActiveChannels(ctx)
 	if len(active) != 1 || active[0].ChannelID != "gantangan_22" {
 		t.Fatalf("expected 1 active channel, got %d", len(active))
 	}
 
-	// Update calibration
 	newCrop := model.CropConfig{X: 200, Y: 250, Width: 500, Height: 500}
 	newPersp := model.PerspectiveConfig{
 		Enabled:   true,
@@ -76,7 +74,6 @@ func TestUseCaseListAndCalibration(t *testing.T) {
 		t.Errorf("calibration did not update properly: %+v", ch)
 	}
 
-	// Test building FFmpeg args
 	args, err := uc.BuildArgs(ctx, "gantangan_22", "rtsp://127.0.0.1:8554")
 	if err != nil {
 		t.Fatalf("failed to build args: %v", err)

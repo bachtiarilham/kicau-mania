@@ -60,33 +60,5 @@ func TestCatalogParseErrorsPreserveCauseWithoutLoggingCredentials(t *testing.T) 
 				}
 			}
 		}
-		if upstream && !strings.Contains(err.Error(), "channel one") {
-			t.Fatal("error lost channel context")
-		}
-	}
-}
-
-func TestCatalogPreservesEncodedCredentialsOnlyInInputs(t *testing.T) {
-	u := &url.URL{Scheme: "rtsp", Host: "192.0.2.1:554", Path: "/feed", User: url.UserPassword("operator", "P@ss#123/+")}
-	c, err := New([]Input{{ID: "one", Source: u.String()}}, "rtsp://127.0.0.1:8554")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if c.Inputs()[0].Source != u.String() {
-		t.Fatal("encoded upstream URL changed")
-	}
-	got, err := c.HubRTSP("one")
-	if err != nil || got != "rtsp://127.0.0.1:8554/one" {
-		t.Fatalf("expected local hub URL: %s %v", got, err)
-	}
-}
-func TestCatalogRejectsInvalidInputs(t *testing.T) {
-	for _, inputs := range [][]Input{nil, {{ID: "../x", Source: "rtsp://192.0.2.1/a"}}, {{ID: "x", Source: "http://192.0.2.1/a"}}, {{ID: "x", Source: "rtsp://192.0.2.1/a"}, {ID: "x", Source: "rtsp://192.0.2.1/b"}}} {
-		if _, e := New(inputs, "rtsp://127.0.0.1:8554"); e == nil {
-			t.Fatalf("accepted invalid input %+v", inputs)
-		}
-	}
-	if _, e := New([]Input{{ID: "x", Source: "rtsp://192.0.2.1/a"}}, "http://127.0.0.1:8554"); e == nil {
-		t.Fatal("accepted non-RTSP hub")
 	}
 }

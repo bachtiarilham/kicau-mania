@@ -46,7 +46,6 @@ func (c *ZoomChannel) Validate() error {
 		return ErrInvalidCrop
 	}
 	if c.Perspective.Enabled {
-		// Ensure none of the 4 points are all zeroes unless explicitly expected
 		for i, pt := range c.Perspective.SrcPoints {
 			if pt[0] < 0 || pt[1] < 0 {
 				return fmt.Errorf("%w: point %d has negative coordinates", ErrInvalidPerspective, i)

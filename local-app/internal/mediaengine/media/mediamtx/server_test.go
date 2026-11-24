@@ -14,8 +14,8 @@ import (
 
 	"kicau.local/edge/internal/mediaengine/media"
 	"kicau.local/edge/internal/mediaengine/media/ffmpeg"
-	zoomModel "kicau.local/edge/internal/mediaengine/zoom/model"
-	zoomService "kicau.local/edge/internal/mediaengine/zoom/service"
+	cameraModel "kicau.local/edge/internal/camera/model"
+	cameraService "kicau.local/edge/internal/camera/service"
 )
 
 func TestGeneratedConfigPreservesUpstreamMapping(t *testing.T) {
@@ -189,7 +189,7 @@ func TestOnDemandZoomPublishesVideoAndAudio(t *testing.T) {
 	listener.Close()
 	base := "rtsp://" + addr
 	ffmpegBinary := binary("ffmpeg")
-	builder := zoomService.NewBuilder(ffmpegBinary)
+	builder := cameraService.NewBuilder(ffmpegBinary)
 	builder.AudioFilter = "highpass=f=100,agate=threshold=-55dB"
 	server := New(Options{
 		Binary: binary("mediamtx"), ConfigFile: filepath.Join(t.TempDir(), "mediamtx.yml"), RTSPListen: addr,
@@ -200,7 +200,7 @@ func TestOnDemandZoomPublishesVideoAndAudio(t *testing.T) {
 				"-c:v", "libx264", "-preset", "ultrafast", "-tune", "zerolatency",
 				"-c:a", "aac", "-f", "rtsp", "-rtsp_transport", "tcp", base + "/camera"}},
 			{ID: "zoom/camera_zoom", OnDemand: append([]string{ffmpegBinary},
-				builder.BuildArgs(zoomModel.ZoomChannel{}, base+"/camera", base+"/zoom/camera_zoom")...)},
+				builder.BuildArgs(cameraModel.ZoomChannel{}, base+"/camera", base+"/zoom/camera_zoom")...)},
 		},
 	})
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)

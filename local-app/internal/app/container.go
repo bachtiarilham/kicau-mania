@@ -16,25 +16,26 @@ import (
 	setup "kicau.local/edge/internal/setup/model"
 
 	"kicau.local/edge/config"
+	cameraDelivery "kicau.local/edge/internal/camera/delivery"
+	cameraModel "kicau.local/edge/internal/camera/model"
+	cameraRepo "kicau.local/edge/internal/camera/repository"
+	cameraService "kicau.local/edge/internal/camera/service"
+	cameraUC "kicau.local/edge/internal/camera/usecase"
 	cloudClient "kicau.local/edge/internal/cloud/client"
 	cloudRepo "kicau.local/edge/internal/cloud/repository"
 	cloudUC "kicau.local/edge/internal/cloud/usecase"
 	cloudWorker "kicau.local/edge/internal/cloud/worker"
 	delivery "kicau.local/edge/internal/delivery"
-	channelDelivery "kicau.local/edge/internal/delivery/rest/channel"
 	engineDelivery "kicau.local/edge/internal/delivery/rest/engine"
 	savingDelivery "kicau.local/edge/internal/delivery/rest/saving"
 	sessionDelivery "kicau.local/edge/internal/delivery/rest/session"
 	streamingDelivery "kicau.local/edge/internal/delivery/rest/streaming"
-	zoomDelivery "kicau.local/edge/internal/delivery/rest/zoom"
 	websocketDelivery "kicau.local/edge/internal/delivery/websocket"
 	"kicau.local/edge/internal/infra/storage/filesystem"
 	"kicau.local/edge/internal/infra/storage/s3"
 	audioService "kicau.local/edge/internal/mediaengine/audio/service"
 	audioUC "kicau.local/edge/internal/mediaengine/audio/usecase"
 	audioWorker "kicau.local/edge/internal/mediaengine/audio/worker"
-	channelRepo "kicau.local/edge/internal/mediaengine/channel/repository"
-	channelUC "kicau.local/edge/internal/mediaengine/channel/usecase"
 	"kicau.local/edge/internal/mediaengine/media/ffmpeg"
 	"kicau.local/edge/internal/mediaengine/media/mediamtx"
 	savingRepo "kicau.local/edge/internal/mediaengine/saving/repository"
@@ -45,34 +46,30 @@ import (
 	sessionWorker "kicau.local/edge/internal/mediaengine/session/worker"
 	streamingUC "kicau.local/edge/internal/mediaengine/streaming/usecase"
 	streamingWorker "kicau.local/edge/internal/mediaengine/streaming/worker"
-	zoomModel "kicau.local/edge/internal/mediaengine/zoom/model"
-	zoomRepository "kicau.local/edge/internal/mediaengine/zoom/repository"
-	zoomService "kicau.local/edge/internal/mediaengine/zoom/service"
-	zoomUsecase "kicau.local/edge/internal/mediaengine/zoom/usecase"
 )
 
 type Container struct {
 	Background     *cloudWorker.Worker
 	Engine         *cloudUC.Engine
 	Commands       *cloudUC.Commands
-	ChannelCatalog *channelRepo.Catalog
+	ChannelCatalog *cameraRepo.Catalog
 	MediaServer    *mediamtx.Server
-	Channels       *channelUC.UseCase
+	Channels       *cameraUC.CameraUseCase
 	Audio          *audioUC.UseCase
 	Streaming      *streamingUC.UseCase
 	Saving         *savingUC.UseCase
 	Sessions       *sessionUC.UseCase
-	Zoom           *zoomUsecase.UseCase
+	Zoom           *cameraUC.ZoomUseCase
 	Handlers       delivery.Handlers
 }
 
 // NewMedia is also used by -render-config: rendering does not start processes.
-func NewMedia(c config.Config) (*channelRepo.Catalog, *mediamtx.Server, error) {
-	inputs := make([]channelRepo.Input, 0, len(c.Channels))
+func NewMedia(c config.Config) (*cameraRepo.Catalog, *mediamtx.Server, error) {
+	inputs := make([]cameraRepo.Input, 0, len(c.Channels))
 	for _, ch := range c.Channels {
-		inputs = append(inputs, channelRepo.Input{ID: ch.ID, Source: ch.Source})
+		inputs = append(inputs, cameraRepo.Input{ID: ch.ID, Source: ch.Source})
 	}
-	catalog, e := channelRepo.New(inputs, c.RTSPBase)
+	catalog, e := cameraRepo.New(inputs, c.RTSPBase)
 	if e != nil {
 		return nil, nil, e
 	}
@@ -152,7 +149,7 @@ func NewContainer(ctx context.Context, c config.Config) (*Container, error) {
 	if c.BackendURL != "" {
 		remote = audioService.NewMetricsClient(c.BackendURL, c.BackendToken)
 	}
-	channels := channelUC.New(sources, sources)
+	channels := cameraUC.NewCameraUseCase(sources, sources)
 	audioJobs := audioWorker.New()
 	streamingJobs := streamingWorker.New()
 	savingJobs := savingWorker.New()
@@ -187,13 +184,13 @@ func NewContainer(ctx context.Context, c config.Config) (*Container, error) {
 		commands = cloudClient.New(c.CloudCommandsURL, c.CloudToken)
 	}
 
-	zoomRepo := zoomRepository.NewFileRepository(filepath.Join(c.DataDir, "channels_zoom.json"))
-	zoomBuilder := zoomService.NewBuilder(c.FFmpeg)
-	zoomUC, err := zoomUsecase.New(zoomRepo, zoomBuilder)
+	zoomRepo := cameraRepo.NewFileRepository(filepath.Join(c.DataDir, "channels_zoom.json"))
+	zoomBuilder := cameraService.NewBuilder(c.FFmpeg)
+	zoomUC, err := cameraUC.NewZoomUseCase(zoomRepo, zoomBuilder)
 	if err != nil {
 		return nil, err
 	}
-	zoomHandler := zoomDelivery.New(zoomUC)
+	cameraHandler := cameraDelivery.NewHandler(channels, zoomUC)
 
 	return &Container{
 		Background: cloudWorker.New(), Engine: engine,
@@ -203,12 +200,11 @@ func NewContainer(ctx context.Context, c config.Config) (*Container, error) {
 		Handlers: delivery.Handlers{
 			Desktop:   &desktopDelivery.Handler{Cloud: bridge, Saving: saving},
 			Engine:    engineDelivery.New(engine),
-			Channels:  channelDelivery.New(channels),
+			Camera:    cameraHandler,
 			WebSocket: sockets,
 			Streaming: streamingDelivery.New(streaming),
 			Saving:    savingDelivery.New(saving),
 			Sessions:  sessionDelivery.New(sessions),
-			Zoom:      zoomHandler,
 		},
 	}, nil
 }
@@ -229,12 +225,12 @@ func audioFilterOptions(c config.Config) ffmpeg.AudioFilterOptions {
 	}
 }
 
-func mediaSources(c config.Config, catalog *channelRepo.Catalog) ([]mediamtx.Source, error) {
-	mapping, err := zoomRepository.NewFileRepository(filepath.Join(c.DataDir, "channels_zoom.json")).Load()
+func mediaSources(c config.Config, catalog *cameraRepo.Catalog) ([]mediamtx.Source, error) {
+	mapping, err := cameraRepo.NewFileRepository(filepath.Join(c.DataDir, "channels_zoom.json")).Load()
 	if err != nil {
 		return nil, err
 	}
-	builder := zoomService.NewBuilder(c.FFmpeg)
+	builder := cameraService.NewBuilder(c.FFmpeg)
 	builder.AudioFilter = (ffmpeg.Pipeline{AudioFilter: audioFilterOptions(c)}).AudioFilterString()
 	base := strings.TrimRight(c.RTSPBase, "/")
 
@@ -247,7 +243,7 @@ func mediaSources(c config.Config, catalog *channelRepo.Catalog) ([]mediamtx.Sou
 		source, _ := catalog.HubRTSP(in.ID)
 		id := "zoom/" + in.ID + "_zoom"
 		sources = append(sources, mediamtx.Source{ID: id,
-			OnDemand: append([]string{builder.FFmpegBinary}, builder.BuildArgs(zoomModel.ZoomChannel{}, source, base+"/"+id)...),
+			OnDemand: append([]string{builder.FFmpegBinary}, builder.BuildArgs(cameraModel.ZoomChannel{}, source, base+"/"+id)...),
 		})
 	}
 	for _, ch := range mapping.ActiveChannels {

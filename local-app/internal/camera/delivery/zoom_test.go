@@ -1,4 +1,4 @@
-package zoom
+package delivery
 
 import (
 	"bytes"
@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"kicau.local/edge/internal/mediaengine/zoom/model"
+	"kicau.local/edge/internal/camera/model"
 )
 
 type mockZoomUC struct {
@@ -54,10 +54,10 @@ func TestZoomHandlerRoutes(t *testing.T) {
 		},
 	}
 
-	h := New(mock)
+	h := NewHandler(nil, mock)
 	r := gin.New()
 	g := r.Group("/api/v1")
-	h.Routes(g)
+	h.Routes(nil, g)
 
 	t.Run("GET /api/v1/zoom/channels", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/api/v1/zoom/channels", nil)

@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"kicau.local/edge/internal/apperror"
-	channelRepo "kicau.local/edge/internal/mediaengine/channel/repository"
+	cameraRepo "kicau.local/edge/internal/camera/repository"
 	"kicau.local/edge/internal/mediaengine/media"
 	"kicau.local/edge/internal/mediaengine/streaming/worker"
 )
@@ -37,7 +37,7 @@ func (f restreamer) Restream(ctx context.Context, source, _ string) (media.Proce
 	return p, nil
 }
 func TestRestreamAllowlistAndCancellation(t *testing.T) {
-	sources, e := channelRepo.New([]channelRepo.Input{{ID: "lapak01", Source: "rtsp://192.0.2.1/a"}, {ID: "lapak02", Source: "rtsp://192.0.2.1/b"}}, "rtsp://127.0.0.1:8554")
+	sources, e := cameraRepo.New([]cameraRepo.Input{{ID: "lapak01", Source: "rtsp://192.0.2.1/a"}, {ID: "lapak02", Source: "rtsp://192.0.2.1/b"}}, "rtsp://127.0.0.1:8554")
 	if e != nil {
 		t.Fatal(e)
 	}
