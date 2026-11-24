@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"syscall"
 	"time"
 
 	"kicau.tools/agent-ctl/internal/config"
@@ -111,6 +112,9 @@ func (m *Manager) Start(targetName string, timeout time.Duration) (*ProcessRecor
 	cmd.Dir = target.Dir
 	cmd.Stdout = logFile
 	cmd.Stderr = logFile
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		CreationFlags: syscall.CREATE_NEW_PROCESS_GROUP,
+	}
 
 	if err := cmd.Start(); err != nil {
 		_ = logFile.Close()
