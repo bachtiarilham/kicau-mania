@@ -1,17 +1,17 @@
-// Recording queries provide cursor pagination over recording manifests.
 package usecase
 
 import (
 	"context"
 
 	"kicau.local/edge/internal/apperror"
-	"kicau.local/edge/internal/mediaengine/saving/model"
+	"kicau.local/edge/internal/recording/model"
 )
 
-func (u *UseCase) Recordings(ctx context.Context, cursor string, limit int) ([]model.Recording, string, error) {
+func (u *SavingUseCase) Recordings(ctx context.Context, cursor string, limit int) ([]model.Recording, string, error) {
 	return u.RecordingsFiltered(ctx, cursor, limit, "", "", "")
 }
-func (u *UseCase) RecordingsFiltered(ctx context.Context, cursor string, limit int, session, channel, state string) ([]model.Recording, string, error) {
+
+func (u *SavingUseCase) RecordingsFiltered(ctx context.Context, cursor string, limit int, session, channel, state string) ([]model.Recording, string, error) {
 	if limit < 1 || limit > 100 {
 		return nil, "", apperror.ErrInvalid
 	}

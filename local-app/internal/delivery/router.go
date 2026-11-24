@@ -14,10 +14,9 @@ import (
 	"kicau.local/edge/internal/delivery/rest"
 	"kicau.local/edge/internal/delivery/rest/apidocs"
 	cameraDelivery "kicau.local/edge/internal/camera/delivery"
+	recordingDelivery "kicau.local/edge/internal/recording/delivery"
 	engineDelivery "kicau.local/edge/internal/delivery/rest/engine"
 	"kicau.local/edge/internal/delivery/rest/response"
-	savingDelivery "kicau.local/edge/internal/delivery/rest/saving"
-	sessionDelivery "kicau.local/edge/internal/delivery/rest/session"
 	setupDelivery "kicau.local/edge/internal/delivery/rest/setup"
 	streamingDelivery "kicau.local/edge/internal/delivery/rest/streaming"
 	"kicau.local/edge/internal/delivery/websocket"
@@ -29,10 +28,9 @@ type Handlers struct {
 	Setup     *setupDelivery.Handler
 	Engine    *engineDelivery.Handler
 	Camera    *cameraDelivery.Handler
+	Recording *recordingDelivery.Handler
 	WebSocket *websocket.Handler
 	Streaming *streamingDelivery.Handler
-	Saving    *savingDelivery.Handler
-	Sessions  *sessionDelivery.Handler
 }
 
 // Router godoc
@@ -105,11 +103,8 @@ func Router(c config.Config, handlers Handlers) *gin.Engine {
 	if handlers.Streaming != nil {
 		streamingDelivery.RegisterRoutes(g, handlers.Streaming)
 	}
-	if handlers.Saving != nil {
-		savingDelivery.RegisterRoutes(g, handlers.Saving)
-	}
-	if handlers.Sessions != nil {
-		sessionDelivery.RegisterRoutes(g, handlers.Sessions)
+	if handlers.Recording != nil {
+		handlers.Recording.Routes(g)
 	} else {
 		g.GET("/media/sessions/current", func(c *gin.Context) { response.Success(c, "No session active", nil) })
 		g.GET("/media/sessions/:id", func(c *gin.Context) { response.Success(c, "No session active", nil) })

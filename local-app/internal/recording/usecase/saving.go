@@ -1,38 +1,42 @@
-// Package usecase queries recording manifests and coordinates uploads independently of sessions.
 package usecase
 
 import (
 	"context"
-	"kicau.local/edge/internal/apperror"
-	"kicau.local/edge/internal/mediaengine/saving/model"
 	"sync"
+
+	"kicau.local/edge/internal/apperror"
+	"kicau.local/edge/internal/recording/model"
 )
 
 type RecordingRepository interface {
 	Save(context.Context, model.Recording) error
 	List(context.Context) ([]model.Recording, error)
 }
+
 type Storage interface {
 	Put(context.Context, string, string) error
 }
-type Executor interface {
+
+type UploadExecutor interface {
 	Start() error
 	StartUploadLoop(func(context.Context)) error
 	UploadWithTimeout(context.Context, func(context.Context) error) error
 	Close()
 }
-type UseCase struct {
+
+type SavingUseCase struct {
 	repo             RecordingRepository
 	storage          Storage
-	executor         Executor
+	executor         UploadExecutor
 	mu               sync.Mutex
 	started, closing bool
 }
 
-func New(repo RecordingRepository, storage Storage, executor Executor) *UseCase {
-	return &UseCase{repo: repo, storage: storage, executor: executor}
+func NewSavingUseCase(repo RecordingRepository, storage Storage, executor UploadExecutor) *SavingUseCase {
+	return &SavingUseCase{repo: repo, storage: storage, executor: executor}
 }
-func (u *UseCase) Start() error {
+
+func (u *SavingUseCase) Start() error {
 	u.mu.Lock()
 	defer u.mu.Unlock()
 	if u.closing {
@@ -54,7 +58,8 @@ func (u *UseCase) Start() error {
 	u.started = true
 	return nil
 }
-func (u *UseCase) Close() {
+
+func (u *SavingUseCase) Close() {
 	u.mu.Lock()
 	u.closing = true
 	u.mu.Unlock()

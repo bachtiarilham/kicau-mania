@@ -1,4 +1,3 @@
-// Package repository persists session journals independently of recording manifests.
 package repository
 
 import (
@@ -11,17 +10,18 @@ import (
 	"kicau.local/edge/internal/apperror"
 	"kicau.local/edge/internal/core/identifier"
 	"kicau.local/edge/internal/infra/storage/filesystem"
-	"kicau.local/edge/internal/mediaengine/session/model"
+	"kicau.local/edge/internal/recording/model"
 )
 
 type Journal struct{ dir string }
 
-func New(dir string) (*Journal, error) {
+func NewJournal(dir string) (*Journal, error) {
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return nil, err
 	}
 	return &Journal{dir: dir}, nil
 }
+
 func (j *Journal) Save(ctx context.Context, s model.Session) error {
 	if err := ctx.Err(); err != nil {
 		return err
@@ -31,6 +31,7 @@ func (j *Journal) Save(ctx context.Context, s model.Session) error {
 	}
 	return filesystem.WriteJSON(filepath.Join(j.dir, s.ID+".json"), s)
 }
+
 func (j *Journal) Get(ctx context.Context, id string) (model.Session, error) {
 	var s model.Session
 	if err := ctx.Err(); err != nil {
@@ -52,6 +53,7 @@ func (j *Journal) Get(ctx context.Context, id string) (model.Session, error) {
 	}
 	return s, err
 }
+
 func (j *Journal) List(ctx context.Context) ([]model.Session, error) {
 	entries, err := os.ReadDir(j.dir)
 	if err != nil {

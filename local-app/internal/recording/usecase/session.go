@@ -1,4 +1,3 @@
-// Package usecase owns the single lifecycle for live, audio, recording, and restream.
 package usecase
 
 import (
@@ -10,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
 	"sync"
 	"time"
 
@@ -18,8 +16,7 @@ import (
 	"kicau.local/edge/internal/apperror"
 	"kicau.local/edge/internal/core/identifier"
 	"kicau.local/edge/internal/infra/logger"
-	recording "kicau.local/edge/internal/mediaengine/saving/model"
-	"kicau.local/edge/internal/mediaengine/session/model"
+	"kicau.local/edge/internal/recording/model"
 	streaming "kicau.local/edge/internal/mediaengine/streaming/model"
 )
 
@@ -28,29 +25,40 @@ type Journal interface {
 	Get(context.Context, string) (model.Session, error)
 	List(context.Context) ([]model.Session, error)
 }
+
 type Recordings interface {
-	Save(context.Context, recording.Recording) error
-	List(context.Context) ([]recording.Recording, error)
+	Save(context.Context, model.Recording) error
+	List(context.Context) ([]model.Recording, error)
 }
-type Catalog interface{ HubRTSP(string) (string, error) }
+
+type Catalog interface {
+	HubRTSP(string) (string, error)
+}
+
 type Pipeline interface {
-	// RunMedia reports video readiness independently of optional PCM frames.
 	RunMedia(context.Context, string, string, func(), func([]byte)) error
 }
+
 type Finalizer interface {
 	Finalize(context.Context, []string, string) error
 }
+
 type Audio interface {
 	Activate([]string) error
 	Deactivate()
 	Ingest(string, []byte)
 }
+
 type Restreams interface {
 	StartRestream(string, string) error
 	StopRestream(string) error
 	Restreams() []streaming.RestreamView
 }
-type Disk interface{ Free(string) (uint64, error) }
+
+type Disk interface {
+	Free(string) (uint64, error)
+}
+
 type Worker interface {
 	Start() error
 	Context() context.Context
@@ -59,23 +67,32 @@ type Worker interface {
 	Wait(context.Context, time.Duration) bool
 	Close()
 }
-type Connections interface{ CloseSessions(context.Context) error }
-type MediaReset interface{ Restart() error }
-type Options struct {
+
+type Connections interface {
+	CloseSessions(context.Context) error
+}
+
+type MediaReset interface {
+	Restart() error
+}
+
+type SessionOptions struct {
 	DataDir      string
 	MaxDuration  time.Duration
 	MinFreeBytes uint64
 	Targets      map[string]string
 }
+
 type run struct {
 	session             model.Session
 	ctx                 context.Context
 	cancel              context.CancelFunc
 	pipelinesDone, done chan struct{}
-	records             map[string]recording.Recording
+	records             map[string]model.Recording
 }
-type UseCase struct {
-	opts             Options
+
+type SessionUseCase struct {
+	opts             SessionOptions
 	journal          Journal
 	recordings       Recordings
 	catalog          Catalog
@@ -94,18 +111,44 @@ type UseCase struct {
 	live, sockets    Connections
 }
 
-func New(opts Options, journal Journal, recordings Recordings, catalog Catalog, pipeline Pipeline, finalizer Finalizer, audio Audio, restreams Restreams, disk Disk, worker Worker, media MediaReset) *UseCase {
+func NewSessionUseCase(
+	opts SessionOptions,
+	journal Journal,
+	recordings Recordings,
+	catalog Catalog,
+	pipeline Pipeline,
+	finalizer Finalizer,
+	audio Audio,
+	restreams Restreams,
+	disk Disk,
+	worker Worker,
+	media MediaReset,
+) *SessionUseCase {
 	targets := map[string]string{}
 	for k, v := range opts.Targets {
 		targets[k] = v
 	}
 	opts.Targets = targets
-	return &UseCase{opts: opts, journal: journal, recordings: recordings, catalog: catalog, pipeline: pipeline, finalizer: finalizer, audio: audio, restreams: restreams, disk: disk, worker: worker, media: media}
+	return &SessionUseCase{
+		opts:       opts,
+		journal:    journal,
+		recordings: recordings,
+		catalog:    catalog,
+		pipeline:   pipeline,
+		finalizer:  finalizer,
+		audio:      audio,
+		restreams:  restreams,
+		disk:       disk,
+		worker:     worker,
+		media:      media,
+	}
 }
 
-// BindConnections is called only by app before Start; no transport implementation is imported.
-func (u *UseCase) BindConnections(live, sockets Connections) { u.live, u.sockets = live, sockets }
-func (u *UseCase) Start() error {
+func (u *SessionUseCase) BindConnections(live, sockets Connections) {
+	u.live, u.sockets = live, sockets
+}
+
+func (u *SessionUseCase) Start() error {
 	u.ops.Lock()
 	defer u.ops.Unlock()
 	if u.closing || u.started {
@@ -125,7 +168,8 @@ func (u *UseCase) Start() error {
 	u.mu.Unlock()
 	return nil
 }
-func (u *UseCase) validate(req model.StartRequest) error {
+
+func (u *SessionUseCase) validate(req model.StartRequest) error {
 	if !identifier.Valid(req.ID) || len(req.Channels) < 1 || len(req.Channels) > 24 {
 		return apperror.ErrInvalid
 	}
@@ -155,7 +199,8 @@ func (u *UseCase) validate(req model.StartRequest) error {
 	}
 	return nil
 }
-func (u *UseCase) StartSession(ctx context.Context, req model.StartRequest) (model.Session, error) {
+
+func (u *SessionUseCase) StartSession(ctx context.Context, req model.StartRequest) (model.Session, error) {
 	u.ops.Lock()
 	defer u.ops.Unlock()
 	if err := u.validate(req); err != nil {
@@ -173,7 +218,6 @@ func (u *UseCase) StartSession(ctx context.Context, req model.StartRequest) (mod
 		if u.active != nil && u.active.session.ID == req.ID && (old.State == "STARTING" || old.State == "RUNNING" || old.State == "DEGRADED") && string(a) == string(b) {
 			return clone(u.active.session), nil
 		}
-		// Session identity is immutable: recordings and cloud mappings retain it.
 		return model.Session{}, apperror.ErrConflict
 	}
 	if !errors.Is(err, apperror.ErrNotFound) && err != nil {
@@ -191,7 +235,6 @@ func (u *UseCase) StartSession(ctx context.Context, req model.StartRequest) (mod
 			return model.Session{}, apperror.ErrConflict
 		}
 	}
-	// Copy caller slices before persisting or using them in asynchronous work.
 	req.Channels = append([]string(nil), req.Channels...)
 	req.Restreams = append([]model.Restream(nil), req.Restreams...)
 	s := model.Session{StartRequest: req, State: "STARTING", StartedAt: time.Now().UTC(), ChannelsState: []model.Channel{}}
@@ -203,9 +246,9 @@ func (u *UseCase) StartSession(ctx context.Context, req model.StartRequest) (mod
 		return model.Session{}, err
 	}
 	jobCtx, cancel := context.WithCancel(u.worker.Context())
-	r := &run{session: s, ctx: jobCtx, cancel: cancel, pipelinesDone: make(chan struct{}), done: make(chan struct{}), records: map[string]recording.Recording{}}
+	r := &run{session: s, ctx: jobCtx, cancel: cancel, pipelinesDone: make(chan struct{}), done: make(chan struct{}), records: map[string]model.Recording{}}
 	for _, ch := range s.ChannelsState {
-		rec := recording.Recording{ID: ch.RecordingID, RoundID: req.ID, ChannelID: ch.ID, State: "RECORDING", File: filepath.Join(u.opts.DataDir, "recordings", ch.RecordingID+".mkv"), Key: "rounds/" + req.ID + "/" + ch.ID + "/" + ch.RecordingID + ".mkv", StartedAt: s.StartedAt}
+		rec := model.Recording{ID: ch.RecordingID, RoundID: req.ID, ChannelID: ch.ID, State: "RECORDING", File: filepath.Join(u.opts.DataDir, "recordings", ch.RecordingID+".mkv"), Key: "rounds/" + req.ID + "/" + ch.ID + "/" + ch.RecordingID + ".mkv", StartedAt: s.StartedAt}
 		if err := u.recordings.Save(ctx, rec); err != nil {
 			u.abortLocked(r)
 			return model.Session{}, err
@@ -237,7 +280,8 @@ func (u *UseCase) StartSession(ctx context.Context, req model.StartRequest) (mod
 	}
 	return clone(r.session), nil
 }
-func (u *UseCase) abortLocked(r *run) {
+
+func (u *SessionUseCase) abortLocked(r *run) {
 	r.cancel()
 	u.audio.Deactivate()
 	r.session.State = "FAILED"
@@ -251,6 +295,7 @@ func (u *UseCase) abortLocked(r *run) {
 	u.active = nil
 	close(r.done)
 }
+
 func clone(s model.Session) model.Session {
 	s.Channels = append([]string(nil), s.Channels...)
 	s.Restreams = append([]model.Restream(nil), s.Restreams...)
@@ -260,7 +305,8 @@ func clone(s model.Session) model.Session {
 	}
 	return s
 }
-func (u *UseCase) Get(ctx context.Context, id string) (model.Session, error) {
+
+func (u *SessionUseCase) Get(ctx context.Context, id string) (model.Session, error) {
 	u.mu.Lock()
 	defer u.mu.Unlock()
 	if u.active != nil && u.active.session.ID == id {
@@ -269,8 +315,7 @@ func (u *UseCase) Get(ctx context.Context, id string) (model.Session, error) {
 	return u.journal.Get(ctx, id)
 }
 
-// Current supports a dashboard refresh without starting or resuming a session.
-func (u *UseCase) Current(ctx context.Context) (*model.Session, error) {
+func (u *SessionUseCase) Current(ctx context.Context) (*model.Session, error) {
 	u.mu.Lock()
 	if u.active != nil {
 		s := clone(u.active.session)
@@ -291,10 +336,14 @@ func (u *UseCase) Current(ctx context.Context) (*model.Session, error) {
 	}
 	return latest, nil
 }
-func (u *UseCase) Busy() bool { u.mu.Lock(); defer u.mu.Unlock(); return u.active != nil }
 
-// Reset clears recorded terminal sessions so the operator can restart from Ronde 1 cleanly.
-func (u *UseCase) Reset(ctx context.Context) error {
+func (u *SessionUseCase) Busy() bool {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	return u.active != nil
+}
+
+func (u *SessionUseCase) Reset(ctx context.Context) error {
 	u.ops.Lock()
 	defer u.ops.Unlock()
 	u.mu.Lock()
@@ -323,8 +372,7 @@ func (u *UseCase) Reset(ctx context.Context) error {
 	return nil
 }
 
-// AcquirePlayback admits a POST before Stop may wait, preventing late session creation.
-func (u *UseCase) AcquirePlayback(channel string) (func(), error) {
+func (u *SessionUseCase) AcquirePlayback(channel string) (func(), error) {
 	u.mu.Lock()
 	defer u.mu.Unlock()
 	r := u.active
@@ -344,7 +392,8 @@ func (u *UseCase) AcquirePlayback(channel string) (func(), error) {
 	var once sync.Once
 	return func() { once.Do(u.admissions.Done) }, nil
 }
-func (u *UseCase) StopSession(ctx context.Context, id string) (model.Session, error) {
+
+func (u *SessionUseCase) StopSession(ctx context.Context, id string) (model.Session, error) {
 	u.ops.Lock()
 	defer u.ops.Unlock()
 	u.mu.Lock()
@@ -388,7 +437,8 @@ func (u *UseCase) StopSession(ctx context.Context, id string) (model.Session, er
 	}
 	return clone(r.session), persistErr
 }
-func (u *UseCase) Close() {
+
+func (u *SessionUseCase) Close() {
 	u.mu.Lock()
 	u.closing = true
 	r := u.active
@@ -405,43 +455,8 @@ func (u *UseCase) Close() {
 	}
 	u.worker.Close()
 }
-func (u *UseCase) updateLocked(r *run) {
-	for i := range r.session.ChannelsState {
-		ch := &r.session.ChannelsState[i]
-		rec := r.records[ch.ID]
-		ch.RecordingState = rec.State
-		ch.SegmentCount = len(rec.Segments)
-		ch.Gaps = nil
-		for _, gap := range rec.Gaps {
-			ch.Gaps = append(ch.Gaps, model.Gap{StartedAt: gap.StartedAt, EndedAt: gap.EndedAt, Reason: gap.Reason})
-		}
-	}
-	if r.ctx.Err() == nil {
-		state := "RUNNING"
-		for _, ch := range r.session.ChannelsState {
-			if ch.State != "RUNNING" {
-				state = "DEGRADED"
-				break
-			}
-		}
-		for _, target := range r.session.Restreams {
-			running := false
-			for _, v := range u.restreams.Restreams() {
-				if v.Target == target.Target && v.State == "RUNNING" {
-					running = true
-				}
-			}
-			if !running {
-				state = "DEGRADED"
-			}
-		}
-		r.session.State = state
-	}
-	if err := u.journal.Save(context.Background(), r.session); err != nil {
-		logger.Error("session state persistence failed", zap.Error(err))
-	}
-}
-func (u *UseCase) guard(r *run) {
+
+func (u *SessionUseCase) guard(r *run) {
 	for r.ctx.Err() == nil {
 		free, err := u.disk.Free(u.opts.DataDir)
 		if err != nil || free < u.opts.MinFreeBytes || time.Since(r.session.StartedAt) >= u.opts.MaxDuration {

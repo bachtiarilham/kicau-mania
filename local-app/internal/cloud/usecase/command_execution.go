@@ -6,7 +6,7 @@ import (
 	"errors"
 	"kicau.local/edge/internal/apperror"
 	cloudmodel "kicau.local/edge/internal/cloud/model"
-	session "kicau.local/edge/internal/mediaengine/session/model"
+	session "kicau.local/edge/internal/recording/model"
 )
 
 type Sessions interface {

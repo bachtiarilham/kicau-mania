@@ -2,11 +2,12 @@ package usecase
 
 import (
 	"context"
-	"kicau.local/edge/internal/apperror"
 	"time"
+
+	"kicau.local/edge/internal/apperror"
 )
 
-func (u *UseCase) RecordingFile(c context.Context, id string) (string, error) {
+func (u *SavingUseCase) RecordingFile(c context.Context, id string) (string, error) {
 	u.mu.Lock()
 	defer u.mu.Unlock()
 	rows, e := u.repo.List(c)
@@ -23,7 +24,8 @@ func (u *UseCase) RecordingFile(c context.Context, id string) (string, error) {
 	}
 	return "", apperror.ErrNotFound
 }
-func (u *UseCase) RetryRecording(c context.Context, id string) error {
+
+func (u *SavingUseCase) RetryRecording(c context.Context, id string) error {
 	u.mu.Lock()
 	defer u.mu.Unlock()
 	rows, e := u.repo.List(c)

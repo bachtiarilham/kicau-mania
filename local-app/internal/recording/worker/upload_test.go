@@ -10,7 +10,7 @@ import (
 )
 
 func TestUploadScheduleIsImmediateThenSequential(t *testing.T) {
-	w := New()
+	w := NewUploadWorker()
 	defer w.Close()
 	waits := make(chan time.Duration, 1)
 	advance := make(chan struct{})
@@ -73,7 +73,7 @@ func TestUploadScheduleIsImmediateThenSequential(t *testing.T) {
 }
 
 func TestUploadTimeoutAndCancellation(t *testing.T) {
-	w := New()
+	w := NewUploadWorker()
 	defer w.Close()
 	if e := w.Start(); e != nil {
 		t.Fatal(e)
@@ -89,11 +89,17 @@ func TestUploadTimeoutAndCancellation(t *testing.T) {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	if e := w.UploadWithTimeout(ctx, func(context.Context) error { t.Error("canceled upload invoked callback"); return nil }); !errors.Is(e, context.Canceled) {
+	if e := w.UploadWithTimeout(ctx, func(context.Context) error {
+		t.Error("canceled upload invoked callback")
+		return nil
+	}); !errors.Is(e, context.Canceled) {
 		t.Fatal(e)
 	}
 	w.Close()
-	if e := w.UploadWithTimeout(context.Background(), func(context.Context) error { t.Error("upload after close"); return nil }); !errors.Is(e, apperror.ErrUnavailable) {
+	if e := w.UploadWithTimeout(context.Background(), func(context.Context) error {
+		t.Error("upload after close")
+		return nil
+	}); !errors.Is(e, apperror.ErrUnavailable) {
 		t.Fatal(e)
 	}
 }

@@ -122,7 +122,7 @@ func dependencyViolation(from, imported string) string {
 func TestDomainDependencyBoundaries(t *testing.T) {
 	_, file, _, _ := runtime.Caller(0)
 	root := filepath.Clean(filepath.Join(filepath.Dir(file), "..", ".."))
-	for _, old := range []string{"internal/edgetocloud", "internal/delivery/http", "internal/mediaengine/audio/delivery", "internal/mediaengine/video", "internal/delivery/rest/video", "internal/mediaengine/audio/pubsub", "internal/mediaengine/audio/metricsclient", "internal/mediaengine/saving/delivery", "internal/mediaengine/streaming/delivery", "internal/mediaengine/channel", "internal/mediaengine/zoom", "internal/delivery/rest/channel", "internal/delivery/rest/zoom"} {
+	for _, old := range []string{"internal/edgetocloud", "internal/delivery/http", "internal/mediaengine/audio/delivery", "internal/mediaengine/video", "internal/delivery/rest/video", "internal/mediaengine/audio/pubsub", "internal/mediaengine/audio/metricsclient", "internal/mediaengine/saving/delivery", "internal/mediaengine/streaming/delivery", "internal/mediaengine/channel", "internal/mediaengine/zoom", "internal/delivery/rest/channel", "internal/delivery/rest/zoom", "internal/mediaengine/saving", "internal/mediaengine/session", "internal/delivery/rest/saving", "internal/delivery/rest/session"} {
 		if _, err := os.Stat(filepath.Join(root, filepath.FromSlash(old))); !os.IsNotExist(err) {
 			t.Fatalf("legacy protocol delivery location still exists: %s", old)
 		}

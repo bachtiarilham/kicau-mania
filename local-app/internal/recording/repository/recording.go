@@ -11,7 +11,7 @@ import (
 	"sync"
 
 	"kicau.local/edge/internal/core/identifier"
-	"kicau.local/edge/internal/mediaengine/saving/model"
+	"kicau.local/edge/internal/recording/model"
 )
 
 type Files struct {

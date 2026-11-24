@@ -19,8 +19,11 @@ import (
 	cameraDelivery "kicau.local/edge/internal/camera/delivery"
 	cameraRepo "kicau.local/edge/internal/camera/repository"
 	cameraUC "kicau.local/edge/internal/camera/usecase"
-	savingDelivery "kicau.local/edge/internal/delivery/rest/saving"
-	sessionDelivery "kicau.local/edge/internal/delivery/rest/session"
+	recordingDelivery "kicau.local/edge/internal/recording/delivery"
+	recordingModel "kicau.local/edge/internal/recording/model"
+	recordingRepo "kicau.local/edge/internal/recording/repository"
+	recordingUC "kicau.local/edge/internal/recording/usecase"
+	recordingWorker "kicau.local/edge/internal/recording/worker"
 	streamingDelivery "kicau.local/edge/internal/delivery/rest/streaming"
 	websocketDelivery "kicau.local/edge/internal/delivery/websocket"
 	"kicau.local/edge/internal/infra/storage/filesystem"
@@ -29,13 +32,6 @@ import (
 	audioWorker "kicau.local/edge/internal/mediaengine/audio/worker"
 	"kicau.local/edge/internal/mediaengine/media"
 	"kicau.local/edge/internal/mediaengine/media/mediamtx"
-	savingRepo "kicau.local/edge/internal/mediaengine/saving/repository"
-	savingUC "kicau.local/edge/internal/mediaengine/saving/usecase"
-	savingWorker "kicau.local/edge/internal/mediaengine/saving/worker"
-	sessionModel "kicau.local/edge/internal/mediaengine/session/model"
-	sessionRepo "kicau.local/edge/internal/mediaengine/session/repository"
-	sessionUC "kicau.local/edge/internal/mediaengine/session/usecase"
-	sessionWorker "kicau.local/edge/internal/mediaengine/session/worker"
 	streamingUC "kicau.local/edge/internal/mediaengine/streaming/usecase"
 	streamingWorker "kicau.local/edge/internal/mediaengine/streaming/worker"
 )
@@ -105,8 +101,8 @@ type testContainer struct {
 	Camera    *cameraUC.CameraUseCase
 	Audio     *audioUC.UseCase
 	Streaming *streamingUC.UseCase
-	Saving    *savingUC.UseCase
-	Sessions  *sessionUC.UseCase
+	Saving    *recordingUC.SavingUseCase
+	Sessions  *recordingUC.SessionUseCase
 	Handlers  Handlers
 }
 
@@ -121,7 +117,7 @@ func fixture(t *testing.T) (*testContainer, config.Config, *fakeMedia) {
 		t.Fatal(e)
 	}
 	mediaServer := mediamtx.New(mediamtx.Options{})
-	repo, e := savingRepo.NewFiles(filepath.Join(dir, "queue"))
+	repo, e := recordingRepo.NewFiles(filepath.Join(dir, "queue"))
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -129,15 +125,15 @@ func fixture(t *testing.T) (*testContainer, config.Config, *fakeMedia) {
 	v := cameraUC.NewCameraUseCase(catalog, catalog)
 	a := audioUC.New(audioUC.Options{SampleRate: 16000, Threshold: -35}, catalog, audioService.NewBroadcaster(), nil, audioWorker.New())
 	s := streamingUC.New(catalog, media, map[string]string{"youtube": "rtmps://example.test/live/key"}, streamingWorker.New())
-	save := savingUC.New(repo, nil, savingWorker.New())
-	journal, e := sessionRepo.New(filepath.Join(dir, "sessions"))
+	save := recordingUC.NewSavingUseCase(repo, nil, recordingWorker.NewUploadWorker())
+	journal, e := recordingRepo.NewJournal(filepath.Join(dir, "sessions"))
 	if e != nil {
 		t.Fatal(e)
 	}
-	sessions := sessionUC.New(sessionUC.Options{DataDir: dir, MaxDuration: time.Hour, MinFreeBytes: 100, Targets: map[string]string{"youtube": "configured"}}, journal, repo, catalog, media, media, a, s, testDisk{}, sessionWorker.New(), mediaServer)
+	sessions := recordingUC.NewSessionUseCase(recordingUC.SessionOptions{DataDir: dir, MaxDuration: time.Hour, MinFreeBytes: 100, Targets: map[string]string{"youtube": "configured"}}, journal, repo, catalog, media, media, a, s, testDisk{}, recordingWorker.NewSessionWorker(), mediaServer)
 	sockets := websocketDelivery.New(a, cfg.Origins)
 	sessions.BindConnections(nil, sockets)
-	c := &testContainer{Camera: v, Audio: a, Streaming: s, Saving: save, Sessions: sessions, Handlers: Handlers{Camera: cameraDelivery.NewHandler(v, nil), WebSocket: sockets, Streaming: streamingDelivery.New(s), Saving: savingDelivery.New(save), Sessions: sessionDelivery.New(sessions)}}
+	c := &testContainer{Camera: v, Audio: a, Streaming: s, Saving: save, Sessions: sessions, Handlers: Handlers{Camera: cameraDelivery.NewHandler(v, nil), Recording: recordingDelivery.NewHandler(sessions, save), WebSocket: sockets, Streaming: streamingDelivery.New(s)}}
 
 	t.Cleanup(func() {
 		sessions.Close()
@@ -168,7 +164,7 @@ func waitStopped(t *testing.T, c *testContainer, id string) {
 }
 func TestStopSessionStopsAllMedia(t *testing.T) {
 	c, _, media := fixture(t)
-	_, err := c.Sessions.StartSession(context.Background(), sessionModel.StartRequest{ID: "session1", Channels: []string{"lapak01"}, Restreams: []sessionModel.Restream{{ChannelID: "lapak01", Target: "youtube"}}})
+	_, err := c.Sessions.StartSession(context.Background(), recordingModel.StartRequest{ID: "session1", Channels: []string{"lapak01"}, Restreams: []recordingModel.Restream{{ChannelID: "lapak01", Target: "youtube"}}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -296,7 +292,7 @@ func TestExistingHTTPContracts(t *testing.T) {
 }
 func TestAudioWebSocketWireContracts(t *testing.T) {
 	c, cfg, _ := fixture(t)
-	if _, err := c.Sessions.StartSession(context.Background(), sessionModel.StartRequest{ID: "websocket-session", Channels: []string{"lapak01"}}); err != nil {
+	if _, err := c.Sessions.StartSession(context.Background(), recordingModel.StartRequest{ID: "websocket-session", Channels: []string{"lapak01"}}); err != nil {
 		t.Fatal(err)
 	}
 	srv := httptest.NewServer(Router(cfg, c.Handlers))

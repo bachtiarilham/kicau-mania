@@ -3,19 +3,18 @@ package usecase
 import (
 	"context"
 	"errors"
-	"kicau.local/edge/internal/apperror"
-	"kicau.local/edge/internal/mediaengine/media"
-	recording "kicau.local/edge/internal/mediaengine/saving/model"
-	recordingRepo "kicau.local/edge/internal/mediaengine/saving/repository"
-	"kicau.local/edge/internal/mediaengine/session/model"
-	"kicau.local/edge/internal/mediaengine/session/repository"
-	"kicau.local/edge/internal/mediaengine/session/worker"
-	streaming "kicau.local/edge/internal/mediaengine/streaming/model"
 	"os"
 	"path/filepath"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"kicau.local/edge/internal/apperror"
+	"kicau.local/edge/internal/mediaengine/media"
+	streaming "kicau.local/edge/internal/mediaengine/streaming/model"
+	"kicau.local/edge/internal/recording/model"
+	"kicau.local/edge/internal/recording/repository"
+	"kicau.local/edge/internal/recording/worker"
 )
 
 type fixtureMedia struct {
@@ -33,6 +32,7 @@ func (f *fixtureMedia) RunMedia(ctx context.Context, _, file string, ready func(
 	<-ctx.Done()
 	return ctx.Err()
 }
+
 func (f *fixtureMedia) Finalize(_ context.Context, parts []string, output string) error {
 	if f.finalError != nil {
 		return f.finalError
@@ -72,23 +72,24 @@ type fixtureReset struct{}
 
 func (fixtureReset) Restart() error { return nil }
 
-func sessionFixture(t *testing.T) (*UseCase, *repository.Journal, *recordingRepo.Files, *fixtureMedia) {
+func sessionFixture(t *testing.T) (*SessionUseCase, *repository.Journal, *repository.Files, *fixtureMedia) {
 	t.Helper()
 	dir := t.TempDir()
-	journal, err := repository.New(filepath.Join(dir, "sessions"))
+	journal, err := repository.NewJournal(filepath.Join(dir, "sessions"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	files, err := recordingRepo.NewFiles(filepath.Join(dir, "queue"))
+	files, err := repository.NewFiles(filepath.Join(dir, "queue"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	pipeline := &fixtureMedia{}
-	u := New(Options{DataDir: dir, MaxDuration: time.Hour}, journal, files, fixtureCatalog{}, pipeline, pipeline, fixtureAudio{}, fixtureRestream{}, fixtureDisk{}, worker.New(), fixtureReset{})
+	u := NewSessionUseCase(SessionOptions{DataDir: dir, MaxDuration: time.Hour}, journal, files, fixtureCatalog{}, pipeline, pipeline, fixtureAudio{}, fixtureRestream{}, fixtureDisk{}, worker.NewSessionWorker(), fixtureReset{})
 	t.Cleanup(u.Close)
 	return u, journal, files, pipeline
 }
-func awaitState(t *testing.T, u *UseCase, id, state string) model.Session {
+
+func awaitState(t *testing.T, u *SessionUseCase, id, state string) model.Session {
 	t.Helper()
 	until := time.Now().Add(2 * time.Second)
 	for time.Now().Before(until) {
@@ -101,6 +102,7 @@ func awaitState(t *testing.T, u *UseCase, id, state string) model.Session {
 	t.Fatalf("session did not reach %s", state)
 	return model.Session{}
 }
+
 func TestSessionOwnsBackgroundAndPlaybackBarrier(t *testing.T) {
 	u, _, files, _ := sessionFixture(t)
 	if err := u.Start(); err != nil {
@@ -147,6 +149,7 @@ func TestSessionOwnsBackgroundAndPlaybackBarrier(t *testing.T) {
 		t.Fatal("reused ID", err)
 	}
 }
+
 func TestRestartFinalizesWithoutResuming(t *testing.T) {
 	u, journal, files, pipeline := sessionFixture(t)
 	now := time.Now().UTC()
@@ -162,7 +165,7 @@ func TestRestartFinalizesWithoutResuming(t *testing.T) {
 	if err := journal.Save(context.Background(), s); err != nil {
 		t.Fatal(err)
 	}
-	rec := recording.Recording{ID: "recording", RoundID: s.ID, ChannelID: "one", State: "RECORDING", File: file, Key: "rounds/interrupted/one/recording.mkv", StartedAt: now, Segments: []recording.Segment{{File: part, StartedAt: now}}}
+	rec := model.Recording{ID: "recording", RoundID: s.ID, ChannelID: "one", State: "RECORDING", File: file, Key: "rounds/interrupted/one/recording.mkv", StartedAt: now, Segments: []model.Segment{{File: part, StartedAt: now}}}
 	if err := files.Save(context.Background(), rec); err != nil {
 		t.Fatal(err)
 	}
@@ -177,6 +180,7 @@ func TestRestartFinalizesWithoutResuming(t *testing.T) {
 		t.Fatal("reopened interrupted session")
 	}
 }
+
 func TestFailedFinalizationPreservesSourceAndReason(t *testing.T) {
 	u, _, files, pipeline := sessionFixture(t)
 	pipeline.finalError = media.FinalizationError("recording segment codecs changed")

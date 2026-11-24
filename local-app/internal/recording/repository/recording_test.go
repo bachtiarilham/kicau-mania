@@ -15,8 +15,6 @@ func TestManifestRoundTrip(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	// Fixture uses the persisted schema before the domain split, including a
-	// Windows file path and a scheduled retry. No migration should be necessary.
 	fixture := `{"id":"abc123","round_id":"ronde-001","channel_id":"lapak01","state":"READY","file":"D:\\arena-data\\recordings\\abc123.mkv","object_key":"rounds/ronde-001/lapak01/abc123.mkv","attempts":3,"next_attempt":"2026-11-04T12:30:00+07:00","started_at":"2026-11-04T12:00:00+07:00","ended_at":"2026-11-04T12:10:00+07:00"}`
 	path := filepath.Join(dir, "abc123.json")
 	if e = os.WriteFile(path, []byte(fixture), 0600); e != nil {
@@ -44,7 +42,7 @@ func TestManifestRoundTrip(t *testing.T) {
 	if e = json.Unmarshal(saved, &got); e != nil {
 		t.Fatal(e)
 	}
-	want["version"] = float64(1) // Version increments on save.
+	want["version"] = float64(1)
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("persisted schema changed: %s", saved)
 	}

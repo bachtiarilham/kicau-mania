@@ -1,18 +1,16 @@
-// Upload processes persisted ready recordings and saves retry outcomes.
 package usecase
 
 import (
 	"context"
 	"errors"
-	"kicau.local/edge/internal/mediaengine/saving/model"
 	"time"
 
 	"go.uber.org/zap"
-
 	"kicau.local/edge/internal/infra/logger"
+	"kicau.local/edge/internal/recording/model"
 )
 
-func (u *UseCase) uploadPending(ctx context.Context) {
+func (u *SavingUseCase) uploadPending(ctx context.Context) {
 	u.mu.Lock()
 	records, err := u.repo.List(ctx)
 	u.mu.Unlock()
@@ -29,9 +27,6 @@ func (u *UseCase) uploadPending(ctx context.Context) {
 		}
 	}
 	if len(activeRounds) > 0 {
-		// Session-Aware Bandwidth Protection:
-		// Active recording session in progress; pause cloud upload worker
-		// so 100% upstream bandwidth is dedicated to livestreaming.
 		return
 	}
 	for _, r := range records {

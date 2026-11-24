@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	cloudmodel "kicau.local/edge/internal/cloud/model"
-	saving "kicau.local/edge/internal/mediaengine/saving/model"
+	saving "kicau.local/edge/internal/recording/model"
 )
 
 func (e *Engine) allRecordings(ctx context.Context) ([]saving.Recording, error) {

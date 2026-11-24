@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"kicau.local/edge/internal/mediaengine/saving/model"
+	"kicau.local/edge/internal/recording/model"
 	"net/http"
 	"net/http/httptest"
 	"os"

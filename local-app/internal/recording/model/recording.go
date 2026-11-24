@@ -7,6 +7,19 @@ import (
 
 var ErrNotMapped = errors.New("recording has no approved cloud mapping")
 
+type Gap struct {
+	Reason    string    `json:"reason,omitempty"`
+	StartedAt time.Time `json:"started_at"`
+	EndedAt   time.Time `json:"ended_at"`
+}
+
+type Segment struct {
+	File      string    `json:"file"`
+	StartedAt time.Time `json:"started_at"`
+	EndedAt   time.Time `json:"ended_at,omitempty"`
+	HasMedia  bool      `json:"has_media"`
+}
+
 type Recording struct {
 	Segments    []Segment `json:"segments,omitempty"`
 	Gaps        []Gap     `json:"gaps,omitempty"`
@@ -22,16 +35,4 @@ type Recording struct {
 	NextAttempt time.Time `json:"next_attempt"`
 	StartedAt   time.Time `json:"started_at"`
 	EndedAt     time.Time `json:"ended_at,omitempty"`
-}
-
-type Segment struct {
-	File      string    `json:"file"`
-	StartedAt time.Time `json:"started_at"`
-	EndedAt   time.Time `json:"ended_at,omitempty"`
-	HasMedia  bool      `json:"has_media"`
-}
-type Gap struct {
-	Reason    string    `json:"reason,omitempty"`
-	StartedAt time.Time `json:"started_at"`
-	EndedAt   time.Time `json:"ended_at"`
 }

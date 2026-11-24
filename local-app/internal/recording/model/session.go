@@ -1,4 +1,3 @@
-// Package model defines the persistent media session lifecycle.
 package model
 
 import "time"
@@ -7,15 +6,11 @@ type Restream struct {
 	ChannelID string `json:"channel_id"`
 	Target    string `json:"target"`
 }
+
 type StartRequest struct {
 	ID        string     `json:"id" binding:"required"`
 	Channels  []string   `json:"channels" binding:"required,min=1,max=24"`
 	Restreams []Restream `json:"restreams"`
-}
-type Gap struct {
-	Reason    string    `json:"reason,omitempty"`
-	StartedAt time.Time `json:"started_at"`
-	EndedAt   time.Time `json:"ended_at"`
 }
 
 type Channel struct {
@@ -29,8 +24,9 @@ type Channel struct {
 	Attempts       int    `json:"attempts"`
 	Error          string `json:"error,omitempty"`
 }
+
 type Session struct {
-	StopReason string `json:"stop_reason,omitempty"`
+	StopReason    string    `json:"stop_reason,omitempty"`
 	StartRequest
 	State         string    `json:"state"`
 	StartedAt     time.Time `json:"started_at"`

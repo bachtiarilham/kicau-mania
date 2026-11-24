@@ -27,8 +27,6 @@ import (
 	cloudWorker "kicau.local/edge/internal/cloud/worker"
 	delivery "kicau.local/edge/internal/delivery"
 	engineDelivery "kicau.local/edge/internal/delivery/rest/engine"
-	savingDelivery "kicau.local/edge/internal/delivery/rest/saving"
-	sessionDelivery "kicau.local/edge/internal/delivery/rest/session"
 	streamingDelivery "kicau.local/edge/internal/delivery/rest/streaming"
 	websocketDelivery "kicau.local/edge/internal/delivery/websocket"
 	"kicau.local/edge/internal/infra/storage/filesystem"
@@ -36,14 +34,12 @@ import (
 	audioService "kicau.local/edge/internal/mediaengine/audio/service"
 	audioUC "kicau.local/edge/internal/mediaengine/audio/usecase"
 	audioWorker "kicau.local/edge/internal/mediaengine/audio/worker"
+	recordingDelivery "kicau.local/edge/internal/recording/delivery"
+	recordingRepo "kicau.local/edge/internal/recording/repository"
+	recordingUC "kicau.local/edge/internal/recording/usecase"
+	recordingWorker "kicau.local/edge/internal/recording/worker"
 	"kicau.local/edge/internal/mediaengine/media/ffmpeg"
 	"kicau.local/edge/internal/mediaengine/media/mediamtx"
-	savingRepo "kicau.local/edge/internal/mediaengine/saving/repository"
-	savingUC "kicau.local/edge/internal/mediaengine/saving/usecase"
-	savingWorker "kicau.local/edge/internal/mediaengine/saving/worker"
-	sessionRepo "kicau.local/edge/internal/mediaengine/session/repository"
-	sessionUC "kicau.local/edge/internal/mediaengine/session/usecase"
-	sessionWorker "kicau.local/edge/internal/mediaengine/session/worker"
 	streamingUC "kicau.local/edge/internal/mediaengine/streaming/usecase"
 	streamingWorker "kicau.local/edge/internal/mediaengine/streaming/worker"
 )
@@ -57,8 +53,8 @@ type Container struct {
 	Channels       *cameraUC.CameraUseCase
 	Audio          *audioUC.UseCase
 	Streaming      *streamingUC.UseCase
-	Saving         *savingUC.UseCase
-	Sessions       *sessionUC.UseCase
+	Saving         *recordingUC.SavingUseCase
+	Sessions       *recordingUC.SessionUseCase
 	Zoom           *cameraUC.ZoomUseCase
 	Handlers       delivery.Handlers
 }
@@ -126,7 +122,7 @@ func NewContainer(ctx context.Context, c config.Config) (*Container, error) {
 	if e != nil {
 		return nil, e
 	}
-	repo, err := savingRepo.NewFiles(filepath.Join(c.DataDir, "queue"))
+	repo, err := recordingRepo.NewFiles(filepath.Join(c.DataDir, "queue"))
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +134,7 @@ func NewContainer(ctx context.Context, c config.Config) (*Container, error) {
 	if err != nil {
 		return nil, err
 	}
-	var objectStorage savingUC.Storage
+	var objectStorage recordingUC.Storage
 	if c.AccessMode == "lan" {
 		objectStorage = bridge
 	}
@@ -152,7 +148,7 @@ func NewContainer(ctx context.Context, c config.Config) (*Container, error) {
 	channels := cameraUC.NewCameraUseCase(sources, sources)
 	audioJobs := audioWorker.New()
 	streamingJobs := streamingWorker.New()
-	savingJobs := savingWorker.New()
+	savingJobs := recordingWorker.NewUploadWorker()
 	previewSources := make(map[string]string, len(c.Channels))
 	for _, ch := range c.Channels {
 		if ch.HasAudio == nil || *ch.HasAudio {
@@ -165,12 +161,12 @@ func NewContainer(ctx context.Context, c config.Config) (*Container, error) {
 		PreviewSources: previewSources, PreviewCapture: pipeline.RunPreviewAudio,
 	}, sources, audioService.NewBroadcaster(), remote, audioJobs)
 	streaming := streamingUC.New(sources, ffmpeg.Restreamer{Binary: c.FFmpeg, Probe: c.FFprobe}, c.Destinations, streamingJobs)
-	saving := savingUC.New(repo, objectStorage, savingJobs)
-	sessionJournal, err := sessionRepo.New(filepath.Join(c.DataDir, "media-sessions"))
+	saving := recordingUC.NewSavingUseCase(repo, objectStorage, savingJobs)
+	sessionJournal, err := recordingRepo.NewJournal(filepath.Join(c.DataDir, "media-sessions"))
 	if err != nil {
 		return nil, err
 	}
-	sessions := sessionUC.New(sessionUC.Options{DataDir: c.DataDir, MaxDuration: c.MaxRound, MinFreeBytes: c.MinFreeBytes, Targets: c.Destinations}, sessionJournal, repo, sources, pipeline, ffmpeg.Finalizer{Binary: c.FFmpeg, Probe: c.FFprobe}, audio, streaming, filesystem.Disk{}, sessionWorker.New(), mediaServer)
+	sessions := recordingUC.NewSessionUseCase(recordingUC.SessionOptions{DataDir: c.DataDir, MaxDuration: c.MaxRound, MinFreeBytes: c.MinFreeBytes, Targets: c.Destinations}, sessionJournal, repo, sources, pipeline, ffmpeg.Finalizer{Binary: c.FFmpeg, Probe: c.FFprobe}, audio, streaming, filesystem.Disk{}, recordingWorker.NewSessionWorker(), mediaServer)
 	engine := cloudUC.NewEngine(cloudUC.EngineOptions{
 		ArenaID: c.ArenaID, EngineID: c.EngineID,
 		HeartbeatTimeout: c.HeartbeatTimeout, CommandsConfigured: c.CloudCommandsURL != "",
@@ -191,6 +187,7 @@ func NewContainer(ctx context.Context, c config.Config) (*Container, error) {
 		return nil, err
 	}
 	cameraHandler := cameraDelivery.NewHandler(channels, zoomUC)
+	recordingHandler := recordingDelivery.NewHandler(sessions, saving)
 
 	return &Container{
 		Background: cloudWorker.New(), Engine: engine,
@@ -201,10 +198,9 @@ func NewContainer(ctx context.Context, c config.Config) (*Container, error) {
 			Desktop:   &desktopDelivery.Handler{Cloud: bridge, Saving: saving},
 			Engine:    engineDelivery.New(engine),
 			Camera:    cameraHandler,
+			Recording: recordingHandler,
 			WebSocket: sockets,
 			Streaming: streamingDelivery.New(streaming),
-			Saving:    savingDelivery.New(saving),
-			Sessions:  sessionDelivery.New(sessions),
 		},
 	}, nil
 }

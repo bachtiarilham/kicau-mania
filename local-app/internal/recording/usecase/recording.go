@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"kicau.local/edge/internal/apperror"
-	"kicau.local/edge/internal/mediaengine/media"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,12 +11,50 @@ import (
 	"time"
 
 	"go.uber.org/zap"
+	"kicau.local/edge/internal/apperror"
 	"kicau.local/edge/internal/infra/logger"
-	recording "kicau.local/edge/internal/mediaengine/saving/model"
-	"kicau.local/edge/internal/mediaengine/session/model"
+	"kicau.local/edge/internal/mediaengine/media"
+	"kicau.local/edge/internal/recording/model"
 )
 
-func (u *UseCase) capture(r *run, ctx context.Context, id string) {
+func (u *SessionUseCase) updateLocked(r *run) {
+	for i := range r.session.ChannelsState {
+		ch := &r.session.ChannelsState[i]
+		rec := r.records[ch.ID]
+		ch.RecordingState = rec.State
+		ch.SegmentCount = len(rec.Segments)
+		ch.Gaps = nil
+		for _, gap := range rec.Gaps {
+			ch.Gaps = append(ch.Gaps, model.Gap{StartedAt: gap.StartedAt, EndedAt: gap.EndedAt, Reason: gap.Reason})
+		}
+	}
+	if r.ctx.Err() == nil {
+		state := "RUNNING"
+		for _, ch := range r.session.ChannelsState {
+			if ch.State != "RUNNING" {
+				state = "DEGRADED"
+				break
+			}
+		}
+		for _, target := range r.session.Restreams {
+			running := false
+			for _, v := range u.restreams.Restreams() {
+				if v.Target == target.Target && v.State == "RUNNING" {
+					running = true
+				}
+			}
+			if !running {
+				state = "DEGRADED"
+			}
+		}
+		r.session.State = state
+	}
+	if err := u.journal.Save(context.Background(), r.session); err != nil {
+		logger.Error("session state persistence failed", zap.Error(err))
+	}
+}
+
+func (u *SessionUseCase) capture(r *run, ctx context.Context, id string) {
 	var gap time.Time
 	defer func() {
 		if !gap.IsZero() {
@@ -29,7 +65,7 @@ func (u *UseCase) capture(r *run, ctx context.Context, id string) {
 			if end.IsZero() {
 				end = time.Now().UTC()
 			}
-			rec.Gaps = append(rec.Gaps, recording.Gap{Reason: "source_interruption", StartedAt: gap, EndedAt: end})
+			rec.Gaps = append(rec.Gaps, model.Gap{Reason: "source_interruption", StartedAt: gap, EndedAt: end})
 			r.records[id] = rec
 			_ = u.recordings.Save(context.Background(), rec)
 		}
@@ -39,7 +75,7 @@ func (u *UseCase) capture(r *run, ctx context.Context, id string) {
 		rec := r.records[id]
 		attempt := len(rec.Segments) + 1
 		part := fmt.Sprintf("%s.segment-%06d%s.partial", rec.File, attempt, filepath.Ext(rec.File))
-		rec.Segments = append(rec.Segments, recording.Segment{File: part, StartedAt: time.Now().UTC()})
+		rec.Segments = append(rec.Segments, model.Segment{File: part, StartedAt: time.Now().UTC()})
 		r.records[id] = rec
 		for i := range r.session.ChannelsState {
 			if r.session.ChannelsState[i].ID == id {
@@ -66,7 +102,7 @@ func (u *UseCase) capture(r *run, ctx context.Context, id string) {
 				v := r.records[id]
 				v.Segments[len(v.Segments)-1].HasMedia = true
 				if !gap.IsZero() {
-					v.Gaps = append(v.Gaps, recording.Gap{Reason: "source_interruption", StartedAt: gap, EndedAt: time.Now().UTC()})
+					v.Gaps = append(v.Gaps, model.Gap{Reason: "source_interruption", StartedAt: gap, EndedAt: time.Now().UTC()})
 					gap = time.Time{}
 				}
 				r.records[id] = v
@@ -106,7 +142,7 @@ func (u *UseCase) capture(r *run, ctx context.Context, id string) {
 			}
 		}
 		if ctx.Err() != nil && !gap.IsZero() {
-			rec.Gaps = append(rec.Gaps, recording.Gap{Reason: "source_interruption", StartedAt: gap, EndedAt: last.EndedAt})
+			rec.Gaps = append(rec.Gaps, model.Gap{Reason: "source_interruption", StartedAt: gap, EndedAt: last.EndedAt})
 			gap = time.Time{}
 		}
 		r.records[id] = rec
@@ -125,7 +161,8 @@ func (u *UseCase) capture(r *run, ctx context.Context, id string) {
 		}
 	}
 }
-func (u *UseCase) safePath(path string) bool {
+
+func (u *SessionUseCase) safePath(path string) bool {
 	root, err := filepath.Abs(filepath.Join(u.opts.DataDir, "recordings"))
 	if err != nil {
 		return false
@@ -137,7 +174,8 @@ func (u *UseCase) safePath(path string) bool {
 	rel, err := filepath.Rel(root, absolute)
 	return err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) && !filepath.IsAbs(rel)
 }
-func (u *UseCase) finalize(ctx context.Context, rec recording.Recording, at time.Time) error {
+
+func (u *SessionUseCase) finalize(ctx context.Context, rec model.Recording, at time.Time) error {
 	if rec.State == "READY" || rec.State == "UPLOADED" {
 		return nil
 	}
@@ -154,9 +192,6 @@ func (u *UseCase) finalize(ctx context.Context, rec recording.Recording, at time
 			rec.Error = "recording segment path outside data directory"
 			return u.recordings.Save(ctx, rec)
 		}
-		// PCM delivery is best effort; it is not proof that a segment is empty.
-		// Include any bytes written and let the finalizer validate them. Only
-		// attempts that never wrote media bytes can be skipped as recorded gaps.
 		st, statErr := os.Stat(segment.File)
 		if segment.HasMedia || statErr == nil && st.Size() > 0 {
 			parts = append(parts, segment.File)
@@ -189,10 +224,9 @@ func (u *UseCase) finalize(ctx context.Context, rec recording.Recording, at time
 	}
 	return u.recordings.Save(ctx, rec)
 }
-func (u *UseCase) finish(r *run) {
+
+func (u *SessionUseCase) finish(r *run) {
 	defer close(r.done)
-	// Stop admission was committed before scheduling this function. All POSTs
-	// already admitted must complete registration before connection teardown.
 	u.admissions.Wait()
 	u.audio.Deactivate()
 	u.mu.Lock()
@@ -240,7 +274,7 @@ func (u *UseCase) finish(r *run) {
 		r.session.ChannelsState[i].State = "STOPPED"
 		r.session.ChannelsState[i].RecordingState = "FINALIZING"
 	}
-	records := []recording.Recording{}
+	records := []model.Recording{}
 	for _, rec := range r.records {
 		rec.State = "FINALIZING"
 		records = append(records, rec)
@@ -249,8 +283,6 @@ func (u *UseCase) finish(r *run) {
 	u.mu.Unlock()
 	failed := false
 	for _, rec := range records {
-		// A previous completion pass may already have committed/uploaded a result.
-		// Never overwrite its upload attempts/state when retrying journal completion.
 		current, readErr := u.recordings.List(context.Background())
 		if readErr != nil {
 			failed = true
@@ -312,7 +344,8 @@ func (u *UseCase) finish(r *run) {
 		u.active = nil
 	}
 }
-func (u *UseCase) recover(ctx context.Context) error {
+
+func (u *SessionUseCase) recover(ctx context.Context) error {
 	sessions, err := u.journal.List(ctx)
 	if err != nil {
 		return err
@@ -345,15 +378,13 @@ func (u *UseCase) recover(ctx context.Context) error {
 			if segment.EndedAt.IsZero() {
 				segment.EndedAt = now
 				segment.HasMedia = true
-				rec.Gaps = append(rec.Gaps, recording.Gap{Reason: "restart_uncertain", StartedAt: segment.StartedAt, EndedAt: now})
+				rec.Gaps = append(rec.Gaps, model.Gap{Reason: "restart_uncertain", StartedAt: segment.StartedAt, EndedAt: now})
 			}
 		}
 		if err := u.finalize(ctx, rec, now); err != nil {
 			return err
 		}
 	}
-	// Publish the finalization outcome in interrupted session status as well as
-	// in the upload manifest. Recovery never reopens media admission.
 	all, err = u.recordings.List(ctx)
 	if err != nil {
 		return err

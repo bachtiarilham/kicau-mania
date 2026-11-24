@@ -25,7 +25,7 @@ import (
 
 	"kicau.local/edge/internal/apperror"
 	"kicau.local/edge/internal/infra/storage/credentials"
-	"kicau.local/edge/internal/mediaengine/saving/model"
+	"kicau.local/edge/internal/recording/model"
 )
 
 var safeID = regexp.MustCompile(`^[a-zA-Z0-9_-]{1,128}$`)
