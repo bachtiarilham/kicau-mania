@@ -56,7 +56,7 @@ UPDATE media.recording_assets SET state='UPLOADED',updated_at=now() WHERE id=$1:
 
 -- name: DesktopAssetRead
 -- params: id uuid
-SELECT to_jsonb(a)||jsonb_build_object('arena_id',e.arena_id,'registration_id',m.registration_id,'user_id',t.user_id,'round_id',s.round_id,'snapshot',m.snapshot) FROM media.recording_assets a JOIN media.ingest_engines e ON e.id=a.engine_id JOIN media.ingest_sessions s ON s.id=a.ingestion_id JOIN media.ingest_mappings m ON m.ingestion_id=a.ingestion_id AND m.channel_id=a.channel_id JOIN competition.registrations t ON t.id=m.registration_id WHERE a.id=$1::uuid;
+SELECT to_jsonb(a)||jsonb_build_object('arena_id',e.arena_id,'registration_id',m.registration_id,'user_id',t.user_id,'round_id',s.round_id,'snapshot',m.snapshot,'user_phone',COALESCE(t.owner_phone, t.participant_phone, u.phone, '')) FROM media.recording_assets a JOIN media.ingest_engines e ON e.id=a.engine_id JOIN media.ingest_sessions s ON s.id=a.ingestion_id JOIN media.ingest_mappings m ON m.ingestion_id=a.ingestion_id AND m.channel_id=a.channel_id JOIN competition.registrations t ON t.id=m.registration_id LEFT JOIN iam.users u ON u.id=t.user_id WHERE a.id=$1::uuid;
 
 -- name: DesktopAssetList
 -- params: arena uuid, round uuid nullable, session text nullable, channel text nullable, cursor uuid nullable, limit int, user uuid nullable

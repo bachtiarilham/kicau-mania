@@ -101,6 +101,10 @@ func testDesktopMedia(t *testing.T, c *Container, call func(string, string, any,
 		t.Fatal("unsafe/mismatched recording")
 	}
 	call("GET", "/media/recordings/"+id+"/download", nil, 200)
+	call("POST", "/media/recordings/"+id+"/deliver/whatsapp", nil, 200)
+	call("POST", "/arenas/"+arena+"/rounds/"+round+"/deliveries/whatsapp", nil, 200)
+	call("GET", "/v/"+id, nil, 200)
+	call("GET", "/api/v1/public/watch/"+id, nil, 200)
 	payload["recording_id"] = "recording-second-session"
 	objects.present = false
 	*token = engineToken

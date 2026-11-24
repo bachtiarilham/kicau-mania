@@ -27,10 +27,16 @@ type Data interface {
 type Access interface {
 	Require(context.Context, string, string, ...string) error
 }
+
+type WhatsAppSender interface {
+	SendMessage(ctx context.Context, phone, message string) error
+}
+
 type UseCase struct {
-	DB      Data
-	ACL     Access
-	Objects model.Objects
+	DB       Data
+	ACL      Access
+	Objects  model.Objects
+	WhatsApp WhatsAppSender
 }
 
 var identifier = regexp.MustCompile(`^[a-zA-Z0-9_-]{1,128}$`)
@@ -379,4 +385,146 @@ func (u *UseCase) Download(c context.Context, actor, id string) (string, error) 
 		return "", apperror.ErrUnavailable
 	}
 	return u.Objects.Download(c, text(r, "object_key"))
+}
+
+func (u *UseCase) DeliverWhatsApp(c context.Context, actor, assetID, baseURL string) (*model.WhatsAppDeliveryResult, error) {
+	if !core.UUID(assetID) {
+		return nil, apperror.ErrInvalid
+	}
+	r, err := u.Read(c, actor, assetID)
+	if err != nil {
+		return nil, err
+	}
+	if text(r, "state") != "UPLOADED" {
+		return nil, apperror.ErrConflict
+	}
+
+	regID := text(r, "registration_id")
+	phone := text(r, "user_phone")
+
+	birdName := "Burung Peserta"
+	ownerName := "Peserta Lomba"
+	if snap, ok := r["snapshot"].(map[string]any); ok {
+		if b, ok := snap["bird_name"].(string); ok && b != "" {
+			birdName = b
+		}
+		if o, ok := snap["registrant_name"].(string); ok && o != "" {
+			ownerName = o
+		}
+	}
+
+	streamURL := fmt.Sprintf("%s/v/%s", strings.TrimRight(baseURL, "/"), assetID)
+
+	res := &model.WhatsAppDeliveryResult{
+		RecordingID:    assetID,
+		RegistrationID: regID,
+		RecipientPhone: phone,
+		StreamingURL:   streamURL,
+	}
+
+	if phone == "" {
+		res.Status = "SKIPPED"
+		res.Error = "Nomor WhatsApp peserta tidak terdaftar"
+		return res, nil
+	}
+
+	messageText := fmt.Sprintf(
+		"🏆 *REKAMAN RESMI LOMBA - KICAU MANIA* 🏆\n\n"+
+			"Halo Bpk/Ibu *%s*,\n"+
+			"Terima kasih atas partisipasinya dalam gelaran resmi kicau mania!\n\n"+
+			"📋 *Detail Sesi Lomba:*\n"+
+			"• Burung: *%s*\n"+
+			"• Saluran / Gantangan: *%s*\n\n"+
+			"🎥 *Tonton Rekaman CCTV Full HD (10 Menit):*\n"+
+			"👉 %s\n\n"+
+			"_(Dapat diputar langsung di HP tanpa install aplikasi & tersedia tombol download)_\n"+
+			"Salam Kicau Mania Juara! 🕊️",
+		ownerName,
+		birdName,
+		strings.ToUpper(text(r, "channel_id")),
+		streamURL,
+	)
+
+	if u.WhatsApp != nil {
+		if err := u.WhatsApp.SendMessage(c, phone, messageText); err != nil {
+			res.Status = "FAILED"
+			res.Error = err.Error()
+			return res, nil
+		}
+	}
+
+	res.Status = "SENT"
+	return res, nil
+}
+
+func (u *UseCase) BroadcastRoundWhatsApp(c context.Context, actor, arenaID, roundID, baseURL string) ([]model.WhatsAppDeliveryResult, error) {
+	if !core.UUID(arenaID) || !core.UUID(roundID) {
+		return nil, apperror.ErrInvalid
+	}
+	if err := u.ACL.Require(c, actor, arenaID, "ADMIN", "OPERATOR"); err != nil {
+		return nil, err
+	}
+	assets, err := u.List(c, actor, arenaID, roundID, "", "", "", 100)
+	if err != nil {
+		return nil, err
+	}
+
+	var results []model.WhatsAppDeliveryResult
+	for _, a := range assets {
+		if text(a, "state") != "UPLOADED" {
+			continue
+		}
+		res, err := u.DeliverWhatsApp(c, actor, text(a, "id"), baseURL)
+		if err != nil {
+			results = append(results, model.WhatsAppDeliveryResult{
+				RecordingID: text(a, "id"),
+				Status:      "FAILED",
+				Error:       err.Error(),
+			})
+			continue
+		}
+		results = append(results, *res)
+	}
+	return results, nil
+}
+
+func (u *UseCase) PublicWatch(c context.Context, assetID string) (*model.PublicVideoWatch, error) {
+	if !core.UUID(assetID) {
+		return nil, apperror.ErrInvalid
+	}
+	r, err := u.DB.One(c, "DesktopAssetRead", assetID)
+	if err != nil {
+		return nil, err
+	}
+	if text(r, "state") != "UPLOADED" {
+		return nil, apperror.ErrNotFound
+	}
+	if u.Objects == nil {
+		return nil, apperror.ErrUnavailable
+	}
+	downloadURL, err := u.Objects.Download(c, text(r, "object_key"))
+	if err != nil {
+		return nil, err
+	}
+
+	birdName := "Burung Peserta"
+	ownerName := "Peserta Lomba"
+	if snap, ok := r["snapshot"].(map[string]any); ok {
+		if b, ok := snap["bird_name"].(string); ok && b != "" {
+			birdName = b
+		}
+		if o, ok := snap["registrant_name"].(string); ok && o != "" {
+			ownerName = o
+		}
+	}
+
+	return &model.PublicVideoWatch{
+		RecordingID:   assetID,
+		BirdName:      birdName,
+		OwnerName:     ownerName,
+		GantanganCode: strings.ToUpper(text(r, "channel_id")),
+		StreamingURL:  downloadURL,
+		DownloadURL:   downloadURL,
+		Duration:      "10:00 Menit",
+	}, nil
 }

@@ -116,11 +116,13 @@ func New(ctx context.Context, cfg config.Config) (*Container, error) {
 			return nil, err
 		}
 	}
+	waSender := mediaService.NewGenericWhatsAppGateway(cfg.WhatsAppEndpoint, cfg.WhatsAppAPIKey)
 	mh := &mediaDelivery.Handler{
 		UC: &mediaUC.UseCase{
-			DB:      db,
-			ACL:     c.User,
-			Objects: objects,
+			DB:       db,
+			ACL:      c.User,
+			Objects:  objects,
+			WhatsApp: waSender,
 		},
 	}
 

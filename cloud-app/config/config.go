@@ -16,6 +16,7 @@ import (
 
 type Config struct {
 	MediaS3Endpoint, MediaS3Region, MediaS3Bucket, MediaS3Key, MediaS3Secret string
+	WhatsAppEndpoint, WhatsAppAPIKey                                         string
 	HTTPAddress                                                              string
 	DatabaseURL                                                              string
 	RedisURL                                                                 string
@@ -38,6 +39,8 @@ func Load(path string) (Config, error) {
 	c.MediaS3Bucket = env("MEDIA_S3_BUCKET", "")
 	c.MediaS3Key = env("MEDIA_S3_ACCESS_KEY", "")
 	c.MediaS3Secret = env("MEDIA_S3_SECRET_KEY", "")
+	c.WhatsAppEndpoint = env("WHATSAPP_ENDPOINT", "")
+	c.WhatsAppAPIKey = env("WHATSAPP_API_KEY", "")
 	if c.MediaS3Bucket != "" && (c.MediaS3Key == "" || c.MediaS3Secret == "") {
 		return c, fmt.Errorf("MEDIA_S3_ACCESS_KEY and MEDIA_S3_SECRET_KEY are required with MEDIA_S3_BUCKET")
 	}

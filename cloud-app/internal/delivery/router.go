@@ -50,6 +50,9 @@ func Router(opts Options, h Handlers) *gin.Engine {
 	if h.Identity != nil {
 		h.Identity.PublicRoutes(r.Group("/api/v1/auth"))
 	}
+	if h.Media != nil {
+		h.Media.PublicRoutes(r)
+	}
 
 	g := r.Group("/api/v1", middleware.RequireUser(h.Verifier))
 

@@ -49,3 +49,22 @@ type Objects interface {
 	Parts(context.Context, string, string) ([]Part, error)
 	Download(context.Context, string) (string, error)
 }
+
+type WhatsAppDeliveryResult struct {
+	RecordingID    string `json:"recording_id"`
+	RegistrationID string `json:"registration_id"`
+	RecipientPhone string `json:"recipient_phone"`
+	Status         string `json:"status"` // SENT, FAILED, SKIPPED
+	StreamingURL   string `json:"streaming_url"`
+	Error          string `json:"error,omitempty"`
+}
+
+type PublicVideoWatch struct {
+	RecordingID   string `json:"recording_id"`
+	BirdName      string `json:"bird_name"`
+	OwnerName     string `json:"owner_name"`
+	GantanganCode string `json:"gantangan_code"`
+	StreamingURL  string `json:"streaming_url"`
+	DownloadURL   string `json:"download_url"`
+	Duration      string `json:"duration"`
+}
