@@ -41,3 +41,22 @@ func TestGenericWhatsAppGateway_NoEndpointGraceful(t *testing.T) {
 		t.Fatalf("expected nil error on empty endpoint, got: %v", err)
 	}
 }
+
+func TestGenericWhatsAppGateway_CircuitBreakerTrip(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "gateway internal error", http.StatusInternalServerError)
+	}))
+	defer server.Close()
+
+	gw := service.NewGenericWhatsAppGateway(server.URL, "test-key")
+	// Make 3 requests to trigger ReadyToTrip (failureRatio >= 0.6 and Requests >= 3)
+	for i := 0; i < 3; i++ {
+		_ = gw.SendMessage(context.Background(), "081234567890", "fail")
+	}
+
+	// 4th request should now be blocked by the Circuit Breaker
+	err := gw.SendMessage(context.Background(), "081234567890", "blocked")
+	if err == nil {
+		t.Fatal("expected circuit breaker error, got nil")
+	}
+}

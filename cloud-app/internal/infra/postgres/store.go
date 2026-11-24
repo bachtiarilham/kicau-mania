@@ -78,6 +78,19 @@ func (s *Store) Do(ctx context.Context, f func(context.Context) error) error {
 	}
 	return classify(tx.Commit(ctx))
 }
+
+// WithTransaction executes f within a database transaction context, matching the Clean Architecture standard.
+func (s *Store) WithTransaction(ctx context.Context, f func(context.Context) error) error {
+	return s.Do(ctx, f)
+}
+
+// ExtractTx returns the active pgx.Tx bound to ctx, or nil if no transaction is active.
+func ExtractTx(ctx context.Context) pgx.Tx {
+	if tx, ok := ctx.Value(txKey{}).(pgx.Tx); ok {
+		return tx
+	}
+	return nil
+}
 func decode(b []byte) (model.Record, error) {
 	var r model.Record
 	d := json.NewDecoder(bytes.NewReader(b))
