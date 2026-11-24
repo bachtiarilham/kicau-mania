@@ -315,10 +315,12 @@ func handleVerify(verifier *verify.Verifier, targets []config.TargetInfo, args [
 func handleEvidence(verifier *verify.Verifier, targets []config.TargetInfo, args []string) {
 	fs := flag.NewFlagSet("evidence", flag.ExitOnError)
 	format := fs.String("format", "markdown", "Output format: markdown, json")
+	noTests := fs.Bool("no-tests", false, "Skip automated unit tests")
+	noSmoke := fs.Bool("no-smoke", false, "Skip HTTP smoke checks")
 	_ = fs.Parse(args)
 
 	for _, t := range targets {
-		rep, err := verifier.CollectEvidence(t, true, true)
+		rep, err := verifier.CollectEvidence(t, !*noTests, !*noSmoke)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error collecting evidence: %v\n", err)
 			continue
