@@ -25,7 +25,7 @@ USAGE:
 
 TARGETS:
   cloud       Cloud Backend API (cloud-app, default port 8080)
-  edge        Local Edge Media Engine (local-app, default port 8081)
+  edge        Local Edge Media Engine (local-app, default port 8090)
   desktop     Desktop Operator HUD (kicau-mania-desktop, default port 5173)
   all         Run command across all configured targets
 
