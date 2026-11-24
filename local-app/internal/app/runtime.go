@@ -6,7 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"go.uber.org/zap"
-	cloudMedia "kicau.local/edge/internal/cloudmedia/service"
+	cloudMedia "kicau.local/edge/internal/cloud/service"
 	desktopDelivery "kicau.local/edge/internal/delivery/rest/desktop"
 	"net"
 	"net/http"

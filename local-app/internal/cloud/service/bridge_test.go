@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"kicau.local/edge/internal/recording/model"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -15,6 +14,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"kicau.local/edge/internal/recording/model"
 )
 
 func TestUnmappedRecordingStaysLocal(t *testing.T) {
@@ -60,6 +61,7 @@ func TestMKVWaitsForCloudContainerSupport(t *testing.T) {
 		t.Fatal("local file lost", e)
 	}
 }
+
 func TestDurableUploadAndMetadataRetryAfterDesktopCloses(t *testing.T) {
 	dir := t.TempDir()
 	b, _ := New(dir)

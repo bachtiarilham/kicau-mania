@@ -23,7 +23,7 @@ func (p *fakeProcess) Stop()                 { p.once.Do(func() { close(p.done) 
 func TestRestreamRetryAndTargetStop(t *testing.T) {
 	w := NewRestreamWorker()
 	defer w.Close()
-	waits := make(chan time.Duration, 1)
+	waits := make(chan time.Duration, 4)
 	advance := make(chan struct{})
 	w.wait = func(ctx context.Context, d time.Duration) bool {
 		waits <- d

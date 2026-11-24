@@ -1,5 +1,3 @@
-// Package service implements durable cloud upload without transferring ownership
-// of recording or upload workers to the desktop process.
 package service
 
 import (
@@ -12,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	cloudModel "kicau.local/edge/internal/cloudmedia/model"
 	"net"
 	"net/http"
 	"net/url"
@@ -24,6 +21,7 @@ import (
 	"time"
 
 	"kicau.local/edge/internal/apperror"
+	cloudModel "kicau.local/edge/internal/cloud/model"
 	"kicau.local/edge/internal/infra/storage/credentials"
 	"kicau.local/edge/internal/recording/model"
 )
@@ -34,6 +32,7 @@ type Pairing = cloudModel.Pairing
 type Mapping = cloudModel.Mapping
 type Ingestion = cloudModel.Ingestion
 type Progress = cloudModel.Progress
+
 type Bridge struct {
 	mu     sync.Mutex
 	dir    string
@@ -45,8 +44,18 @@ func New(dir string) (*Bridge, error) {
 	if e := os.MkdirAll(dir, 0700); e != nil {
 		return nil, e
 	}
-	return &Bridge{dir: dir, client: &http.Client{Timeout: 10 * time.Minute, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}, active: map[string]bool{}}, nil
+	return &Bridge{
+		dir: dir,
+		client: &http.Client{
+			Timeout: 10 * time.Minute,
+			CheckRedirect: func(*http.Request, []*http.Request) error {
+				return http.ErrUseLastResponse
+			},
+		},
+		active: map[string]bool{},
+	}, nil
 }
+
 func validBase(s string) bool {
 	u, e := url.Parse(s)
 	if e != nil || u.Hostname() == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" {
@@ -55,6 +64,7 @@ func validBase(s string) bool {
 	ip := net.ParseIP(u.Hostname())
 	return u.Scheme == "https" || (u.Scheme == "http" && (u.Hostname() == "localhost" || ip != nil && ip.IsLoopback()))
 }
+
 func (b *Bridge) save(name string, v any, secret bool) error {
 	data, e := json.Marshal(v)
 	if e != nil {
@@ -86,6 +96,7 @@ func (b *Bridge) save(name string, v any, secret bool) error {
 	}
 	return os.Rename(f.Name(), filepath.Join(b.dir, name))
 }
+
 func (b *Bridge) load(name string, v any, secret bool) error {
 	data, e := os.ReadFile(filepath.Join(b.dir, name))
 	if e != nil {
@@ -99,6 +110,7 @@ func (b *Bridge) load(name string, v any, secret bool) error {
 	}
 	return json.Unmarshal(data, v)
 }
+
 func (b *Bridge) Configure(p Pairing) error {
 	if !validBase(p.Base) || len(p.Token) != 64 || !safeID.MatchString(p.EngineID) || p.ArenaID == "" {
 		return apperror.ErrInvalid
@@ -115,6 +127,7 @@ func (b *Bridge) Configure(p Pairing) error {
 	}
 	return b.save("pairing.bin", p, true)
 }
+
 func (b *Bridge) Status() map[string]any {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -122,6 +135,7 @@ func (b *Bridge) Status() map[string]any {
 	e := b.load("pairing.bin", &p, true)
 	return map[string]any{"paired": e == nil, "base_url": p.Base, "engine_id": p.EngineID, "arena_id": p.ArenaID}
 }
+
 func (b *Bridge) Bind(in Ingestion) error {
 	if !safeID.MatchString(in.SessionID) || in.ID == "" || len(in.Mappings) < 1 || len(in.Mappings) > 24 {
 		return apperror.ErrInvalid
@@ -153,6 +167,7 @@ func (b *Bridge) Bind(in Ingestion) error {
 	}
 	return b.save("session-"+in.SessionID+".json", in, false)
 }
+
 func (b *Bridge) Progress(id string) Progress {
 	if !safeID.MatchString(id) {
 		return Progress{State: "FAILED"}
@@ -165,12 +180,14 @@ func (b *Bridge) Progress(id string) Progress {
 	}
 	return p
 }
+
 func (b *Bridge) progress(id string, p Progress) {
 	p.Updated = time.Now().UTC()
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	_ = b.save("upload-"+id+".json", p, false)
 }
+
 func (b *Bridge) Retry(id string) error {
 	if !safeID.MatchString(id) {
 		return apperror.ErrInvalid
@@ -188,9 +205,11 @@ func (b *Bridge) Retry(id string) error {
 	}
 	return b.save("upload-"+id+".json", p, false)
 }
+
 func (b *Bridge) Put(context.Context, string, string) error {
 	return errors.New("recording metadata required")
 }
+
 func (b *Bridge) call(c context.Context, p Pairing, method, path string, body any, out any) error {
 	var raw io.Reader
 	if body != nil {
@@ -234,6 +253,7 @@ type remotePart struct {
 	Number int32  `json:"number"`
 	SHA256 string `json:"sha256"`
 }
+
 type remote struct {
 	ObjectKey string       `json:"object_key"`
 	ID        string       `json:"id"`
@@ -257,7 +277,11 @@ func (b *Bridge) PutRecording(c context.Context, r model.Recording) (err error) 
 	var mapping Ingestion
 	me := b.load("session-"+r.RoundID+".json", &mapping, false)
 	b.mu.Unlock()
-	defer func() { b.mu.Lock(); delete(b.active, r.ID); b.mu.Unlock() }()
+	defer func() {
+		b.mu.Lock()
+		delete(b.active, r.ID)
+		b.mu.Unlock()
+	}()
 	progress := b.Progress(r.ID)
 	failureMessage := "Upload belum selesai; file lokal dipertahankan"
 	defer func() {
@@ -318,7 +342,16 @@ func (b *Bridge) PutRecording(c context.Context, r model.Recording) (err error) 
 		return e
 	}
 	var upload remote
-	payload := map[string]any{"container": container, "session_id": r.RoundID, "channel_id": r.ChannelID, "recording_id": r.ID, "size_bytes": stat.Size(), "sha256": hash, "started_at": r.StartedAt, "ended_at": r.EndedAt}
+	payload := map[string]any{
+		"container":    container,
+		"session_id":   r.RoundID,
+		"channel_id":   r.ChannelID,
+		"recording_id": r.ID,
+		"size_bytes":   stat.Size(),
+		"sha256":       hash,
+		"started_at":   r.StartedAt,
+		"ended_at":     r.EndedAt,
+	}
 	if e = b.call(c, p, "POST", "/uploads", payload, &upload); e != nil {
 		return e
 	}

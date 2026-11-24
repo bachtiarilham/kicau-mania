@@ -8,11 +8,13 @@ type Pairing struct {
 	EngineID string `json:"engine_id"`
 	ArenaID  string `json:"arena_id"`
 }
+
 type Mapping struct {
 	ChannelID      string `json:"channel_id"`
 	RegistrationID string `json:"registration_id"`
 	GantanganID    string `json:"gantangan_id"`
 }
+
 type Ingestion struct {
 	ID        string    `json:"id"`
 	EngineID  string    `json:"engine_id"`
@@ -20,6 +22,7 @@ type Ingestion struct {
 	RoundID   string    `json:"round_id"`
 	Mappings  []Mapping `json:"mappings"`
 }
+
 type Progress struct {
 	SHA256   string    `json:"sha256,omitempty"`
 	Modified time.Time `json:"file_modified_at,omitempty"`

@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/gin-gonic/gin"
 	"kicau.local/edge/internal/apperror"
-	bridge "kicau.local/edge/internal/cloudmedia/model"
+	bridge "kicau.local/edge/internal/cloud/model"
 	"kicau.local/edge/internal/delivery/rest/response"
 	"net/http"
 	"os"

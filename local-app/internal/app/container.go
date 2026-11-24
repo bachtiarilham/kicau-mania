@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"go.uber.org/zap"
-	cloudMedia "kicau.local/edge/internal/cloudmedia/service"
+	cloudMedia "kicau.local/edge/internal/cloud/service"
 	desktopDelivery "kicau.local/edge/internal/delivery/rest/desktop"
 	"kicau.local/edge/internal/infra/logger"
 	setup "kicau.local/edge/internal/setup/model"
