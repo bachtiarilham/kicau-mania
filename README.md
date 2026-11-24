@@ -1,29 +1,86 @@
 # Kicau Mania
 
-Sistem pengelolaan lomba dan media arena. **Cloud-app menangani data bisnis; local-app menangani media di arena.** Frontend menggunakan API cloud untuk login, registrasi dan penilaian, lalu mengakses engine melalui LAN untuk live dan metrik.
+Sistem ekosistem terpadu pengelolaan kompetisi burung berkicau, penayangan live stream multi-kamera arena, perekaman presisi, dan penjurian digital.
 
-Mulai dari **[indeks dokumentasi](docs/README.md)** dan **[alur integrasi local-app–cloud-app](docs/integration.md)**. Panduan integrasi membedakan fitur yang tersedia dari endpoint cloud pendamping engine yang belum aktif.
+Ekosistem Kicau Mania terdiri dari tiga komponen utama:
+1. **`cloud-app`**: Backend API terpusat untuk autentikasi, manajemen turnamen, jadwal ronde, penjurian, registrasi peserta, dan sinkronisasi media (Port `8080`).
+2. **`local-app`**: Edge Media Engine yang berjalan di komputer arena lokal untuk relay RTSP (MediaMTX), analisis audio, restreaming, perekaman MKV H.265/HEVC, dan upload multipart terisolasi (Port `8090`).
+3. **`kicau-mania-desktop`**: Aplikasi desktop Windows (Wails v3 + Svelte 5) yang menyediakan Tactical Operator Console (24 kamera arena) dan Layar Penilaian Dewan Juri.
 
-## Bagian sistem
+---
 
-| Bagian | Tanggung jawab | Mulai menjalankan |
-| --- | --- | --- |
-| Local-app | Setup kamera/NVR, live LAN, analisis audio, sesi media, recording, restream dan upload. | [README local-app](local-app/README.md) |
-| Cloud-app | Login email/password atau Google, arena, peserta, registrasi/pembayaran, penjurian dan hasil di PostgreSQL. | [README cloud-app](cloud-app/README.md) |
-| Frontend | Tampilan operator/juri; menghubungkan API bisnis cloud dengan API/media LAN. | [Alur akses dan batas integrasi](docs/integration.md) |
+## 1. Komponen Ekosistem
 
-Aplikasi backend dijalankan dari direktori masing-masing; tidak ada satu perintah startup bersama pada root repo. Local-app menyediakan mode LAN mandiri tanpa login cloud. Mode cloud dengan tiket playback masih memerlukan implementasi endpoint pendamping pada cloud-app; perpindahan fase ronde saat ini belum otomatis mengendalikan media.
+| Komponen | Peran & Tanggung Jawab | Port Default | Panduan |
+| :--- | :--- | :--- | :--- |
+| **`cloud-app`** | Master data bisnis PostgreSQL: Auth (JWT/Cookie), Arenas, Competitions, Rounds, Judging Sessions, Media Upload Gateways. | `8080` | [README cloud-app](cloud-app/README.md) |
+| **`local-app`** | Edge Media Engine: RTSP ingest (MediaMTX), audio metering (FFmpeg PCM), stream copy H.265, storage segmen & upload worker. | `8090` | [README local-app](local-app/README.md) |
+| **`kicau-mania-desktop`** | Aplikasi Desktop Windows: HUD Juri (Grid 3x2), Operator Console (Grid 24 Gantangan), LibVLC HWND hardware decoding, Quick Save. | `5173` (Vite dev) | [README desktop](../wails/kicau-mania-desktop/README.md) |
+| **`agent-ctl`** | Standalone Controller CLI: Orchestrator status proses, healthcheck, automated test verification, dan evidence reporting. | N/A | [Runbook CLI](tools/agent-ctl/README.md) |
 
-## Panduan proyek
+---
 
-- [Dokumentasi local-app](local-app/docs/README.md): alur media, peta kode, setup API dan penerimaan perangkat.
-- [Panduan bisnis cloud](cloud-app/docs/ALUR-BISNIS.md) dan [API cloud](cloud-app/docs/API.md).
-- [Database, migrasi dan query](cloud-app/db/README.md) serta [ERD](cloud-app/db/ERD.md).
-- [Runbook deployment](cloud-app/deployment/devops_runbook.md) dan [belajar deployment](cloud-app/deployment/BELAJAR-DEPLOYMENT.md).
+## 2. Arsitektur Bersih (Clean Architecture)
 
-[Indeks dokumentasi](docs/README.md) juga memuat catatan kerja, laporan historis, dan template referensi. Semua file `.txt` hasil diskusi tetap berada di root dengan nama dan isi aslinya; catatan tersebut bukan pengganti status implementasi pada panduan aktif.
+Seluruh komponen backend Go (`cloud-app`, `local-app`, dan `kicau-mania-desktop`) mengadopsi standar **Vertical Slice (Domain-First Modular Monolith)**:
+```
+internal/
+├── <domain-a>/
+│   ├── model/         # Entitas data, DTO, dan konstanta domain
+│   ├── repository/    # Database store / driver persistensi lokal
+│   ├── gateway/       # Adapter HTTP/WebSocket ke layanan eksternal
+│   ├── usecase/       # Logika bisnis inti (independen dari transport/UI)
+│   └── delivery/      # Transport handler (REST Gin / Wails RPC)
+├── infra/             # Shared low-level adapters (FFmpeg, MediaMTX, Logger, S3)
+└── app/               # Composition root & lifecycle wiring
+```
 
+### Domain Utama:
+- **`local-app`**: `camera`, `recording`, `streaming`, `cloud` + `infra/` (`ffmpeg`, `mediamtx`, `media`, `logger`, `storage`, `runtime`, `network`).
+- **`cloud-app`**: `identity`, `competition`, `asset`, `media` + `infra/` (`database`, `logger`, `storage`).
+- **`kicau-mania-desktop`**: `auth`, `config`, `engine`, `player`, `recording` + `bindings/`, `container/`, `app/`.
 
-## Desktop CCTV Windows
+---
 
-Aplikasi Wails berada di [wails/kicau-mania-desktop](D:/ilham/workdir/wails/kicau-mania-desktop/README.md). Desktop mengontrol local-app pada komputer yang sama, menonton RTSP melalui mpv native, serta mengatur mapping dan upload rekaman ke cloud. Integrasi media membutuhkan migrasi cloud 011 additif dan object storage privat; tidak ada reset database operasional otomatis.
+## 3. Kontrol Operasional: `agent-ctl` CLI
+
+Pengontrolan proses, pengujian otomatis, dan audit verifikasi sistem dilakukan secara terpusat melalui binary mandiri: **`bin/agent-ctl.exe`**.
+
+```powershell
+# 1. Cek status seluruh service (cloud, edge, desktop)
+bin\agent-ctl.exe status
+
+# 2. Verifikasi automated unit tests & AST rules
+bin\agent-ctl.exe verify cloud --no-smoke
+bin\agent-ctl.exe verify edge --no-smoke
+bin\agent-ctl.exe verify desktop --no-smoke
+
+# 3. Kontrol proses service
+bin\agent-ctl.exe start edge
+bin\agent-ctl.exe stop edge
+
+# 4. Generate laporan bukti kerja terverifikasi (Evidence Report)
+bin\agent-ctl.exe evidence edge --no-smoke
+```
+
+---
+
+## 4. Rujukan Peta Fitur (Feature Maps)
+
+Sebelum menambahkan atau memodifikasi interaksi bisnis atau UI/API, konsultasikan dokumen spesifikasi pada folder `feature-map/`:
+- **Desktop HUD & Operator**: `../wails/kicau-mania-desktop/feature-map/`
+  - `01-auth-and-session.md`
+  - `02-operator-console.md`
+  - `03-juri-hud.md`
+  - `04-recordings-and-whatsapp.md`
+  - `05-desktop-settings.md`
+- **Cloud Backend API**: `cloud-app/feature-map/`
+- **Edge Media Engine**: `local-app/feature-map/`
+
+---
+
+## 5. Dokumentasi Terkait
+
+- **[Indeks Dokumentasi Lengkap](docs/README.md)**: Rujukan integrasi, diagram interaksi, dan catatan arsitektur.
+- **[Panduan Integrasi Local-Cloud](docs/integration.md)**: Alur pairing, binding sesi ronde, dan upload rekaman.
+- **[Aturan Pengembang (GEMINI.md)](GEMINI.md)**: Aturan Clean Architecture, Zero-Comment Rule, dan protokol verifikasi agen.
