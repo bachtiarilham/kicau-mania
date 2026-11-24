@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"kicau.local/edge/config"
-	setup "kicau.local/edge/internal/setup/model"
+	cameraModel "kicau.local/edge/internal/camera/model"
 	"os"
 	"path/filepath"
 	"testing"
@@ -25,7 +25,7 @@ func TestH264ConfigurationCannotStartRuntime(t *testing.T) {
 	t.Setenv("KICAU_UNIT_RESTORE_H264", "1")
 	dir := t.TempDir()
 	_, e = NewContainer(context.Background(), config.Config{FFprobe: binary, DataDir: dir, MediaConfig: filepath.Join(dir, "mediamtx.json"), Channels: []config.Channel{{ID: "one", Source: "rtsp://192.0.2.1/nvr"}}})
-	var failure *setup.Failure
+	var failure *cameraModel.Failure
 	if !errors.As(e, &failure) || failure.Code != "UNSUPPORTED_VIDEO_CODEC" {
 		t.Fatal("stored/initial H264 source admitted", e)
 	}

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"kicau.local/edge/internal/setup/model"
+	"kicau.local/edge/internal/camera/model"
 )
 
 // Inspector reads a bounded sample; a successful TCP connection alone is not a valid stream.

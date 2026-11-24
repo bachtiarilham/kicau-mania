@@ -1,29 +1,88 @@
-// Package setup parses local setup requests and maps diagnostic results to HTTP.
 package setup
 
 import (
 	"context"
+	"net/url"
+
 	"github.com/gin-gonic/gin"
 	"kicau.local/edge/internal/delivery/rest/response"
-	"kicau.local/edge/internal/setup/model"
+	"kicau.local/edge/internal/infra/network"
 )
 
-type UseCase interface {
-	Guidance(string) model.Diagnostic
-	Status(context.Context) model.RuntimeStatus
-	Networks() []model.Network
-	Check(context.Context) []model.Diagnostic
-	Configuration(context.Context) (model.Configuration, error)
-	Start(model.JobRequest) (model.Job, error)
-	Job(string) (model.Job, error)
+type Diagnostic struct {
+	Component string `json:"component,omitempty"`
+	Code      string `json:"code"`
+	Message   string `json:"message,omitempty"`
+	Advice    string `json:"advice,omitempty"`
+}
+
+type ViewChannel struct {
+	ID             string `json:"id"`
+	IP             string `json:"ip,omitempty"`
+	Source         string `json:"source"`
+	Codec          string `json:"codec,omitempty"`
+	HasAudio       bool   `json:"has_audio"`
+	Width          int    `json:"width,omitempty"`
+	Height         int    `json:"height,omitempty"`
+	HasCredentials bool   `json:"has_credentials,omitempty"`
+}
+
+type Configuration struct {
+	Version  int           `json:"version"`
+	LANIP    string        `json:"lan_ip"`
+	LANCIDR  string        `json:"lan_cidr"`
+	NVRIP    string        `json:"nvr_ip,omitempty"`
+	NVRMAC   string        `json:"nvr_mac,omitempty"`
+	Channels []ViewChannel `json:"channels"`
+}
+
+type RuntimeStatus struct {
+	ChecksJobID    string        `json:"checks_job_id,omitempty"`
+	SourceChecks   any           `json:"source_checks,omitempty"`
+	CapacityNotice string        `json:"capacity_notice,omitempty"`
+	Advice         string        `json:"advice,omitempty"`
+	Channels       []ViewChannel `json:"channels"`
+	Configured     bool          `json:"configured"`
+	Ready          bool          `json:"ready"`
+	ErrorCode      string        `json:"error_code,omitempty"`
+	Session        any           `json:"session,omitempty"`
+	Targets        []string      `json:"targets"`
+	APIURLs        []string      `json:"api_urls"`
+}
+
+type JobRequest struct {
+	Action string `json:"action"`
+}
+
+type Job struct {
+	ID        string `json:"id"`
+	State     string `json:"state"`
+	Progress  string `json:"progress"`
+	Result    any    `json:"result,omitempty"`
+	Code      string `json:"code,omitempty"`
+	Message   string `json:"message,omitempty"`
+}
+
+type SystemInfo interface {
+	Guidance(string) Diagnostic
+	Status(context.Context) RuntimeStatus
+	Networks() []network.Network
+	Check(context.Context) []Diagnostic
+	Configuration(context.Context) (Configuration, error)
+	Start(JobRequest) (Job, error)
+	Job(string) (Job, error)
 	Cancel(string) error
 }
+
 type Handler struct {
-	uc    UseCase
+	sys   SystemInfo
 	nonce string
 }
 
-func New(u UseCase, nonce string) *Handler { return &Handler{u, nonce} }
+func New(sys SystemInfo, nonce string) *Handler {
+	return &Handler{sys: sys, nonce: nonce}
+}
+
 func (h *Handler) Routes(g *gin.RouterGroup) {
 	g.GET("/guidance/:code", h.Guidance)
 	g.GET("/bootstrap", h.bootstrap)
@@ -34,46 +93,16 @@ func (h *Handler) Routes(g *gin.RouterGroup) {
 	g.DELETE("/jobs/:id", h.cancelJob)
 }
 
-// BootstrapResponse contains a per-process local control nonce and available IPv4 networks.
-type BootstrapResponse struct {
-	Nonce    string          `json:"nonce"`
-	Networks []model.Network `json:"networks"`
-}
-
-// bootstrap godoc
-// @Summary Ambil nonce kontrol lokal dan interface LAN
-// @Description Mode lan, localhost pada PC engine saja. Gunakan data.nonce pada Authorize LocalControl untuk request mutasi berikutnya; nonce bukan API_TOKEN dan tidak diberikan kepada penonton LAN.
-// @Tags Setup
-// @Produce json
-// @Success 200 {object} response.Response{data=BootstrapResponse}
-// @Failure 403 {object} response.Response
-// @Router /api/v1/setup/bootstrap [get]
 func (h *Handler) bootstrap(c *gin.Context) {
-	response.Success(c, "Local control", gin.H{"nonce": h.nonce, "networks": h.uc.Networks()})
+	response.Success(c, "Local control", gin.H{"nonce": h.nonce, "networks": h.sys.Networks()})
 }
 
-// checks godoc
-// @Summary Periksa binary dan encoder aplikasi
-// @Description Mode lan, localhost saja. Memeriksa FFmpeg, ffprobe, MediaMTX dan encoder; hasil pemeriksaan tidak otomatis memulai sesi.
-// @Tags Setup
-// @Produce json
-// @Success 200 {object} response.Response{data=[]model.Diagnostic}
-// @Failure 403 {object} response.Response
-// @Router /api/v1/setup/checks [get]
 func (h *Handler) checks(c *gin.Context) {
-	response.Success(c, "Application checks", h.uc.Check(c.Request.Context()))
+	response.Success(c, "Application checks", h.sys.Check(c.Request.Context()))
 }
 
-// configuration godoc
-// @Summary Baca konfigurasi sumber yang disamarkan
-// @Description Mode lan, localhost saja. Username, password, credential_ref, userinfo dan query RTSP tidak dikembalikan. Probe dan penyimpanan melalui jobs action apply.
-// @Tags Setup
-// @Produce json
-// @Success 200 {object} response.Response{data=model.Configuration}
-// @Failure 403,404,503 {object} response.Response
-// @Router /api/v1/setup/configuration [get]
 func (h *Handler) configuration(c *gin.Context) {
-	v, e := h.uc.Configuration(c.Request.Context())
+	v, e := h.sys.Configuration(c.Request.Context())
 	if e != nil {
 		response.WriteError(c, e)
 		return
@@ -81,24 +110,13 @@ func (h *Handler) configuration(c *gin.Context) {
 	response.Success(c, "Configuration", v)
 }
 
-// startJob godoc
-// @Summary Jalankan discovery, profil, probe, apply atau recheck
-// @Description Mode lan dan localhost dengan X-Local-Control. action=discover memakai ip interface; profiles memakai endpoint/username/password; probe memakai channel; apply memakai configuration (LAN IP/CIDR dan 1-24 channel, video NVR wajib HEVC/H.265; passthrough tetap tanpa pilihan mode); recheck memeriksa sumber tersimpan. Lihat docs/setup-api.md untuk payload tiap action. Poll jobs/{id}: HTTP 202 hanya berarti diterima, hasil akhir ada di state/result/code/advice. Apply tidak boleh saat sesi aktif atau finalisasi, dan tidak memulai sesi. Result: discover=Device[], profiles=Profile[], probe=Probe, apply=Configuration tersamarkan, recheck=SourceCheck[].
-// @Tags Setup
-// @Accept json
-// @Produce json
-// @Security LocalControl
-// @Param request body model.JobRequest true "Isi hanya field yang diperlukan oleh action"
-// @Success 202 {object} response.Response{data=model.Job}
-// @Failure 400,403,409,503 {object} response.Response
-// @Router /api/v1/setup/jobs [post]
 func (h *Handler) startJob(c *gin.Context) {
-	var in model.JobRequest
+	var in JobRequest
 	if c.ShouldBindJSON(&in) != nil {
 		response.BadRequest(c, "invalid request syntax", nil)
 		return
 	}
-	v, e := h.uc.Start(in)
+	v, e := h.sys.Start(in)
 	if e != nil {
 		response.WriteError(c, e)
 		return
@@ -106,17 +124,8 @@ func (h *Handler) startJob(c *gin.Context) {
 	response.Accepted(c, "Setup job accepted", v)
 }
 
-// job godoc
-// @Summary Baca progres dan hasil pekerjaan setup
-// @Description Mode lan, localhost saja. State RUNNING, SUCCEEDED atau FAILED; result sesuai action. Job dan credential_ref bersifat sementara, bukan konfigurasi persisten.
-// @Tags Setup
-// @Produce json
-// @Param id path string true "ID job dari request start"
-// @Success 200 {object} response.Response{data=model.Job}
-// @Failure 403,404 {object} response.Response
-// @Router /api/v1/setup/jobs/{id} [get]
 func (h *Handler) job(c *gin.Context) {
-	v, e := h.uc.Job(c.Param("id"))
+	v, e := h.sys.Job(c.Param("id"))
 	if e != nil {
 		response.WriteError(c, e)
 		return
@@ -124,45 +133,63 @@ func (h *Handler) job(c *gin.Context) {
 	response.Success(c, "Setup job", v)
 }
 
-// cancelJob godoc
-// @Summary Minta pembatalan pekerjaan setup
-// @Description Mode lan dan localhost dengan nonce. Pembatalan bersifat kooperatif; baca ulang status job untuk hasil akhir.
-// @Tags Setup
-// @Security LocalControl
-// @Param id path string true "ID job"
-// @Success 204 "Pembatalan diterima, tanpa body"
-// @Failure 403,404 {object} response.Response
-// @Router /api/v1/setup/jobs/{id} [delete]
 func (h *Handler) cancelJob(c *gin.Context) {
-	if e := h.uc.Cancel(c.Param("id")); e != nil {
+	if e := h.sys.Cancel(c.Param("id")); e != nil {
 		response.WriteError(c, e)
 		return
 	}
 	c.Status(204)
 }
 
-// Status godoc
-// @Summary Baca status lokal, codec, sesi dan diagnostik
-// @Description Mode lan, dibatasi MEDIA_READ_CIDRS. Tersedia sebelum konfigurasi siap. Session dan source_checks dapat belum tersedia. Tidak memulai media.
-// @Tags Local
-// @Produce json
-// @Success 200 {object} response.Response{data=model.RuntimeStatus}
-// @Failure 403 {object} response.Response
-// @Router /api/v1/local/status [get]
 func (h *Handler) Status(c *gin.Context) {
-	response.Success(c, "Local runtime status", h.uc.Status(c.Request.Context()))
+	response.Success(c, "Local runtime status", h.sys.Status(c.Request.Context()))
 }
 
-// Guidance godoc
-// @Summary Baca panduan penanganan kode gangguan
-// @Description Jalur setup hanya localhost; jalur local tersedia untuk subnet pembaca dalam mode lan.
-// @Tags Local
-// @Produce json
-// @Param code path string true "Kode seperti SOURCE_UNREACHABLE, DISK_LOW, UNSUPPORTED_CODEC"
-// @Success 200 {object} response.Response{data=model.Diagnostic}
-// @Failure 403 {object} response.Response
-// @Router /api/v1/local/guidance/{code} [get]
-// @Router /api/v1/setup/guidance/{code} [get]
 func (h *Handler) Guidance(c *gin.Context) {
-	response.Success(c, "Diagnostic guidance", h.uc.Guidance(c.Param("code")))
+	response.Success(c, "Diagnostic guidance", h.sys.Guidance(c.Param("code")))
+}
+
+func Advice(code string) string {
+	switch code {
+	case "MEDIA_UNAVAILABLE":
+		return "MediaMTX belum berjalan. Periksa binary, port RTSP internal dan proses lain; API tetap tersedia."
+	case "MAX_DURATION":
+		return "Batas durasi sesi tercapai. Tunggu finalisasi sebelum memulai sesi berikutnya."
+	case "DISK_LOW", "DISK_UNAVAILABLE":
+		return "Periksa ruang disk dan izin folder rekaman; hentikan sesi dan tunggu finalisasi sebelum mengelola file."
+	case "DISK_FULL":
+		return "Stop sesi, periksa kapasitas disk dan upload; jangan menghapus manifest/segmen yang masih aktif."
+	case "SOURCE_INTERRUPTED":
+		return "Engine mencoba ulang channel setiap 5 detik. Periksa sumber/jaringan; channel lain tetap berjalan."
+	case "BINARY_START_FAILED":
+		return "Periksa lokasi binary, izin eksekusi dan batas proses pada komputer engine."
+	case "RECORDING_FINALIZATION_FAILED":
+		return "Simpan segmen untuk pemeriksaan dan lihat alasan validasi; jangan mengunggah file yang belum READY."
+	case "SESSION_ACTIVE":
+		return "Stop seluruh media dan tunggu status terminal sebelum mengubah konfigurasi."
+	case "BINARY_MISSING", "ENCODER_MISSING":
+		return "Periksa paket FFmpeg, ffprobe dan MediaMTX; codec sumber diteruskan tanpa encode ulang."
+	case "SOURCE_UNREACHABLE", "DEVICE_UNREACHABLE", "TIMEOUT":
+		return "Periksa IP, port, path stream, kabel dan firewall; lalu jalankan tes koneksi kembali."
+	case "NETWORK_SCOPE", "NETWORK_UNAVAILABLE":
+		return "Pilih interface LAN aktif pada subnet yang sama dengan perangkat."
+	case "UNSUPPORTED_VIDEO_CODEC":
+		return "Pilih profil NVR HEVC/H.265. Codec lain ditolak; konversi tidak tersedia."
+	case "CONFIG_APPLY_FAILED", "ENGINE_START_FAILED":
+		return "Periksa binary, port internal dan izin folder data; API tetap dapat dipakai untuk konfigurasi ulang."
+	default:
+		return "Periksa status engine dan hasil pemeriksaan aplikasi. Jangan membagikan kredensial atau log proses mentah."
+	}
+}
+
+func MaskSource(raw string) (string, bool) {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return raw, false
+	}
+	hasCreds := u.User != nil || u.RawQuery != ""
+	u.User = nil
+	u.RawQuery = ""
+	u.Fragment = ""
+	return u.String(), hasCreds
 }

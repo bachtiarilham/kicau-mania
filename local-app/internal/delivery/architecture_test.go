@@ -29,7 +29,7 @@ func domainOf(pkg string) string {
 	if len(parts) < 3 || parts[0] != "internal" {
 		return ""
 	}
-	if parts[1] == "cloud" || parts[1] == "setup" || parts[1] == "camera" || parts[1] == "recording" || parts[1] == "streaming" {
+	if parts[1] == "cloud" || parts[1] == "camera" || parts[1] == "recording" || parts[1] == "streaming" {
 		return parts[1]
 	}
 	return ""
@@ -76,7 +76,7 @@ func dependencyViolation(from, imported string) string {
 	if to == "internal/edge" || strings.HasPrefix(to, "internal/edge/") {
 		return "legacy edge grouping import"
 	}
-	for _, old := range []string{"arena", "video", "media", "synchronization", "exchange", "operation", "network", "storage", "runtime", "cloudmedia", "mediaengine"} {
+	for _, old := range []string{"arena", "video", "media", "synchronization", "exchange", "operation", "network", "storage", "runtime", "cloudmedia", "mediaengine", "setup"} {
 		if to == "internal/"+old || strings.HasPrefix(to, "internal/"+old+"/") {
 			return "legacy ungrouped internal import"
 		}
@@ -118,7 +118,7 @@ func dependencyViolation(from, imported string) string {
 func TestDomainDependencyBoundaries(t *testing.T) {
 	_, file, _, _ := runtime.Caller(0)
 	root := filepath.Clean(filepath.Join(filepath.Dir(file), "..", ".."))
-	for _, old := range []string{"internal/edgetocloud", "internal/delivery/http", "internal/mediaengine/audio/delivery", "internal/mediaengine/video", "internal/delivery/rest/video", "internal/mediaengine/audio/pubsub", "internal/mediaengine/audio/metricsclient", "internal/mediaengine/saving/delivery", "internal/mediaengine/streaming/delivery", "internal/mediaengine/channel", "internal/mediaengine/zoom", "internal/delivery/rest/channel", "internal/delivery/rest/zoom", "internal/mediaengine/saving", "internal/mediaengine/session", "internal/delivery/rest/saving", "internal/delivery/rest/session", "internal/mediaengine/streaming", "internal/mediaengine/audio", "internal/delivery/rest/streaming", "internal/delivery/websocket", "internal/cloudmedia", "internal/mediaengine"} {
+	for _, old := range []string{"internal/edgetocloud", "internal/delivery/http", "internal/mediaengine/audio/delivery", "internal/mediaengine/video", "internal/delivery/rest/video", "internal/mediaengine/audio/pubsub", "internal/mediaengine/audio/metricsclient", "internal/mediaengine/saving/delivery", "internal/mediaengine/streaming/delivery", "internal/mediaengine/channel", "internal/mediaengine/zoom", "internal/delivery/rest/channel", "internal/delivery/rest/zoom", "internal/mediaengine/saving", "internal/mediaengine/session", "internal/delivery/rest/saving", "internal/delivery/rest/session", "internal/mediaengine/streaming", "internal/mediaengine/audio", "internal/delivery/rest/streaming", "internal/delivery/websocket", "internal/cloudmedia", "internal/mediaengine", "internal/setup", "internal/infra/network/onvif"} {
 		if _, err := os.Stat(filepath.Join(root, filepath.FromSlash(old))); !os.IsNotExist(err) {
 			t.Fatalf("legacy protocol delivery location still exists: %s", old)
 		}

@@ -13,7 +13,6 @@ import (
 	cloudMedia "kicau.local/edge/internal/cloud/service"
 	desktopDelivery "kicau.local/edge/internal/delivery/rest/desktop"
 	"kicau.local/edge/internal/infra/logger"
-	setup "kicau.local/edge/internal/setup/model"
 
 	"kicau.local/edge/config"
 	cameraDelivery "kicau.local/edge/internal/camera/delivery"
@@ -98,7 +97,7 @@ func NewContainer(ctx context.Context, c config.Config) (*Container, error) {
 					zap.String("audio_codec", p.AudioCodec),
 					zap.Bool("has_audio", p.HasAudio))
 			} else {
-				var failure *setup.Failure
+				var failure *cameraModel.Failure
 				if errors.As(err, &failure) && failure.Code == "UNSUPPORTED_VIDEO_CODEC" {
 					errCh <- err
 					return

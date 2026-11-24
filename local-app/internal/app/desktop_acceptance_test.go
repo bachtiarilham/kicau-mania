@@ -5,10 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"kicau.local/edge/config"
-	"kicau.local/edge/internal/infra/storage/credentials"
 	ffmpegMedia "kicau.local/edge/internal/infra/ffmpeg"
 	session "kicau.local/edge/internal/recording/model"
-	setupRepo "kicau.local/edge/internal/setup/repository"
 	"math"
 	"net"
 	"os"
@@ -22,18 +20,6 @@ import (
 
 func TestDesktopRealSaving(t *testing.T) {
 	source, ffmpeg, probe, relay := os.Getenv("KICAU_TEST_NVR_RTSP_URL"), os.Getenv("KICAU_TEST_FFMPEG"), os.Getenv("KICAU_TEST_FFPROBE"), os.Getenv("KICAU_TEST_MEDIAMTX")
-	if source == "" && os.Getenv("KICAU_TEST_NVR_SETTINGS_FILE") != "" {
-		stored, err := setupRepo.New(os.Getenv("KICAU_TEST_NVR_SETTINGS_FILE"), credentials.Protector{}).Load(context.Background())
-		if err != nil {
-			t.Fatal(err)
-		}
-		for _, ch := range stored.Channels {
-			if os.Getenv("KICAU_TEST_NVR_CHANNEL") == "" || ch.ID == os.Getenv("KICAU_TEST_NVR_CHANNEL") {
-				source = ch.Source
-				break
-			}
-		}
-	}
 	if source == "" || ffmpeg == "" || probe == "" || relay == "" {
 		t.Skip("Explicit isolated native media binaries/source required")
 	}

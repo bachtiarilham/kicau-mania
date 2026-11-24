@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	setup "kicau.local/edge/internal/setup/model"
+	setup "kicau.local/edge/internal/camera/model"
 	"os"
 	"testing"
 )
