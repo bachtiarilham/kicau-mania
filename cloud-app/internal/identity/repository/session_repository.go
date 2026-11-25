@@ -33,6 +33,10 @@ func (r *sessionRepositoryImpl) RevokeSession(ctx context.Context, userID, sessi
 }
 
 func (r *sessionRepositoryImpl) SaveSession(ctx context.Context, userID, deviceID, userAgent string, expiresAt time.Time) (string, time.Time, error) {
+	revokeQuery := `UPDATE iam.user_sessions SET revoked_at = CURRENT_TIMESTAMP WHERE user_id = $1::uuid AND device_id = $2 AND revoked_at IS NULL`
+	if err := r.store.ExecSQL(ctx, revokeQuery, userID, deviceID); err != nil {
+		return "", time.Time{}, err
+	}
 	query := `
 		INSERT INTO iam.user_sessions(user_id, device_id, expires_at, user_agent)
 		VALUES($1::uuid, $2, $3, $4)

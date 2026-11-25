@@ -14,7 +14,9 @@ import (
 )
 
 type AuthBusiness interface {
-	Login(ctx context.Context, in model.LoginRequest) (*model.AuthTokens, error)
+	Login(ctx context.Context, in model.LoginRequest) (*model.PreAuthResponse, error)
+	SelectScope(ctx context.Context, in model.SelectScopeRequest) (*model.AuthTokens, error)
+	SwitchScope(ctx context.Context, actorID, bearerToken string, in model.SwitchScopeRequest) (*model.AuthTokens, error)
 	Refresh(ctx context.Context, refreshToken string) (*model.AuthTokens, error)
 	Logout(ctx context.Context, refreshToken string) error
 	Profile(ctx context.Context, actorID string) (*model.UserProfile, error)
@@ -71,9 +73,30 @@ func (h *Handler) PublicRoutes(g *gin.RouterGroup) {
 		if !request.Bind(c, &in) {
 			return
 		}
+		if in.DeviceID == "" {
+			in.DeviceID = c.GetHeader("X-Device-ID")
+		}
 		in.IP = c.ClientIP()
 		in.UserAgent = c.GetHeader("User-Agent")
-		t, err := h.Auth.Login(c.Request.Context(), in)
+		res, err := h.Auth.Login(c.Request.Context(), in)
+		if err != nil {
+			result(c, nil, err)
+			return
+		}
+		result(c, res, nil)
+	})
+
+	g.POST("/select-scope", func(c *gin.Context) {
+		var in model.SelectScopeRequest
+		if !request.Bind(c, &in) {
+			return
+		}
+		if in.DeviceID == "" {
+			in.DeviceID = c.GetHeader("X-Device-ID")
+		}
+		in.IP = c.ClientIP()
+		in.UserAgent = c.GetHeader("User-Agent")
+		t, err := h.Auth.SelectScope(c.Request.Context(), in)
 		if err != nil {
 			result(c, nil, err)
 			return
@@ -111,6 +134,21 @@ func (h *Handler) ProtectedRoutes(g *gin.RouterGroup) {
 	g.GET("/auth/me", func(c *gin.Context) {
 		v, err := h.Auth.Profile(c.Request.Context(), request.Actor(c))
 		result(c, v, err)
+	})
+
+	g.POST("/auth/switch-scope", func(c *gin.Context) {
+		var req model.SwitchScopeRequest
+		if !request.Bind(c, &req) {
+			return
+		}
+		bearer := strings.TrimPrefix(c.GetHeader("Authorization"), "Bearer ")
+		t, err := h.Auth.SwitchScope(c.Request.Context(), request.Actor(c), strings.TrimSpace(bearer), req)
+		if err != nil {
+			result(c, nil, err)
+			return
+		}
+		h.cookie(c, t.RefreshToken, 30*86400)
+		result(c, t, nil)
 	})
 
 	g.POST("/auth/change-password", func(c *gin.Context) {

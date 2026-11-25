@@ -4,7 +4,6 @@ import (
 	"time"
 )
 
-// LoginRequest describes incoming user credentials and device info.
 type LoginRequest struct {
 	Email     string `json:"email"`
 	Password  string `json:"password"`
@@ -13,22 +12,47 @@ type LoginRequest struct {
 	UserAgent string `json:"-"`
 }
 
-// AuthTokens contains JWT tokens and profile data returned on login/refresh.
-type AuthTokens struct {
-	AccessToken  string       `json:"access_token"`
-	RefreshToken string       `json:"refresh_token"`
-	TokenType    string       `json:"token_type"`
-	ExpiresIn    int          `json:"expires_in"`
-	User         *UserProfile `json:"user"`
+type AccessibleScope struct {
+	ScopeID   string  `json:"scope_id"`
+	Role      string  `json:"role"`
+	ScopeType string  `json:"scope_type"`
+	ArenaID   *string `json:"arena_id,omitempty"`
 }
 
-// ChangePasswordRequest describes payload for password alteration.
+type PreAuthResponse struct {
+	PreAuthToken     string            `json:"pre_auth_token"`
+	TokenType        string            `json:"token_type"`
+	ExpiresIn        int               `json:"expires_in"`
+	User             *UserProfile      `json:"user"`
+	AccessibleScopes []AccessibleScope `json:"accessible_scopes"`
+}
+
+type SelectScopeRequest struct {
+	PreAuthToken string `json:"pre_auth_token"`
+	ScopeID      string `json:"scope_id"`
+	DeviceID     string `json:"device_id"`
+	IP           string `json:"-"`
+	UserAgent    string `json:"-"`
+}
+
+type SwitchScopeRequest struct {
+	ScopeID string `json:"scope_id"`
+}
+
+type AuthTokens struct {
+	AccessToken  string           `json:"access_token"`
+	RefreshToken string           `json:"refresh_token"`
+	TokenType    string           `json:"token_type"`
+	ExpiresIn    int              `json:"expires_in"`
+	ActiveScope  *AccessibleScope `json:"active_scope,omitempty"`
+	User         *UserProfile     `json:"user"`
+}
+
 type ChangePasswordRequest struct {
 	OldPassword string `json:"old_password"`
 	NewPassword string `json:"new_password"`
 }
 
-// SessionView represents a row projected from cloud_read.v_user_sessions.
 type SessionView struct {
 	ID        string     `db:"id" json:"id"`
 	UserID    string     `db:"user_id" json:"user_id"`
@@ -39,10 +63,12 @@ type SessionView struct {
 	IsCurrent bool       `json:"is_current"`
 }
 
-// SessionToken represents active token session data in Redis.
 type SessionToken struct {
-	UserID    string `json:"user_id"`
-	SessionID string `json:"session_id"`
-	Access    string `json:"access"`
-	Refresh   string `json:"refresh"`
+	UserID        string  `json:"user_id"`
+	SessionID     string  `json:"session_id"`
+	TokenType     string  `json:"token_type,omitempty"`
+	ActiveRole    string  `json:"active_role,omitempty"`
+	ActiveArenaID *string `json:"active_arena_id,omitempty"`
+	Access        string  `json:"access"`
+	Refresh       string  `json:"refresh"`
 }

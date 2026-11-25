@@ -95,6 +95,53 @@ func (s *Store) Rotate(c context.Context, old string, v model.SessionToken, acce
 	return nil
 }
 
+func (s *Store) SavePreAuth(c context.Context, hash string, v model.SessionToken, ttl time.Duration) error {
+	if s.Client == nil {
+		return apperror.ErrUnavailable
+	}
+	body, _ := json.Marshal(v)
+	if err := s.Client.Set(c, "km:preauth:"+hash, string(body), ttl).Err(); err != nil {
+		return apperror.ErrUnavailable
+	}
+	return nil
+}
+
+func (s *Store) ConsumePreAuth(c context.Context, hash string) (model.SessionToken, error) {
+	var out model.SessionToken
+	if s.Client == nil {
+		return out, apperror.ErrUnavailable
+	}
+	v, err := s.Client.GetDel(c, "km:preauth:"+hash).Result()
+	if errors.Is(err, redis.Nil) {
+		return out, apperror.ErrUnauthorized
+	}
+	if err != nil {
+		return out, apperror.ErrUnavailable
+	}
+	if json.Unmarshal([]byte(v), &out) != nil {
+		return out, apperror.ErrUnavailable
+	}
+	return out, nil
+}
+
+func (s *Store) DeleteBySessionID(c context.Context, sessionID string) error {
+	if s.Client == nil {
+		return apperror.ErrUnavailable
+	}
+	v, err := s.Client.GetDel(c, "km:s:"+sessionID).Result()
+	if errors.Is(err, redis.Nil) {
+		return nil
+	}
+	if err != nil {
+		return apperror.ErrUnavailable
+	}
+	var tok model.SessionToken
+	if json.Unmarshal([]byte(v), &tok) == nil {
+		_ = s.Client.Del(c, "km:a:"+tok.Access, "km:r:"+tok.Refresh).Err()
+	}
+	return nil
+}
+
 func (s *Store) Delete(c context.Context, v model.SessionToken) error {
 	if s.Client == nil {
 		return apperror.ErrUnavailable

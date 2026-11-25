@@ -175,8 +175,25 @@ func TestSchema010BusinessFlows(t *testing.T) {
 		data, _ := v["data"].(map[string]any)
 		return data
 	}
-	call("POST", "/auth/login", map[string]any{"email": "admin@example.test", "password": "incorrect-password", "device_id": "test-device-01"}, 401)
-	login := call("POST", "/auth/login", map[string]any{"email": "admin@example.test", "password": "test-password-admin-010", "device_id": "test-device-01"}, 200)
+	loginScoped := func(email, password, deviceID string, status int) map[string]any {
+		pre := call("POST", "/auth/login", map[string]any{"email": email, "password": password, "device_id": deviceID}, status)
+		if status != 200 {
+			return pre
+		}
+		preToken, _ := pre["pre_auth_token"].(string)
+		scopes, _ := pre["accessible_scopes"].([]any)
+		if preToken == "" || len(scopes) == 0 {
+			t.Fatalf("expected pre_auth_token and accessible_scopes, got %#v", pre)
+		}
+		prevToken := token
+		token = preToken
+		call("GET", "/auth/me", nil, 401)
+		token = prevToken
+		scopeID := scopes[0].(map[string]any)["scope_id"].(string)
+		return call("POST", "/auth/select-scope", map[string]any{"pre_auth_token": preToken, "scope_id": scopeID, "device_id": deviceID}, 200)
+	}
+	loginScoped("admin@example.test", "incorrect-password", "test-device-01", 401)
+	login := loginScoped("admin@example.test", "test-password-admin-010", "test-device-01", 200)
 	token = login["access_token"].(string)
 	digest := sha256.Sum256([]byte(token))
 	key := "km:a:" + hex.EncodeToString(digest[:])
@@ -307,7 +324,7 @@ func TestSchema010BusinessFlows(t *testing.T) {
 		call("POST", "/arenas/"+a+"/staff/"+pair.id+"/"+pair.role, map[string]any{}, 200)
 		call("POST", "/arenas/"+a+"/staff/"+pair.id+"/credentials", map[string]any{"password": "test-password-staff-010"}, 200)
 	}
-	opLogin := call("POST", "/auth/login", map[string]any{"email": "operator@example.test", "password": "test-password-staff-010", "device_id": "operator-device-01"}, 200)
+	opLogin := loginScoped("operator@example.test", "test-password-staff-010", "operator-device-01", 200)
 	token = opLogin["access_token"].(string)
 	call("GET", "/arenas/"+otherArena+"/events", nil, 403)
 	call("GET", "/registrations?arena_id="+otherArena, nil, 403)
@@ -320,7 +337,7 @@ func TestSchema010BusinessFlows(t *testing.T) {
 	criterion1 := call("POST", "/arenas/"+a+"/criteria", map[string]any{"criteria_name": "Irama"}, 200)["id"].(string)
 	criterion2 := call("POST", "/arenas/"+a+"/criteria", map[string]any{"criteria_name": "Volume"}, 200)["id"].(string)
 	call("POST", baseRound+"/start", map[string]any{"expected_status": "PREPARED"}, 409)
-	judgeLogin := call("POST", "/auth/login", map[string]any{"email": "judge@example.test", "password": "test-password-staff-010", "device_id": "judge-device-01"}, 200)
+	judgeLogin := loginScoped("judge@example.test", "test-password-staff-010", "judge-device-01", 200)
 	judgeToken, judgeRefresh := judgeLogin["access_token"].(string), refresh
 	token = judgeToken
 	call("PUT", baseRound+"/scores/"+tid, map[string]any{"scores": []any{}}, 400)
@@ -401,11 +418,12 @@ func TestSchema010BusinessFlows(t *testing.T) {
 	}
 	_, _ = db.Exec(ctx, "RESET ROLE")
 	for _, device := range []string{"test-device-02", "test-device-03"} {
-		call("POST", "/auth/login", map[string]any{"email": "admin@example.test", "password": "test-password-admin-010", "device_id": device}, 200)
+		loginScoped("admin@example.test", "test-password-admin-010", device, 200)
 	}
-	call("POST", "/auth/login", map[string]any{"email": "admin@example.test", "password": "test-password-admin-010", "device_id": "test-device-04"}, 409)
-	// Reusing a device rotates its token pair without consuming a fourth slot.
-	login = call("POST", "/auth/login", map[string]any{"email": "admin@example.test", "password": "test-password-admin-010", "device_id": "test-device-01"}, 200)
+	pre4 := call("POST", "/auth/login", map[string]any{"email": "admin@example.test", "password": "test-password-admin-010", "device_id": "test-device-04"}, 200)
+	scope4 := pre4["accessible_scopes"].([]any)[0].(map[string]any)["scope_id"].(string)
+	call("POST", "/auth/select-scope", map[string]any{"pre_auth_token": pre4["pre_auth_token"], "scope_id": scope4, "device_id": "test-device-04"}, 409)
+	login = loginScoped("admin@example.test", "test-password-admin-010", "test-device-01", 200)
 	token = login["access_token"].(string)
 	call("POST", "/auth/logout", map[string]any{}, 200)
 	call("GET", "/auth/me", nil, 401)
@@ -427,13 +445,13 @@ func TestSchema010BusinessFlows(t *testing.T) {
 	if successes != 1 {
 		t.Fatalf("atomic refresh accepted %d requests", successes)
 	}
-	login = call("POST", "/auth/login", map[string]any{"email": "judge@example.test", "password": "test-password-staff-010", "device_id": "judge-device-01"}, 200)
+	login = loginScoped("judge@example.test", "test-password-staff-010", "judge-device-01", 200)
 	token = login["access_token"].(string)
 	call("POST", "/auth/change-password", map[string]any{"old_password": "incorrect-password", "new_password": "new-password-staff-010"}, 401)
 	call("GET", "/auth/me", nil, 200)
 	call("POST", "/auth/change-password", map[string]any{"old_password": "test-password-staff-010", "new_password": "new-password-staff-010"}, 200)
 	call("GET", "/auth/me", nil, 401)
-	login = call("POST", "/auth/login", map[string]any{"email": "judge@example.test", "password": "new-password-staff-010", "device_id": "judge-device-01"}, 200)
+	login = loginScoped("judge@example.test", "new-password-staff-010", "judge-device-01", 200)
 	token = login["access_token"].(string)
 	var sessionID string
 	if e = db.QueryRow(ctx, "SELECT id::text FROM iam.user_sessions WHERE user_id=$1 AND revoked_at IS NULL", judgeID).Scan(&sessionID); e != nil {
@@ -441,7 +459,7 @@ func TestSchema010BusinessFlows(t *testing.T) {
 	}
 	call("POST", "/auth/sessions/"+sessionID+"/revoke", map[string]any{}, 200)
 	call("GET", "/auth/me", nil, 401)
-	login = call("POST", "/auth/login", map[string]any{"email": "judge@example.test", "password": "new-password-staff-010", "device_id": "judge-device-01"}, 200)
+	login = loginScoped("judge@example.test", "new-password-staff-010", "judge-device-01", 200)
 	judgeToken, judgeRefresh = login["access_token"].(string), refresh
 	ready, e := apiClient.Get(server.URL + "/readyz")
 	if e != nil {
