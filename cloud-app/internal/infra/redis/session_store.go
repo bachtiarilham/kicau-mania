@@ -50,6 +50,12 @@ func (s *Store) Resolve(c context.Context, kind, hash string) (model.SessionToke
 	if s.Client == nil {
 		return out, apperror.ErrUnavailable
 	}
+	switch kind {
+	case "access":
+		kind = "a"
+	case "refresh":
+		kind = "r"
+	}
 	v, err := s.Client.Get(c, "km:"+kind+":"+hash).Result()
 	if errors.Is(err, redis.Nil) {
 		return out, apperror.ErrUnauthorized
