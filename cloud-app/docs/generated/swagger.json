@@ -4932,6 +4932,85 @@
         ]
       }
     },
+    "/api/v1/auth/select-scope": {
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "request",
+            "required": true,
+            "schema": {
+              "type": "object"
+            }
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success after commit",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "400": {
+            "description": "Invalid fields or business values",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "401": {
+            "description": "Invalid or revoked session",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "403": {
+            "description": "Role/arena/roster access denied",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "409": {
+            "description": "Version, relationship or workflow conflict",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "429": {
+            "description": "Login attempt limit",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "503": {
+            "description": "PostgreSQL/schema/Redis unavailable",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "POST /api/v1/auth/select-scope",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/v1/auth/sessions": {
       "get": {
         "parameters": [],
@@ -5080,6 +5159,85 @@
           }
         ],
         "summary": "POST /api/v1/auth/sessions/{session}/revoke",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/switch-scope": {
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "request",
+            "required": true,
+            "schema": {
+              "type": "object"
+            }
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success after commit",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "400": {
+            "description": "Invalid fields or business values",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "401": {
+            "description": "Invalid or revoked session",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "403": {
+            "description": "Role/arena/roster access denied",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "409": {
+            "description": "Version, relationship or workflow conflict",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "429": {
+            "description": "Login attempt limit",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          },
+          "503": {
+            "description": "PostgreSQL/schema/Redis unavailable",
+            "schema": {
+              "$ref": "#/definitions/Envelope"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "POST /api/v1/auth/switch-scope",
         "tags": [
           "auth"
         ]
