@@ -1,27 +1,32 @@
-# Data mock schema 010
+# Data mock schema 012
 
-Fixture khusus database pengembangan, diterapkan manual. Seed tidak dijalankan saat startup, migrasi, atau deployment. Database harus sudah melalui migrasi 010; lihat [panduan database](../README.md).
+Fixture khusus database pengembangan, diterapkan manual. Seed tidak dijalankan saat startup, migrasi, atau deployment. Database harus sudah melalui migrasi 012; lihat [panduan database](../README.md).
 
 ## Akun
 
 Semua akun aktif dan terverifikasi, dengan password **`KicauMock2026!`**. Jangan gunakan kredensial fixture untuk produksi.
 
-| Key Insomnia | Email | Penugasan |
-| --- | --- | --- |
-| admin | admin@mock.kicau.test | ADMIN global dan arena A+B |
-| admin_a | admin.a@mock.kicau.test | ADMIN arena A |
-| operator_a | operator.a@mock.kicau.test | OPERATOR arena A |
-| operator_b | operator.b@mock.kicau.test | OPERATOR arena B |
-| juri_1 | juri.1@mock.kicau.test | JURI arena A |
-| juri_2 | juri.2@mock.kicau.test | JURI arena A |
-| peserta_1 | peserta.1@mock.kicau.test | PESERTA, pemilik burung 1–2 |
-| peserta_2 | peserta.2@mock.kicau.test | PESERTA, pemilik burung 3–4 |
+| Key Insomnia | Email | Nama | Penugasan |
+| --- | --- | --- | --- |
+| admin | admin@mock.kicau.test | Hendra Wijaya | ADMIN global dan arena Kemang + Bandung |
+| admin_a | admin.a@mock.kicau.test | Budi Santoso | ADMIN arena Kemang & Bandung |
+| operator_a | operator.a@mock.kicau.test | Rudi Hartono | OPERATOR arena Kemang |
+| operator_b | operator.b@mock.kicau.test | Agus Salim | OPERATOR arena Bandung |
+| juri_1 | juri.1@mock.kicau.test | Dedi Supriadi | JURI arena Kemang |
+| juri_2 | juri.2@mock.kicau.test | Eko Prasetyo | JURI arena Kemang |
+| peserta_1 | peserta.1@mock.kicau.test | Slamet Riyadi | PESERTA, pemilik burung Raja Rimba & Naga Bonar |
+| peserta_2 | peserta.2@mock.kicau.test | Andi Pratama | PESERTA, pemilik burung Black Mamba & Si Pitung |
+| *(tambahan)* | juri.3@mock.kicau.test | Wahyu Hidayat | JURI arena Kemang & Bandung |
+| *(tambahan)* | juri.4@mock.kicau.test | Fajar Nugroho | JURI arena Bandung |
+| *(tambahan)* | peserta.3@mock.kicau.test | Joko Susilo | PESERTA, pemilik burung Bintang Timur & Krakatau |
+| *(tambahan)* | peserta.4@mock.kicau.test | Reza Pahlevi | PESERTA, pemilik burung Garuda Sakti & Srikandi |
 
 ## Isi seed
 
-90 baris fixture: 8 akun, 2 arena, 48 gantangan (4 baris × 6 kolom per arena), 2 event bertanggal 15 November 2026, 2 kategori, 3 ronde PREPARED, 6 kriteria, 1 spesies, 4 burung, 4 catatan kepemilikan awal, 3 role global, dan 7 penugasan arena. Pemilik burung mengacu langsung pada akun. Trigger membuat 8 history user dan 4 history burung; seed tidak menulis tabel audit secara langsung.
-
-Roster, registrasi/tiket, pembayaran, dan skor dibuat melalui request Insomnia. Tidak ada sesi login, token email/Google, engine, atau rekaman tiruan. Kedua materialized view disegarkan saat seed selesai.
+Seluruh 18 tabel pada schema `asset`, `competition`, dan `iam` (ditambah `judging.score_criteria`) terisi dengan data realistis:
+- **IAM**: 12 akun lengkap (`nickname`, `address`, `position`), 4 role (`ADMIN`, `OPERATOR`, `JURI`, `PESERTA`), 5 role global, 11 penugasan arena, 4 tautan Google OAuth (`user_auth_providers`), 4 sesi perangkat aktif (`user_sessions`), dan 12 catatan `user_master_history` (via trigger).
+- **Asset**: 2 arena (`Gantangan Mega Allstar Kemang` & `Gantangan Taman Impian Bandung`), 48 gantangan (4×6 per arena), 5 spesies (`Murai Batu`, `Cucak Ijo`, `Kacer`, `Lovebird`, `Kenari`), 8 burung juara (`BRD-000001`..`BRD-000008`), 9 catatan kepemilikan (termasuk histori take-over), 8 catatan `bird_master_history` (via trigger), dan 6 sertifikat penghargaan internal & eksternal (`bird_award_certificate_history`).
+- **Competition**: 2 event (`Piala Walikota Jakarta Selatan 2026` & `Latpres Akhir Bulan Bandung`), 4 kategori (`EKS`, `BTG`, `VIP`, `REG`), 5 ronde (`PREPARED`, `RUNNING`, `JUDGING`, `CLOSED` lengkap dengan jadwal & susunan juri), serta 10 registrasi tiket (`CASH`/`TRANSFER`, `VERIFIED`/`PENDING`, `ACTIVE`/`DISQUALIFIED`). Ronde A1 tetap `PREPARED` tanpa registrasi agar skenario Insomnia `00 Mock` tetap dapat dijalankan.
 
 ## Menjalankan
 
