@@ -12,6 +12,7 @@ type TransactionManager interface {
 }
 
 type UserRepository interface {
+	NextID(context.Context) (string, error)
 	GetByID(ctx context.Context, id string) (*model.UserView, error)
 	GetByEmail(ctx context.Context, email string) (*model.UserView, error)
 	GetProfile(ctx context.Context, id string) (*model.UserProfile, error)

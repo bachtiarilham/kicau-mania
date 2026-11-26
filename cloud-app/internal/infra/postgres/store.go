@@ -96,6 +96,11 @@ func decode(b []byte) (model.Record, error) {
 	d := json.NewDecoder(bytes.NewReader(b))
 	d.UseNumber()
 	err := d.Decode(&r)
+	for key, value := range r {
+		if id, ok := value.(json.Number); ok && (key == "id" || strings.HasSuffix(key, "_id") || key == "created_by") {
+			r[key] = id.String()
+		}
+	}
 	return r, err
 }
 func (s *Store) One(ctx context.Context, name string, args ...any) (model.Record, error) {

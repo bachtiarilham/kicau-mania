@@ -80,7 +80,8 @@ func (m *mockWhatsApp) SendMessage(ctx context.Context, phone, message string) e
 
 func TestUseCase_DeliverWhatsApp(t *testing.T) {
 	ctx := context.Background()
-	assetID := "018f0a00-1111-7000-8000-000000000001"
+	assetID := "1"
+	publicCode := "018f0a00-1111-7000-8000-000000000001"
 	regID := "018f0a00-2222-7000-8000-000000000002"
 	arenaID := "018f0a00-3333-7000-8000-000000000003"
 	actorID := "018f0a00-4444-7000-8000-000000000004"
@@ -89,7 +90,7 @@ func TestUseCase_DeliverWhatsApp(t *testing.T) {
 		oneFn: func(ctx context.Context, name string, args ...any) (core.Record, error) {
 			if name == "DesktopAssetRead" {
 				return core.Record{
-					"id":              assetID,
+					"public_code": publicCode, "id": assetID,
 					"state":           "UPLOADED",
 					"registration_id": regID,
 					"arena_id":        arenaID,
@@ -131,7 +132,7 @@ func TestUseCase_DeliverWhatsApp(t *testing.T) {
 	if wa.sentTo != "081298765432" {
 		t.Errorf("expected WA sent to 081298765432, got %s", wa.sentTo)
 	}
-	if res.StreamingURL != "https://kicau.app/v/"+assetID {
+	if res.StreamingURL != "https://kicau.app/v/"+publicCode {
 		t.Errorf("expected streaming url https://kicau.app/v/%s, got %s", assetID, res.StreamingURL)
 	}
 }
@@ -142,7 +143,7 @@ func TestUseCase_PublicWatch(t *testing.T) {
 
 	db := &mockData{
 		oneFn: func(ctx context.Context, name string, args ...any) (core.Record, error) {
-			if name == "DesktopAssetRead" {
+			if name == "DesktopPublicWatch" {
 				return core.Record{
 					"id":         assetID,
 					"state":      "UPLOADED",

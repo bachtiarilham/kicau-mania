@@ -1,6 +1,6 @@
 # API aktif schema 011
 
-Prefix `/api/v1`. Semua respons JSON memakai `{success,message,data,errors}`; field null opsional dapat tidak disertakan. Daftar CRUD memakai `{items,next_cursor,has_more}`, `limit` 1–100 (default 25). Cursor adalah UUID terakhir; history memakai `after_version`. Error 400 validasi, 401 sesi invalid, 403 hak akses, 404 tidak ditemukan, 409 konflik versi/relasi/status, 429 batas percobaan login, 503 layanan tidak tersedia. Tidak ada konversi error menjadi daftar kosong.
+Prefix `/api/v1`. Semua respons JSON memakai `{success,message,data,errors}`; field null opsional dapat tidak disertakan. Daftar CRUD memakai `{items,next_cursor,has_more}`, `limit` 1–100 (default 25). ID database dikirim sebagai string desimal untuk menjaga presisi BIGINT. Cursor adalah ID terakhir; history memakai `after_version`. Error 400 validasi, 401 sesi invalid, 403 hak akses, 404 tidak ditemukan, 409 konflik versi/relasi/status, 429 batas percobaan login, 503 layanan tidak tersedia. Tidak ada konversi error menjadi daftar kosong.
 
 Swagger `/api/docs/` dan [JSON](generated/swagger.json) dihasilkan melalui `go run ./cmd/openapi docs/generated/swagger.json`. Query SQL bukan endpoint tersendiri. Media desktop ditambahkan melalui migrasi 011. Tidak ada resource inventory owners/engines/devices lama, signup, Google atau reset email.
 

@@ -2,12 +2,12 @@
 -- UseCase validates authorization, semantics and transaction/lock order; see README.md.
 
 -- name: ReportRoundSnapshot
--- params: arena_id uuid, round_id uuid
-SELECT to_jsonb(v) FROM cloud_read.mv_round_score_summary v WHERE arena_id=$1::uuid AND round_id=$2::uuid ORDER BY average_score DESC NULLS LAST,registration_id;
+-- params: arena_id bigint, round_id bigint
+SELECT to_jsonb(v) FROM cloud_read.mv_round_score_summary v WHERE arena_id=$1::text::bigint AND round_id=$2::text::bigint ORDER BY average_score DESC NULLS LAST,registration_id;
 
 -- name: ReportArenaDashboard
--- params: arena_id uuid
-SELECT to_jsonb(v) FROM cloud_read.mv_arena_dashboard v WHERE arena_id=$1::uuid;
+-- params: arena_id bigint
+SELECT to_jsonb(v) FROM cloud_read.mv_arena_dashboard v WHERE arena_id=$1::text::bigint;
 
 -- name: ReportRefreshStatus
 -- params: view_name text

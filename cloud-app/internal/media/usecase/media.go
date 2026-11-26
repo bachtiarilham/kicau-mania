@@ -57,7 +57,7 @@ func parts(r core.Record) []model.Part {
 	return p
 }
 func (u *UseCase) Pair(c context.Context, actor, id, arena string) (core.Record, error) {
-	if !core.UUID(id) || !core.UUID(arena) {
+	if (!core.UUID(id) && !core.NumericID(id)) || !core.NumericID(arena) {
 		return nil, apperror.ErrInvalid
 	}
 	if e := u.ACL.Require(c, actor, arena, "ADMIN"); e != nil {
@@ -68,14 +68,20 @@ func (u *UseCase) Pair(c context.Context, actor, id, arena string) (core.Record,
 		return nil, e
 	}
 	token := hex.EncodeToString(secret[:])
-	r, e := u.DB.One(c, "DesktopEngineCreate", id, arena, hash(token), actor)
+	var r core.Record
+	var e error
+	if core.NumericID(id) {
+		r, e = u.DB.One(c, "DesktopEngineRotate", id, arena, hash(token))
+	} else {
+		r, e = u.DB.One(c, "DesktopEngineCreate", id, arena, hash(token), actor)
+	}
 	if e == nil {
 		r["token"] = token
 	}
 	return r, e
 }
 func (u *UseCase) Revoke(c context.Context, actor, id string) error {
-	if !core.UUID(id) {
+	if !core.NumericID(id) {
 		return apperror.ErrInvalid
 	}
 	r, e := u.DB.One(c, "DesktopEngineGet", id)
@@ -98,7 +104,7 @@ func (u *UseCase) Authenticate(c context.Context, token string) (core.Record, er
 	return r, e
 }
 func (u *UseCase) Ingest(c context.Context, actor string, in model.Ingestion) (out core.Record, err error) {
-	if !core.UUID(in.EngineID) || !core.UUID(in.RoundID) || !identifier.MatchString(in.SessionID) || len(in.Mappings) < 1 || len(in.Mappings) > 24 {
+	if !core.NumericID(in.EngineID) || !core.NumericID(in.RoundID) || !identifier.MatchString(in.SessionID) || len(in.Mappings) < 1 || len(in.Mappings) > 24 {
 		return nil, apperror.ErrInvalid
 	}
 	slices.SortFunc(in.Mappings, func(a, b model.Mapping) int {
@@ -113,7 +119,7 @@ func (u *UseCase) Ingest(c context.Context, actor string, in model.Ingestion) (o
 	seen := map[string]bool{}
 	regs := map[string]bool{}
 	for _, m := range in.Mappings {
-		if !identifier.MatchString(m.ChannelID) || !core.UUID(m.RegistrationID) || !core.UUID(m.GantanganID) || seen[m.ChannelID] || regs[m.RegistrationID] {
+		if !identifier.MatchString(m.ChannelID) || !core.NumericID(m.RegistrationID) || !core.NumericID(m.GantanganID) || seen[m.ChannelID] || regs[m.RegistrationID] {
 			return nil, apperror.ErrInvalid
 		}
 		seen[m.ChannelID] = true
@@ -153,15 +159,12 @@ func (u *UseCase) Ingest(c context.Context, actor string, in model.Ingestion) (o
 		if !errors.Is(e, apperror.ErrNotFound) {
 			return e
 		}
-		id, e := core.NewID()
+		out, e = u.DB.One(c, "DesktopSessionCreate", in.EngineID, in.SessionID, in.RoundID, actor)
 		if e != nil {
 			return e
 		}
-		out, e = u.DB.One(c, "DesktopSessionCreate", id, in.EngineID, in.SessionID, in.RoundID, actor)
-		if e != nil {
-			return e
-		}
-		// Registration locks use UUID order to match concurrent mapping requests.
+		id := text(out, "id")
+		// Registration locks use consistent order to match concurrent mapping requests.
 		ordered := slices.Clone(in.Mappings)
 		slices.SortFunc(ordered, func(a, b model.Mapping) int {
 			if a.RegistrationID < b.RegistrationID {
@@ -217,10 +220,11 @@ func (u *UseCase) Create(c context.Context, engine core.Record, in model.Upload)
 		if !found {
 			return apperror.ErrForbidden
 		}
-		id, e := core.NewID()
+		allocated, e := u.DB.One(c, "DesktopAssetNextID")
 		if e != nil {
 			return e
 		}
+		id := text(allocated, "id")
 		key := fmt.Sprintf("arenas/%s/engines/%s/%s.%s", text(engine, "arena_id"), eid, id, in.Container)
 		r, e := u.DB.One(c, "DesktopAssetCreate", id, eid, text(s, "id"), in.ChannelID, in.RecordingID, key, in.Size, in.SHA256, in.Started, in.Ended)
 		if e != nil {
@@ -279,14 +283,14 @@ func (u *UseCase) status(c context.Context, eid, id string) (core.Record, error)
 	return r, e
 }
 func (u *UseCase) Status(c context.Context, engine core.Record, id string) (out core.Record, err error) {
-	if !core.UUID(id) {
+	if !core.NumericID(id) {
 		return nil, apperror.ErrInvalid
 	}
 	err = u.DB.Do(c, func(c context.Context) error { var e error; out, e = u.status(c, text(engine, "id"), id); return e })
 	return
 }
 func (u *UseCase) Sign(c context.Context, engine core.Record, id string, p model.SignPart) (out model.Signed, err error) {
-	if !core.UUID(id) || p.Number < 1 || p.Number > 10000 {
+	if !core.NumericID(id) || p.Number < 1 || p.Number > 10000 {
 		return out, apperror.ErrInvalid
 	}
 	err = u.DB.Do(c, func(c context.Context) error {
@@ -307,7 +311,7 @@ func (u *UseCase) Sign(c context.Context, engine core.Record, id string, p model
 	return
 }
 func (u *UseCase) Complete(c context.Context, engine core.Record, id string) (out core.Record, err error) {
-	if !core.UUID(id) {
+	if !core.NumericID(id) {
 		return nil, apperror.ErrInvalid
 	}
 	err = u.DB.Do(c, func(c context.Context) error {
@@ -345,7 +349,7 @@ func (u *UseCase) Complete(c context.Context, engine core.Record, id string) (ou
 	return
 }
 func (u *UseCase) Read(c context.Context, actor, id string) (core.Record, error) {
-	if !core.UUID(id) {
+	if !core.NumericID(id) {
 		return nil, apperror.ErrInvalid
 	}
 	r, e := u.DB.One(c, "DesktopAssetRead", id)
@@ -361,7 +365,7 @@ func (u *UseCase) Read(c context.Context, actor, id string) (core.Record, error)
 	return r, nil
 }
 func (u *UseCase) List(c context.Context, actor, arena, round, session, channel, cursor string, limit int) ([]core.Record, error) {
-	if !core.UUID(arena) || (round != "" && !core.UUID(round)) || (cursor != "" && !core.UUID(cursor)) || limit < 1 || limit > 101 {
+	if !core.NumericID(arena) || (round != "" && !core.NumericID(round)) || (cursor != "" && !core.NumericID(cursor)) || limit < 1 || limit > 101 {
 		return nil, apperror.ErrInvalid
 	}
 	var own any
@@ -388,7 +392,7 @@ func (u *UseCase) Download(c context.Context, actor, id string) (string, error) 
 }
 
 func (u *UseCase) DeliverWhatsApp(c context.Context, actor, assetID, baseURL string) (*model.WhatsAppDeliveryResult, error) {
-	if !core.UUID(assetID) {
+	if !core.NumericID(assetID) {
 		return nil, apperror.ErrInvalid
 	}
 	r, err := u.Read(c, actor, assetID)
@@ -413,7 +417,11 @@ func (u *UseCase) DeliverWhatsApp(c context.Context, actor, assetID, baseURL str
 		}
 	}
 
-	streamURL := fmt.Sprintf("%s/v/%s", strings.TrimRight(baseURL, "/"), assetID)
+	publicCode := text(r, "public_code")
+	if !core.UUID(publicCode) {
+		return nil, apperror.ErrUnavailable
+	}
+	streamURL := fmt.Sprintf("%s/v/%s", strings.TrimRight(baseURL, "/"), publicCode)
 
 	res := &model.WhatsAppDeliveryResult{
 		RecordingID:    assetID,
@@ -458,7 +466,7 @@ func (u *UseCase) DeliverWhatsApp(c context.Context, actor, assetID, baseURL str
 }
 
 func (u *UseCase) BroadcastRoundWhatsApp(c context.Context, actor, arenaID, roundID, baseURL string) ([]model.WhatsAppDeliveryResult, error) {
-	if !core.UUID(arenaID) || !core.UUID(roundID) {
+	if !core.NumericID(arenaID) || !core.NumericID(roundID) {
 		return nil, apperror.ErrInvalid
 	}
 	if err := u.ACL.Require(c, actor, arenaID, "ADMIN", "OPERATOR"); err != nil {
@@ -492,7 +500,7 @@ func (u *UseCase) PublicWatch(c context.Context, assetID string) (*model.PublicV
 	if !core.UUID(assetID) {
 		return nil, apperror.ErrInvalid
 	}
-	r, err := u.DB.One(c, "DesktopAssetRead", assetID)
+	r, err := u.DB.One(c, "DesktopPublicWatch", assetID)
 	if err != nil {
 		return nil, err
 	}
@@ -519,7 +527,7 @@ func (u *UseCase) PublicWatch(c context.Context, assetID string) (*model.PublicV
 	}
 
 	return &model.PublicVideoWatch{
-		RecordingID:   assetID,
+		RecordingID:   text(r, "id"),
 		BirdName:      birdName,
 		OwnerName:     ownerName,
 		GantanganCode: strings.ToUpper(text(r, "channel_id")),

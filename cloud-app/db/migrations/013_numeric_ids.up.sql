@@ -1,0 +1,128 @@
+BEGIN;
+SET LOCAL lock_timeout = '10s';
+SET LOCAL search_path = pg_catalog, pg_temp;
+
+CREATE SCHEMA migration_ids;
+CREATE TABLE migration_ids.legacy (
+    entity text NOT NULL,
+    legacy_uuid uuid NOT NULL,
+    numeric_id bigint NOT NULL CHECK (numeric_id > 0),
+    PRIMARY KEY (entity, legacy_uuid),
+    UNIQUE (entity, numeric_id)
+);
+
+CREATE TEMP TABLE id_columns ON COMMIT DROP AS
+SELECT c.oid::regclass AS tbl, a.attname AS col,
+       CASE a.attname
+         WHEN 'id' THEN c.oid::regclass::text
+         WHEN 'actor_id' THEN 'iam.users' WHEN 'created_by' THEN 'iam.users'
+         WHEN 'judge_user_id' THEN 'iam.users' WHEN 'owner_id' THEN 'iam.users'
+         WHEN 'user_id' THEN 'iam.users' WHEN 'role_id' THEN 'iam.roles'
+         WHEN 'arena_id' THEN 'asset.arenas' WHEN 'gantangan_id' THEN 'asset.gantangan'
+         WHEN 'bird_species_id' THEN 'asset.bird_species' WHEN 'bird_id' THEN 'asset.birds'
+         WHEN 'category_id' THEN 'competition.categories' WHEN 'event_id' THEN 'competition.events'
+         WHEN 'round_id' THEN 'competition.rounds' WHEN 'registration_id' THEN 'competition.registrations'
+         WHEN 'criteria_id' THEN 'judging.score_criteria' WHEN 'engine_id' THEN 'media.ingest_engines'
+         WHEN 'ingestion_id' THEN 'media.ingest_sessions'
+       END AS entity
+FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid
+JOIN pg_namespace n ON n.oid=c.relnamespace
+WHERE n.nspname IN ('iam','asset','competition','judging','media')
+  AND c.relkind='r' AND a.atttypid='uuid'::regtype AND NOT a.attisdropped;
+
+DO $$ DECLARE t record; BEGIN
+ IF NOT EXISTS (SELECT FROM id_columns WHERE tbl='media.recording_assets'::regclass)
+    OR NOT EXISTS (SELECT FROM pg_attribute WHERE attrelid='competition.registrations'::regclass AND attname='registration_date')
+    OR EXISTS (SELECT FROM id_columns WHERE entity IS NULL) THEN
+    RAISE EXCEPTION 'Expected schema 012 with known UUID columns';
+ END IF;
+ FOR t IN SELECT DISTINCT tbl FROM id_columns ORDER BY tbl LOOP
+   EXECUTE format('LOCK TABLE %s IN ACCESS EXCLUSIVE MODE',t.tbl);
+ END LOOP;
+ FOR t IN SELECT tbl,entity FROM id_columns WHERE col='id' LOOP
+   EXECUTE format('INSERT INTO migration_ids.legacy SELECT %L,id,row_number() OVER (ORDER BY id) FROM %s',t.entity,t.tbl);
+ END LOOP;
+END $$;
+
+CREATE FUNCTION pg_temp.mapped(entity_name text, old_id uuid) RETURNS bigint
+LANGUAGE plpgsql STABLE STRICT AS $$
+DECLARE result bigint;
+BEGIN
+ SELECT numeric_id INTO STRICT result FROM migration_ids.legacy WHERE entity=entity_name AND legacy_uuid=old_id;
+ RETURN result;
+END $$;
+
+CREATE TEMP TABLE fk_definitions ON COMMIT DROP AS
+SELECT conrelid::regclass tbl, conname, pg_get_constraintdef(oid) def
+FROM pg_constraint WHERE contype='f' AND conrelid IN (SELECT tbl FROM id_columns);
+
+CREATE TEMP TABLE read_views ON COMMIT DROP AS
+WITH RECURSIVE views AS (
+ SELECT c.oid, c.oid::regclass::text AS name, CASE c.relkind WHEN 'm' THEN 'MATERIALIZED VIEW' ELSE 'VIEW' END kind,
+        pg_get_viewdef(c.oid) def, pg_get_userbyid(c.relowner) owner, c.relispopulated
+ FROM pg_class c WHERE c.relnamespace='cloud_read'::regnamespace AND c.relkind IN ('v','m')
+), paths(oid,depth) AS (
+ SELECT oid,0 FROM views
+ UNION ALL
+ SELECT rw.ev_class,p.depth+1 FROM paths p JOIN pg_depend d ON d.refobjid=p.oid AND d.refclassid='pg_class'::regclass
+ JOIN pg_rewrite rw ON rw.oid=d.objid AND d.classid='pg_rewrite'::regclass
+ WHERE rw.ev_class<>p.oid AND rw.ev_class IN (SELECT oid FROM views)
+)
+SELECT v.*, (SELECT max(depth) FROM paths p WHERE p.oid=v.oid) depth FROM views v;
+
+CREATE TEMP TABLE view_indexes ON COMMIT DROP AS
+SELECT pg_get_indexdef(indexrelid) def FROM pg_index WHERE indrelid IN (SELECT oid FROM read_views);
+CREATE TEMP TABLE view_grants ON COMMIT DROP AS
+SELECT format('GRANT %s ON %s TO %s%s', a.privilege_type,v.name,
+       CASE WHEN a.grantee=0 THEN 'PUBLIC' ELSE quote_ident(pg_get_userbyid(a.grantee)) END,
+       CASE WHEN a.is_grantable THEN ' WITH GRANT OPTION' ELSE '' END) def
+FROM read_views v JOIN pg_class c ON c.oid=v.oid CROSS JOIN LATERAL aclexplode(c.relacl) a WHERE a.grantee<>c.relowner;
+
+DO $$ DECLARE t record; next_id bigint; BEGIN
+ FOR t IN SELECT * FROM read_views ORDER BY depth DESC LOOP
+   EXECUTE format('DROP %s %s',t.kind,t.name);
+ END LOOP;
+ FOR t IN SELECT * FROM fk_definitions LOOP
+   EXECUTE format('ALTER TABLE %s DROP CONSTRAINT %I',t.tbl,t.conname);
+ END LOOP;
+ FOR t IN SELECT tbl FROM id_columns WHERE col='id' LOOP
+   EXECUTE format('ALTER TABLE %s ALTER COLUMN id DROP DEFAULT',t.tbl);
+ END LOOP;
+ FOR t IN SELECT tbl,string_agg(format('ALTER COLUMN %I TYPE bigint USING pg_temp.mapped(%L,%I)',col,entity,col),', ') changes
+          FROM id_columns GROUP BY tbl LOOP
+   EXECUTE format('ALTER TABLE %s %s',t.tbl,t.changes);
+ END LOOP;
+ FOR t IN SELECT tbl FROM id_columns WHERE col='id' LOOP
+   EXECUTE format('SELECT coalesce(max(id),0)+1 FROM %s',t.tbl) INTO next_id;
+   EXECUTE format('ALTER TABLE %s ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (START WITH %s)',t.tbl,next_id);
+   EXECUTE format('GRANT USAGE ON SEQUENCE %s TO kicau_cloud_app',pg_get_serial_sequence(t.tbl::text,'id'));
+ END LOOP;
+ FOR t IN SELECT * FROM fk_definitions LOOP
+   EXECUTE format('ALTER TABLE %s ADD CONSTRAINT %I %s',t.tbl,t.conname,t.def);
+ END LOOP;
+ FOR t IN SELECT * FROM read_views ORDER BY depth LOOP
+   EXECUTE format('CREATE %s %s AS %s%s',t.kind,t.name,rtrim(t.def,E';\n '),
+       CASE WHEN t.kind='MATERIALIZED VIEW' AND NOT t.relispopulated THEN ' WITH NO DATA' ELSE '' END);
+   EXECUTE format('ALTER %s %s OWNER TO %I',t.kind,t.name,t.owner);
+ END LOOP;
+ FOR t IN SELECT def FROM view_indexes UNION ALL SELECT def FROM view_grants LOOP EXECUTE t.def; END LOOP;
+END $$;
+
+DO $$ DECLARE f regprocedure; BEGIN
+ FOREACH f IN ARRAY ARRAY['iam.record_user_master()'::regprocedure,'asset.record_bird_master()'::regprocedure] LOOP
+   EXECUTE replace(pg_get_functiondef(f),'::uuid','::bigint');
+ END LOOP;
+END $$;
+ALTER TABLE media.recording_assets ADD COLUMN public_code uuid;
+UPDATE media.recording_assets a SET public_code=m.legacy_uuid FROM migration_ids.legacy m
+WHERE m.entity='media.recording_assets' AND m.numeric_id=a.id;
+ALTER TABLE media.recording_assets ALTER COLUMN public_code SET NOT NULL,
+ ALTER COLUMN public_code SET DEFAULT gen_random_uuid(), ADD UNIQUE(public_code);
+
+ALTER TABLE media.ingest_engines ADD COLUMN pairing_key uuid;
+UPDATE media.ingest_engines e SET pairing_key=m.legacy_uuid FROM migration_ids.legacy m
+WHERE m.entity='media.ingest_engines' AND m.numeric_id=e.id;
+ALTER TABLE media.ingest_engines ALTER COLUMN pairing_key SET NOT NULL,
+ ALTER COLUMN pairing_key SET DEFAULT gen_random_uuid(), ADD UNIQUE(pairing_key);
+GRANT USAGE ON SCHEMA migration_ids TO kicau_cloud_app;
+COMMIT;

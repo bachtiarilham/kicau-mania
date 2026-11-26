@@ -19,6 +19,16 @@ func NewUserRepository(s *postgres.Store) contract.UserRepository {
 	return &userRepositoryImpl{store: s}
 }
 
+func (r *userRepositoryImpl) NextID(ctx context.Context) (string, error) {
+	row, err := r.store.QueryRow(ctx, "SELECT nextval(pg_get_serial_sequence('iam.users','id'))::text")
+	if err != nil {
+		return "", err
+	}
+	var id string
+	err = row.Scan(&id)
+	return id, err
+}
+
 func (r *userRepositoryImpl) SetMutationContext(ctx context.Context, actorID string, arenaID *string) error {
 	query := `SELECT set_config('app.actor_id', $1::text, true), set_config('app.arena_id', coalesce($2::text, ''), true)`
 	return r.store.ExecSQL(ctx, query, actorID, arenaID)
@@ -42,15 +52,14 @@ func (r *userRepositoryImpl) AdminExists(ctx context.Context) (bool, error) {
 }
 
 func (r *userRepositoryImpl) VerifyEmail(ctx context.Context, id string) error {
-	query := `UPDATE iam.users SET email_verified_at = CURRENT_TIMESTAMP WHERE id = $1::uuid AND email_verified_at IS NULL`
+	query := `UPDATE iam.users SET email_verified_at = CURRENT_TIMESTAMP WHERE id = $1::text::bigint AND email_verified_at IS NULL`
 	return r.store.ExecSQL(ctx, query, id)
 }
 
 func (r *userRepositoryImpl) AssignGlobalRole(ctx context.Context, id, role string) error {
-	query := `INSERT INTO iam.user_roles(user_id, role_id) SELECT $1::uuid, id FROM iam.roles WHERE name = $2 ON CONFLICT DO NOTHING`
+	query := `INSERT INTO iam.user_roles(user_id, role_id) SELECT $1::text::bigint, id FROM iam.roles WHERE name = $2 ON CONFLICT DO NOTHING`
 	return r.store.ExecSQL(ctx, query, id, role)
 }
-
 
 func (r *userRepositoryImpl) GetByID(ctx context.Context, id string) (*model.UserView, error) {
 	query := `
@@ -58,7 +67,7 @@ func (r *userRepositoryImpl) GetByID(ctx context.Context, id string) (*model.Use
 		       has_password, created_at, updated_at, version, deleted_at,
 		       nickname, address, position
 		FROM cloud_read.v_users
-		WHERE id = $1::uuid AND deleted_at IS NULL
+		WHERE id = $1::text::bigint AND deleted_at IS NULL
 	`
 	return postgres.QueryOne[model.UserView](ctx, r.store, query, id)
 }
@@ -89,10 +98,10 @@ func (r *userRepositoryImpl) GetProfile(ctx context.Context, id string) (*model.
 		SELECT r.name
 		FROM iam.user_roles u
 		JOIN iam.roles r ON r.id = u.role_id
-		WHERE u.user_id = $1::uuid
+		WHERE u.user_id = $1::text::bigint
 		ORDER BY r.name
 	`
-	row, err := r.store.QueryRow(ctx, "SELECT coalesce((SELECT jsonb_agg(r.name ORDER BY r.name) FROM iam.user_roles u JOIN iam.roles r ON r.id=u.role_id WHERE u.user_id=$1::uuid),'[]'::jsonb), coalesce((SELECT jsonb_agg(jsonb_build_object('arena_id',a.arena_id,'role',r.name) ORDER BY a.arena_id,r.name) FROM iam.arena_user_roles a JOIN iam.roles r ON r.id=a.role_id WHERE a.user_id=$1::uuid),'[]'::jsonb)", id)
+	row, err := r.store.QueryRow(ctx, "SELECT coalesce((SELECT jsonb_agg(r.name ORDER BY r.name) FROM iam.user_roles u JOIN iam.roles r ON r.id=u.role_id WHERE u.user_id=$1::text::bigint),'[]'::jsonb), coalesce((SELECT jsonb_agg(jsonb_build_object('arena_id',a.arena_id,'role',r.name) ORDER BY a.arena_id,r.name) FROM iam.arena_user_roles a JOIN iam.roles r ON r.id=a.role_id WHERE a.user_id=$1::text::bigint),'[]'::jsonb)", id)
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +122,7 @@ func (r *userRepositoryImpl) GetProfile(ctx context.Context, id string) (*model.
 		SELECT a.arena_id, r.name AS role
 		FROM iam.arena_user_roles a
 		JOIN iam.roles r ON r.id = a.role_id
-		WHERE a.user_id = $1::uuid
+		WHERE a.user_id = $1::text::bigint
 		ORDER BY a.arena_id, r.name
 	`
 	arenaRoles, _ := postgres.QueryMany[model.ArenaRoleScope](ctx, r.store, arenaRolesQuery, id)
@@ -133,7 +142,7 @@ func (r *userRepositoryImpl) List(ctx context.Context, filter model.UserFilter) 
 		       nickname, address, position
 		FROM cloud_read.v_users v
 		WHERE v.deleted_at IS NULL
-		  AND ($1::uuid IS NULL OR v.id > $1::uuid)
+		  AND ($1::text::bigint IS NULL OR v.id > $1::text::bigint)
 		  AND ($2::boolean IS NULL OR v.is_eo = $2)
 		  AND ($3::text IS NULL OR EXISTS(SELECT 1 FROM iam.user_roles a JOIN iam.roles r ON r.id = a.role_id WHERE a.user_id = v.id AND r.name = $3) OR EXISTS(SELECT 1 FROM iam.arena_user_roles a JOIN iam.roles r ON r.id = a.role_id WHERE a.user_id = v.id AND r.name = $3))
 		  AND ($4::text IS NULL OR strpos(lower(concat_ws(' ', v.name, v.phone, v.email, v.nickname)), lower($4)) > 0)
@@ -146,7 +155,7 @@ func (r *userRepositoryImpl) List(ctx context.Context, filter model.UserFilter) 
 func (r *userRepositoryImpl) Create(ctx context.Context, id string, req *model.CreateUserRequest, passwordHash *string) (*model.UserView, error) {
 	insertQuery := `
 		INSERT INTO iam.users(id, name, phone, email, password_hash, is_eo, is_active, nickname, address, position)
-		VALUES($1::uuid, $2, $3, lower(btrim($4)), $5, $6, $7, $8, $9, $10)
+		VALUES($1::text::bigint, $2, $3, lower(btrim($4)), $5, $6, $7, $8, $9, $10)
 	`
 	err := r.store.ExecSQL(ctx, insertQuery, id, req.Name, req.Phone, req.Email, passwordHash, req.IsEO, req.IsActive, req.Nickname, req.Address, req.Position)
 	if err != nil {
@@ -166,7 +175,7 @@ func (r *userRepositoryImpl) Update(ctx context.Context, id string, req *model.U
 			position = coalesce($8, position),
 			is_eo = coalesce($9, is_eo),
 			is_active = coalesce($10, is_active)
-		WHERE id = $1::uuid AND version = $2 AND deleted_at IS NULL
+		WHERE id = $1::text::bigint AND version = $2 AND deleted_at IS NULL
 	`
 	err := r.store.ExecSQL(ctx, updateQuery, id, req.ExpectedVersion, req.Name, req.Phone, req.Email, req.Nickname, req.Address, req.Position, req.IsEO, req.IsActive)
 	if err != nil {
@@ -176,12 +185,12 @@ func (r *userRepositoryImpl) Update(ctx context.Context, id string, req *model.U
 }
 
 func (r *userRepositoryImpl) Delete(ctx context.Context, id string, expectedVersion int) error {
-	query := `UPDATE iam.users SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1::uuid AND version = $2`
+	query := `UPDATE iam.users SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1::text::bigint AND version = $2`
 	return r.store.ExecSQL(ctx, query, id, expectedVersion)
 }
 
 func (r *userRepositoryImpl) GetPasswordHash(ctx context.Context, id string) (string, error) {
-	query := `SELECT password_hash FROM iam.users WHERE id = $1::uuid AND deleted_at IS NULL`
+	query := `SELECT password_hash FROM iam.users WHERE id = $1::text::bigint AND deleted_at IS NULL`
 	row, err := r.store.QueryRow(ctx, query, id)
 	if err != nil {
 		return "", err
@@ -200,6 +209,6 @@ func (r *userRepositoryImpl) GetPasswordHash(ctx context.Context, id string) (st
 }
 
 func (r *userRepositoryImpl) UpdatePassword(ctx context.Context, id string, newHash string) error {
-	query := `UPDATE iam.users SET password_hash = $2 WHERE id = $1::uuid AND deleted_at IS NULL`
+	query := `UPDATE iam.users SET password_hash = $2 WHERE id = $1::text::bigint AND deleted_at IS NULL`
 	return r.store.ExecSQL(ctx, query, id, newHash)
 }

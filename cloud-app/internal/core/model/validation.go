@@ -17,7 +17,7 @@ func Validate(r Record, required, ids, positive, amounts string, create bool) er
 	}
 	for _, k := range strings.Fields(ids) {
 		if v, ok := r[k]; ok && v != nil {
-			if !UUID(Text(r, k)) {
+			if !NumericID(Text(r, k)) {
 				return apperror.Invalid("Invalid identifier: " + k)
 			}
 		}

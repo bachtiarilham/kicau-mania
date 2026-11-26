@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math/big"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"kicau.cloud/control/internal/apperror"
@@ -36,6 +37,11 @@ func Cents(v any) (int64, error) {
 func Amount(c int64) json.Number { return json.Number(fmt.Sprintf("%d.%02d", c/100, c%100)) }
 
 var uuidPattern = regexp.MustCompile(`^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$`)
+
+func NumericID(s string) bool {
+	n, err := strconv.ParseInt(s, 10, 64)
+	return err == nil && n > 0 && strconv.FormatInt(n, 10) == s
+}
 
 func UUID(s string) bool { return uuidPattern.MatchString(s) }
 func NewID() (string, error) {

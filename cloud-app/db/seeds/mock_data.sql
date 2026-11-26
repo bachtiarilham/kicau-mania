@@ -1,13 +1,13 @@
--- Development fixture for schema 012; never startup/deploy automatically.
+-- Development fixture for schema 013; never startup/deploy automatically.
 -- Invoke psql -X -1 -v ON_ERROR_STOP=1 -f db/seeds/mock_data.sql.
 -- Fictional accounts share KicauMock2026!; Argon2id hashes match the application.
 DO $schema$
 BEGIN
- IF to_regclass('iam.user_master_history') IS NULL OR to_regclass('asset.bird_master_history') IS NULL
+ IF to_regclass('migration_ids.legacy') IS NULL OR to_regclass('iam.user_master_history') IS NULL OR to_regclass('asset.bird_master_history') IS NULL
  OR NOT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='iam' AND table_name='users' AND column_name='nickname')
  OR NOT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='competition' AND table_name='registrations' AND column_name='registration_number')
  OR EXISTS(SELECT FROM unnest(ARRAY['ADMIN','OPERATOR','JURI','PESERTA']) role(name) WHERE NOT EXISTS(SELECT FROM iam.roles r WHERE r.name=role.name)) THEN
-  RAISE EXCEPTION 'Mock seed requires migrations through 012';
+  RAISE EXCEPTION 'Mock seed requires migrations through 013';
  END IF;
 END $schema$;
 
@@ -188,12 +188,33 @@ INSERT INTO _kicau_mock_expected(entity,id,identity,payload) VALUES
  ('iam.user_sessions','6d6f636b-000d-4000-8000-000000000003','{"id":"6d6f636b-000d-4000-8000-000000000003"}'::jsonb,'{"id":"6d6f636b-000d-4000-8000-000000000003","user_id":"6d6f636b-0001-4000-8000-000000000005","device_id":"android-juri-dedi-01","expires_at":"2026-12-25T23:59:59+07:00","user_agent":"Mozilla/5.0 (Linux; Android 14; Pixel 8) Mobile Safari/537.36"}'::jsonb),
  ('iam.user_sessions','6d6f636b-000d-4000-8000-000000000004','{"id":"6d6f636b-000d-4000-8000-000000000004"}'::jsonb,'{"id":"6d6f636b-000d-4000-8000-000000000004","user_id":"6d6f636b-0001-4000-8000-000000000007","device_id":"android-peserta-slamet-01","expires_at":"2026-12-25T23:59:59+07:00","user_agent":"Mozilla/5.0 (Linux; Android 14; Samsung Galaxy S24) Mobile"}'::jsonb);
 
+-- Fixture UUIDs are stable lookup keys for both migrated and fresh development databases.
+ALTER TABLE _kicau_mock_expected ADD COLUMN numeric_id bigint;
+DO $mapping$
+DECLARE f record; new_id bigint;
+BEGIN
+ FOR f IN SELECT entity,id FROM _kicau_mock_expected ORDER BY entity,id LOOP
+  SELECT m.numeric_id INTO new_id FROM migration_ids.legacy m WHERE m.entity=f.entity AND m.legacy_uuid=f.id;
+  IF new_id IS NULL THEN
+   new_id:=nextval(pg_get_serial_sequence(f.entity,'id'));
+   INSERT INTO migration_ids.legacy VALUES(f.entity,f.id,new_id);
+  END IF;
+  UPDATE _kicau_mock_expected SET numeric_id=new_id WHERE id=f.id;
+ END LOOP;
+END $mapping$;
+
+CREATE FUNCTION pg_temp.fixture_ids(doc jsonb) RETURNS jsonb LANGUAGE sql STABLE AS $$
+ SELECT jsonb_object_agg(e.key,coalesce(to_jsonb(f.numeric_id),e.value))
+ FROM jsonb_each(doc) e LEFT JOIN _kicau_mock_expected f ON e.value=to_jsonb(f.id)
+$$;
+UPDATE _kicau_mock_expected SET identity=pg_temp.fixture_ids(identity),payload=pg_temp.fixture_ids(payload);
+
 -- Existing identity must match; edits/passwords/status/versions are never reset.
 DO $identities$
-DECLARE fixture record; actual jsonb; role_id uuid;
+DECLARE fixture record; actual jsonb; role_id bigint;
 BEGIN
  FOR fixture IN SELECT * FROM _kicau_mock_expected LOOP
-  EXECUTE format('SELECT to_jsonb(t) FROM %s t WHERE id=$1',fixture.entity::regclass) INTO actual USING fixture.id;
+  EXECUTE format('SELECT to_jsonb(t) FROM %s t WHERE id=$1',fixture.entity::regclass) INTO actual USING fixture.numeric_id;
   IF actual IS NOT NULL AND NOT actual @> fixture.identity THEN RAISE EXCEPTION 'Fixture identity collision: %, %',fixture.entity,fixture.id; END IF;
   IF fixture.payload ? '_role' THEN
    SELECT id INTO STRICT role_id FROM iam.roles WHERE name=fixture.payload->>'_role';
@@ -202,11 +223,11 @@ BEGIN
  END LOOP;
 END $identities$;
 
-SELECT set_config('app.actor_id','6d6f636b-0001-4000-8000-000000000001',true);
+SELECT set_config('app.actor_id',(SELECT numeric_id::text FROM _kicau_mock_expected WHERE id='6d6f636b-0001-4000-8000-000000000001'),true);
 SELECT set_config('app.arena_id','',true);
 
 DO $insert$
-DECLARE fixture record; columns_sql text; payload jsonb; role_id uuid;
+DECLARE fixture record; columns_sql text; payload jsonb; role_id bigint;
 BEGIN
  FOR fixture IN SELECT * FROM _kicau_mock_expected ORDER BY
   CASE entity
@@ -225,7 +246,7 @@ BEGIN
    ELSE 13
   END, id
  LOOP
-  EXECUTE format('SELECT to_jsonb(t) FROM %s t WHERE id=$1',fixture.entity::regclass) INTO payload USING fixture.id;
+  EXECUTE format('SELECT to_jsonb(t) FROM %s t WHERE id=$1',fixture.entity::regclass) INTO payload USING fixture.numeric_id;
   IF payload IS NOT NULL THEN CONTINUE; END IF;
   payload:=fixture.payload;
   IF payload ? '_role' THEN

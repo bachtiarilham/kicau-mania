@@ -22,7 +22,7 @@ func (r *eventRepoImpl) GetByID(ctx context.Context, arenaID, id string) (*model
 		       event_date, status, created_at, updated_at, round_count, location, grand_prize,
 		       pic_name, min_participants, max_participants
 		FROM cloud_read.v_events
-		WHERE arena_id = $1::uuid AND id = $2::uuid
+		WHERE arena_id = $1::text::bigint AND id = $2::text::bigint
 	`
 	return postgres.QueryOne[model.EventView](ctx, r.store, query, arenaID, id)
 }
@@ -36,7 +36,7 @@ func (r *eventRepoImpl) List(ctx context.Context, arenaID string, cursor *string
 		       event_date, status, created_at, updated_at, round_count, location, grand_prize,
 		       pic_name, min_participants, max_participants
 		FROM cloud_read.v_events
-		WHERE arena_id = $1::uuid AND ($2::uuid IS NULL OR id > $2::uuid)
+		WHERE arena_id = $1::text::bigint AND ($2::text::bigint IS NULL OR id > $2::text::bigint)
 		ORDER BY id
 		LIMIT $3
 	`
@@ -46,7 +46,7 @@ func (r *eventRepoImpl) List(ctx context.Context, arenaID string, cursor *string
 func (r *eventRepoImpl) Create(ctx context.Context, arenaID string, req *model.CreateEventRequest) (*model.EventView, error) {
 	query := `
 		INSERT INTO competition.events(arena_id, owner_id, title, description, event_date, status, location, grand_prize, pic_name, min_participants, max_participants)
-		VALUES($1::uuid, $2::uuid, $3, $4, $5::date, $6, $7, $8, $9, $10, $11)
+		VALUES($1::text::bigint, $2::text::bigint, $3, $4, $5::date, $6, $7, $8, $9, $10, $11)
 		RETURNING id
 	`
 	row, err := r.store.QueryRow(ctx, query, arenaID, req.OwnerID, req.Title, req.Description, req.EventDate, req.Status, req.Location, req.GrandPrize, req.PicName, req.MinParticipants, req.MaxParticipants)
@@ -63,7 +63,7 @@ func (r *eventRepoImpl) Create(ctx context.Context, arenaID string, req *model.C
 func (r *eventRepoImpl) Update(ctx context.Context, arenaID, id string, req *model.CreateEventRequest) (*model.EventView, error) {
 	query := `
 		UPDATE competition.events SET
-			owner_id = coalesce($3::uuid, owner_id),
+			owner_id = coalesce($3::text::bigint, owner_id),
 			title = coalesce($4, title),
 			description = coalesce($5, description),
 			event_date = coalesce($6::date, event_date),
@@ -74,7 +74,7 @@ func (r *eventRepoImpl) Update(ctx context.Context, arenaID, id string, req *mod
 			min_participants = coalesce($11, min_participants),
 			max_participants = coalesce($12, max_participants),
 			updated_at = CURRENT_TIMESTAMP
-		WHERE arena_id = $1::uuid AND id = $2::uuid
+		WHERE arena_id = $1::text::bigint AND id = $2::text::bigint
 	`
 	err := r.store.ExecSQL(ctx, query, arenaID, id, req.OwnerID, req.Title, req.Description, req.EventDate, req.Status, req.Location, req.GrandPrize, req.PicName, req.MinParticipants, req.MaxParticipants)
 	if err != nil {
@@ -84,7 +84,7 @@ func (r *eventRepoImpl) Update(ctx context.Context, arenaID, id string, req *mod
 }
 
 func (r *eventRepoImpl) Delete(ctx context.Context, arenaID, id string) error {
-	query := `DELETE FROM competition.events WHERE arena_id = $1::uuid AND id = $2::uuid`
+	query := `DELETE FROM competition.events WHERE arena_id = $1::text::bigint AND id = $2::text::bigint`
 	return r.store.ExecSQL(ctx, query, arenaID, id)
 }
 
@@ -105,7 +105,7 @@ func (r *roundRepoImpl) GetByID(ctx context.Context, arenaID, id string) (*model
 		       field_judge_1, field_judge_2, field_judge_3, field_judge_4,
 		       monitor_judge_1, monitor_judge_2, monitor_judge_3, monitor_judge_4
 		FROM cloud_read.v_rounds
-		WHERE arena_id = $1::uuid AND id = $2::uuid
+		WHERE arena_id = $1::text::bigint AND id = $2::text::bigint
 	`
 	return postgres.QueryOne[model.RoundView](ctx, r.store, query, arenaID, id)
 }
@@ -122,7 +122,7 @@ func (r *roundRepoImpl) List(ctx context.Context, arenaID string, cursor *string
 		       field_judge_1, field_judge_2, field_judge_3, field_judge_4,
 		       monitor_judge_1, monitor_judge_2, monitor_judge_3, monitor_judge_4
 		FROM cloud_read.v_rounds
-		WHERE arena_id = $1::uuid AND ($2::uuid IS NULL OR id > $2::uuid)
+		WHERE arena_id = $1::text::bigint AND ($2::text::bigint IS NULL OR id > $2::text::bigint)
 		ORDER BY id
 		LIMIT $3
 	`
@@ -135,7 +135,7 @@ func (r *roundRepoImpl) Create(ctx context.Context, arenaID string, req *model.C
 		                               start_time, end_time, coordinator_name, head_judge_name,
 		                               field_judge_1, field_judge_2, field_judge_3, field_judge_4,
 		                               monitor_judge_1, monitor_judge_2, monitor_judge_3, monitor_judge_4)
-		VALUES($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5, $6,
+		VALUES($1::text::bigint, $2::text::bigint, $3::text::bigint, $4::text::bigint, $5, $6,
 		       $7, $8, $9, $10,
 		       $11, $12, $13, $14,
 		       $15, $16, $17, $18)
@@ -155,9 +155,9 @@ func (r *roundRepoImpl) Create(ctx context.Context, arenaID string, req *model.C
 func (r *roundRepoImpl) Update(ctx context.Context, arenaID, id string, req *model.CreateRoundRequest) (*model.RoundView, error) {
 	query := `
 		UPDATE competition.rounds SET
-			event_id = coalesce($3::uuid, event_id),
-			category_id = coalesce($4::uuid, category_id),
-			bird_species_id = coalesce($5::uuid, bird_species_id),
+			event_id = coalesce($3::text::bigint, event_id),
+			category_id = coalesce($4::text::bigint, category_id),
+			bird_species_id = coalesce($5::text::bigint, bird_species_id),
 			round_number = coalesce($6, round_number),
 			title = coalesce($7, title),
 			start_time = coalesce($8, start_time),
@@ -173,7 +173,7 @@ func (r *roundRepoImpl) Update(ctx context.Context, arenaID, id string, req *mod
 			monitor_judge_3 = coalesce($18, monitor_judge_3),
 			monitor_judge_4 = coalesce($19, monitor_judge_4),
 			updated_at = CURRENT_TIMESTAMP
-		WHERE arena_id = $1::uuid AND id = $2::uuid
+		WHERE arena_id = $1::text::bigint AND id = $2::text::bigint
 	`
 	err := r.store.ExecSQL(ctx, query, arenaID, id, req.EventID, req.CategoryID, req.BirdSpeciesID, req.RoundNumber, req.Title, req.StartTime, req.EndTime, req.CoordinatorName, req.HeadJudgeName, req.FieldJudge1, req.FieldJudge2, req.FieldJudge3, req.FieldJudge4, req.MonitorJudge1, req.MonitorJudge2, req.MonitorJudge3, req.MonitorJudge4)
 	if err != nil {
@@ -183,7 +183,7 @@ func (r *roundRepoImpl) Update(ctx context.Context, arenaID, id string, req *mod
 }
 
 func (r *roundRepoImpl) Delete(ctx context.Context, arenaID, id string) error {
-	query := `DELETE FROM competition.rounds WHERE arena_id = $1::uuid AND id = $2::uuid`
+	query := `DELETE FROM competition.rounds WHERE arena_id = $1::text::bigint AND id = $2::text::bigint`
 	return r.store.ExecSQL(ctx, query, arenaID, id)
 }
 
@@ -196,13 +196,13 @@ func (r *roundRepoImpl) Lock(ctx context.Context, arenaID, id string) (*model.Ro
 		       field_judge_1, field_judge_2, field_judge_3, field_judge_4,
 		       monitor_judge_1, monitor_judge_2, monitor_judge_3, monitor_judge_4
 		FROM competition.rounds
-		WHERE arena_id = $1::uuid AND id = $2::uuid FOR UPDATE
+		WHERE arena_id = $1::text::bigint AND id = $2::text::bigint FOR UPDATE
 	`
 	return postgres.QueryOne[model.RoundView](ctx, r.store, query, arenaID, id)
 }
 
 func (r *roundRepoImpl) SetStatus(ctx context.Context, arenaID, id, expectedStatus, newStatus string) (*model.RoundView, error) {
-	query := `UPDATE competition.rounds SET status = $4, updated_at = CURRENT_TIMESTAMP WHERE arena_id = $1::uuid AND id = $2::uuid AND status = $3`
+	query := `UPDATE competition.rounds SET status = $4, updated_at = CURRENT_TIMESTAMP WHERE arena_id = $1::text::bigint AND id = $2::text::bigint AND status = $3`
 	if err := r.store.ExecSQL(ctx, query, arenaID, id, expectedStatus, newStatus); err != nil {
 		return nil, err
 	}
@@ -227,7 +227,7 @@ func (r *registrationRepoImpl) GetByID(ctx context.Context, arenaID, id string) 
 		       registration_number, registration_date, participant_name, participant_phone,
 		       owner_name, owner_phone
 		FROM cloud_read.v_registrations
-		WHERE arena_id = $1::uuid AND id = $2::uuid
+		WHERE arena_id = $1::text::bigint AND id = $2::text::bigint
 	`
 	return postgres.QueryOne[model.RegistrationView](ctx, r.store, query, arenaID, id)
 }
@@ -245,9 +245,9 @@ func (r *registrationRepoImpl) List(ctx context.Context, arenaID string, roundID
 		       registration_number, registration_date, participant_name, participant_phone,
 		       owner_name, owner_phone
 		FROM cloud_read.v_registrations
-		WHERE arena_id = $1::uuid
-		  AND ($2::uuid IS NULL OR round_id = $2::uuid)
-		  AND ($3::uuid IS NULL OR id > $3::uuid)
+		WHERE arena_id = $1::text::bigint
+		  AND ($2::text::bigint IS NULL OR round_id = $2::text::bigint)
+		  AND ($3::text::bigint IS NULL OR id > $3::text::bigint)
 		ORDER BY id
 		LIMIT $4
 	`
@@ -258,14 +258,14 @@ func (r *registrationRepoImpl) Create(ctx context.Context, arenaID string, req *
 	query := `
 		INSERT INTO competition.registrations(user_id, arena_id, round_id, bird_id, gantangan_id, entry_fee, payment_method,
 		                                      registration_number, registration_date, participant_name, participant_phone, owner_name, owner_phone)
-		SELECT u.id, $2::uuid, r.id, b.id, $5::uuid, $6::numeric, $7,
+		SELECT u.id, $2::text::bigint, r.id, b.id, $5::text::bigint, $6::numeric, $7,
 		       $8, coalesce($9::date, CURRENT_DATE), $10, $11, $12, $13
 		FROM iam.users u
 		CROSS JOIN asset.birds b
 		JOIN competition.rounds r ON r.bird_species_id = b.bird_species_id
-		WHERE u.id = $1::uuid AND u.deleted_at IS NULL AND u.is_active
-		  AND b.id = $4::uuid AND b.deleted_at IS NULL
-		  AND r.id = $3::uuid AND r.arena_id = $2::uuid
+		WHERE u.id = $1::text::bigint AND u.deleted_at IS NULL AND u.is_active
+		  AND b.id = $4::text::bigint AND b.deleted_at IS NULL
+		  AND r.id = $3::text::bigint AND r.arena_id = $2::text::bigint
 		RETURNING id
 	`
 	row, err := r.store.QueryRow(ctx, query, req.UserID, arenaID, req.RoundID, req.BirdID, req.GantanganID, req.EntryFee, req.PaymentMethod, req.RegistrationNumber, req.RegistrationDate, req.ParticipantName, req.ParticipantPhone, req.OwnerName, req.OwnerPhone)
@@ -282,10 +282,10 @@ func (r *registrationRepoImpl) Create(ctx context.Context, arenaID string, req *
 func (r *registrationRepoImpl) Update(ctx context.Context, arenaID, id string, req *model.CreateRegistrationRequest) (*model.RegistrationView, error) {
 	query := `
 		UPDATE competition.registrations SET
-			user_id = $3::uuid,
-			round_id = $4::uuid,
-			bird_id = $5::uuid,
-			gantangan_id = $6::uuid,
+			user_id = $3::text::bigint,
+			round_id = $4::text::bigint,
+			bird_id = $5::text::bigint,
+			gantangan_id = $6::text::bigint,
 			entry_fee = $7::numeric,
 			payment_method = $8,
 			registration_number = $9,
@@ -295,7 +295,7 @@ func (r *registrationRepoImpl) Update(ctx context.Context, arenaID, id string, r
 			owner_name = $13,
 			owner_phone = $14,
 			updated_at = CURRENT_TIMESTAMP
-		WHERE arena_id = $1::uuid AND id = $2::uuid AND status = 'PENDING_PAYMENT' AND payment_status <> 'VERIFIED'
+		WHERE arena_id = $1::text::bigint AND id = $2::text::bigint AND status = 'PENDING_PAYMENT' AND payment_status <> 'VERIFIED'
 	`
 	err := r.store.ExecSQL(ctx, query, arenaID, id, req.UserID, req.RoundID, req.BirdID, req.GantanganID, req.EntryFee, req.PaymentMethod, req.RegistrationNumber, req.RegistrationDate, req.ParticipantName, req.ParticipantPhone, req.OwnerName, req.OwnerPhone)
 	if err != nil {
@@ -314,13 +314,13 @@ func (r *registrationRepoImpl) Lock(ctx context.Context, arenaID, id string) (*m
 		       registration_number, registration_date, participant_name, participant_phone,
 		       owner_name, owner_phone
 		FROM competition.registrations
-		WHERE arena_id = $1::uuid AND id = $2::uuid FOR UPDATE
+		WHERE arena_id = $1::text::bigint AND id = $2::text::bigint FOR UPDATE
 	`
 	return postgres.QueryOne[model.RegistrationView](ctx, r.store, query, arenaID, id)
 }
 
 func (r *registrationRepoImpl) VerifyPayment(ctx context.Context, arenaID, id string) (*model.RegistrationView, error) {
-	query := `UPDATE competition.registrations SET payment_status = 'VERIFIED', verified_at = CURRENT_TIMESTAMP, status = 'CONFIRMED', updated_at = CURRENT_TIMESTAMP WHERE arena_id = $1::uuid AND id = $2::uuid AND status = 'PENDING_PAYMENT'`
+	query := `UPDATE competition.registrations SET payment_status = 'VERIFIED', verified_at = CURRENT_TIMESTAMP, status = 'CONFIRMED', updated_at = CURRENT_TIMESTAMP WHERE arena_id = $1::text::bigint AND id = $2::text::bigint AND status = 'PENDING_PAYMENT'`
 	if err := r.store.ExecSQL(ctx, query, arenaID, id); err != nil {
 		return nil, err
 	}
@@ -328,7 +328,7 @@ func (r *registrationRepoImpl) VerifyPayment(ctx context.Context, arenaID, id st
 }
 
 func (r *registrationRepoImpl) RejectPayment(ctx context.Context, arenaID, id string) (*model.RegistrationView, error) {
-	query := `UPDATE competition.registrations SET payment_status = 'REJECTED', verified_at = NULL, updated_at = CURRENT_TIMESTAMP WHERE arena_id = $1::uuid AND id = $2::uuid AND status = 'PENDING_PAYMENT'`
+	query := `UPDATE competition.registrations SET payment_status = 'REJECTED', verified_at = NULL, updated_at = CURRENT_TIMESTAMP WHERE arena_id = $1::text::bigint AND id = $2::text::bigint AND status = 'PENDING_PAYMENT'`
 	if err := r.store.ExecSQL(ctx, query, arenaID, id); err != nil {
 		return nil, err
 	}
@@ -336,7 +336,7 @@ func (r *registrationRepoImpl) RejectPayment(ctx context.Context, arenaID, id st
 }
 
 func (r *registrationRepoImpl) Cancel(ctx context.Context, arenaID, id string) (*model.RegistrationView, error) {
-	query := `UPDATE competition.registrations SET status = 'CANCELLED', updated_at = CURRENT_TIMESTAMP WHERE arena_id = $1::uuid AND id = $2::uuid AND status <> 'CANCELLED'`
+	query := `UPDATE competition.registrations SET status = 'CANCELLED', updated_at = CURRENT_TIMESTAMP WHERE arena_id = $1::text::bigint AND id = $2::text::bigint AND status <> 'CANCELLED'`
 	if err := r.store.ExecSQL(ctx, query, arenaID, id); err != nil {
 		return nil, err
 	}
@@ -344,7 +344,7 @@ func (r *registrationRepoImpl) Cancel(ctx context.Context, arenaID, id string) (
 }
 
 func (r *registrationRepoImpl) Disqualify(ctx context.Context, arenaID, id, reason string) (*model.RegistrationView, error) {
-	query := `UPDATE competition.registrations SET participant_status = 'DISQUALIFIED', disqualification_reason = $3, disqualified_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE arena_id = $1::uuid AND id = $2::uuid AND participant_status = 'ACTIVE'`
+	query := `UPDATE competition.registrations SET participant_status = 'DISQUALIFIED', disqualification_reason = $3, disqualified_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE arena_id = $1::text::bigint AND id = $2::text::bigint AND participant_status = 'ACTIVE'`
 	if err := r.store.ExecSQL(ctx, query, arenaID, id, reason); err != nil {
 		return nil, err
 	}
@@ -352,7 +352,7 @@ func (r *registrationRepoImpl) Disqualify(ctx context.Context, arenaID, id, reas
 }
 
 func (r *registrationRepoImpl) Requalify(ctx context.Context, arenaID, id string) (*model.RegistrationView, error) {
-	query := `UPDATE competition.registrations SET participant_status = 'ACTIVE', disqualification_reason = NULL, disqualified_at = NULL, updated_at = CURRENT_TIMESTAMP WHERE arena_id = $1::uuid AND id = $2::uuid AND participant_status = 'DISQUALIFIED'`
+	query := `UPDATE competition.registrations SET participant_status = 'ACTIVE', disqualification_reason = NULL, disqualified_at = NULL, updated_at = CURRENT_TIMESTAMP WHERE arena_id = $1::text::bigint AND id = $2::text::bigint AND participant_status = 'DISQUALIFIED'`
 	if err := r.store.ExecSQL(ctx, query, arenaID, id); err != nil {
 		return nil, err
 	}
@@ -360,12 +360,12 @@ func (r *registrationRepoImpl) Requalify(ctx context.Context, arenaID, id string
 }
 
 func (r *registrationRepoImpl) SetProof(ctx context.Context, arenaID, id string, imageBytes []byte, mimeType string) error {
-	query := `UPDATE competition.registrations SET payment_proof = $3::bytea, payment_proof_mime = $4, updated_at = CURRENT_TIMESTAMP WHERE arena_id = $1::uuid AND id = $2::uuid AND status = 'PENDING_PAYMENT' AND payment_status <> 'VERIFIED'`
+	query := `UPDATE competition.registrations SET payment_proof = $3::bytea, payment_proof_mime = $4, updated_at = CURRENT_TIMESTAMP WHERE arena_id = $1::text::bigint AND id = $2::text::bigint AND status = 'PENDING_PAYMENT' AND payment_status <> 'VERIFIED'`
 	return r.store.ExecSQL(ctx, query, arenaID, id, imageBytes, mimeType)
 }
 
 func (r *registrationRepoImpl) ReadProof(ctx context.Context, arenaID, id string) ([]byte, string, error) {
-	query := `SELECT payment_proof, payment_proof_mime FROM competition.registrations WHERE arena_id = $1::uuid AND id = $2::uuid`
+	query := `SELECT payment_proof, payment_proof_mime FROM competition.registrations WHERE arena_id = $1::text::bigint AND id = $2::text::bigint`
 	row, err := r.store.QueryRow(ctx, query, arenaID, id)
 	if err != nil {
 		return nil, "", err
@@ -392,7 +392,7 @@ func (r *registrationRepoImpl) RoundParticipants(ctx context.Context, arenaID, r
 		       registration_number, registration_date, participant_name, participant_phone,
 		       owner_name, owner_phone
 		FROM cloud_read.v_registrations
-		WHERE arena_id = $1::uuid AND round_id = $2::uuid AND status = 'CONFIRMED' AND payment_status = 'VERIFIED'
+		WHERE arena_id = $1::text::bigint AND round_id = $2::text::bigint AND status = 'CONFIRMED' AND payment_status = 'VERIFIED'
 		ORDER BY gantangan_number, id
 	`
 	return postgres.QueryMany[model.RegistrationView](ctx, r.store, query, arenaID, roundID)
@@ -407,24 +407,24 @@ func NewJudgingRepository(s *postgres.Store) contract.JudgingRepository {
 }
 
 func (r *judgingRepoImpl) RoundJudges(ctx context.Context, arenaID, roundID string) ([]model.RoundJudgeView, error) {
-	query := `SELECT id, arena_id, round_id, judge_user_id, judge_name FROM cloud_read.v_round_judges WHERE arena_id = $1::uuid AND round_id = $2::uuid`
+	query := `SELECT id, arena_id, round_id, judge_user_id, judge_name FROM cloud_read.v_round_judges WHERE arena_id = $1::text::bigint AND round_id = $2::text::bigint`
 	return postgres.QueryMany[model.RoundJudgeView](ctx, r.store, query, arenaID, roundID)
 }
 
 func (r *judgingRepoImpl) AssignJudge(ctx context.Context, arenaID, roundID, judgeUserID string) error {
-	query := `INSERT INTO judging.round_judges(round_id, judge_user_id) VALUES($1::uuid, $2::uuid) ON CONFLICT DO NOTHING`
+	query := `INSERT INTO judging.round_judges(round_id, judge_user_id) VALUES($1::text::bigint, $2::text::bigint) ON CONFLICT DO NOTHING`
 	return r.store.ExecSQL(ctx, query, roundID, judgeUserID)
 }
 
 func (r *judgingRepoImpl) RemoveJudge(ctx context.Context, arenaID, roundID, judgeUserID string) error {
-	query := `DELETE FROM judging.round_judges WHERE round_id = $1::uuid AND judge_user_id = $2::uuid`
+	query := `DELETE FROM judging.round_judges WHERE round_id = $1::text::bigint AND judge_user_id = $2::text::bigint`
 	return r.store.ExecSQL(ctx, query, roundID, judgeUserID)
 }
 
 func (r *judgingRepoImpl) SaveScore(ctx context.Context, arenaID, roundID, registrationID, judgeUserID, criteriaID string, scoreValue float64) error {
 	query := `
 		INSERT INTO judging.round_scores(arena_id, round_id, registration_id, user_id, criteria_id, score_value)
-		VALUES($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid, $6)
+		VALUES($1::text::bigint, $2::text::bigint, $3::text::bigint, $4::text::bigint, $5::text::bigint, $6)
 		ON CONFLICT (registration_id, user_id, criteria_id)
 		DO UPDATE SET score_value = EXCLUDED.score_value, updated_at = CURRENT_TIMESTAMP
 	`
@@ -436,7 +436,7 @@ func (r *judgingRepoImpl) ReadScores(ctx context.Context, arenaID, roundID, regi
 		SELECT id, arena_id, round_id, registration_id, user_id, judge_name, criteria_id, criteria_name,
 		       score_value, created_at, updated_at
 		FROM cloud_read.v_round_scores
-		WHERE arena_id = $1::uuid AND round_id = $2::uuid AND registration_id = $3::uuid
+		WHERE arena_id = $1::text::bigint AND round_id = $2::text::bigint AND registration_id = $3::text::bigint
 		ORDER BY id
 	`
 	return postgres.QueryMany[model.ScoreView](ctx, r.store, query, arenaID, roundID, registrationID)
@@ -448,7 +448,7 @@ func (r *judgingRepoImpl) RoundRecap(ctx context.Context, arenaID, roundID strin
 		       score_count, scoring_judge_count, expected_score_count, judge_count, criteria_count,
 		       total_score, average_score, is_complete
 		FROM cloud_read.v_round_score_summary
-		WHERE arena_id = $1::uuid AND round_id = $2::uuid
+		WHERE arena_id = $1::text::bigint AND round_id = $2::text::bigint
 		ORDER BY total_score DESC NULLS LAST, gantangan_id
 	`
 	return postgres.QueryMany[model.ScoreSummaryView](ctx, r.store, query, arenaID, roundID)

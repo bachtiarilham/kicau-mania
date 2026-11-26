@@ -2,9 +2,7 @@ package usecase
 
 import (
 	"context"
-	"crypto/rand"
-	"fmt"
-	"io"
+
 	"net/mail"
 	"strings"
 
@@ -21,16 +19,6 @@ type UserUsecase struct {
 
 func NewUserUsecase(tx contract.TransactionManager, users contract.UserRepository, passwords PasswordHasher) *UserUsecase {
 	return &UserUsecase{tx: tx, users: users, passwords: passwords}
-}
-
-func newUUID() (string, error) {
-	b := make([]byte, 16)
-	if _, err := io.ReadFull(rand.Reader, b); err != nil {
-		return "", err
-	}
-	b[6] = (b[6] & 0x0f) | 0x40
-	b[8] = (b[8] & 0x3f) | 0x80
-	return fmt.Sprintf("%08x-%04x-%04x-%04x-%012x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:16]), nil
 }
 
 func (u *UserUsecase) Get(ctx context.Context, actorID, targetID string) (*model.UserView, error) {
@@ -53,7 +41,7 @@ func (u *UserUsecase) Create(ctx context.Context, actorID string, req *model.Cre
 		req.Email = &trimmed
 	}
 
-	id, err := newUUID()
+	id, err := u.users.NextID(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -160,7 +148,7 @@ func (u *UserUsecase) Bootstrap(ctx context.Context, name, emailAddress, phone, 
 	if err != nil {
 		return err
 	}
-	id, err := newUUID()
+	id, err := u.users.NextID(ctx)
 	if err != nil {
 		return err
 	}
@@ -193,4 +181,3 @@ func (u *UserUsecase) Bootstrap(ctx context.Context, name, emailAddress, phone, 
 		return u.users.AssignGlobalRole(txCtx, created.ID, "ADMIN")
 	})
 }
-

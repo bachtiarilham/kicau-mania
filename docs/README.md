@@ -31,6 +31,7 @@ Dokumen ini merupakan panduan navigasi dan peta dokumentasi teknis untuk ekosist
 | **`cloud-app`** | [cloud-app/docs/API.md](../cloud-app/docs/API.md) | Kontrak REST API, OpenAPI/Swagger docs, autentikasi JWT, dan webhook. |
 | **Database** | [cloud-app/db/README.md](../cloud-app/db/README.md) | Skema PostgreSQL, migrasi goose, dan [ERD](../cloud-app/db/ERD.md). |
 | **Deployment** | [cloud-app/deployment/devops_runbook.md](../cloud-app/deployment/devops_runbook.md) | Runbook Docker Compose, VPS Ubuntu, Nginx reverse proxy, dan SSL. |
+| **Observability** | [docs/observability-grafana.md](observability-grafana.md) | Cara akses Grafana, Prometheus, Alloy via SSH tunnel, dan query log Loki. |
 | **Desktop** | [kicau-mania-desktop/README.md](../../wails/kicau-mania-desktop/README.md) | Setup Wails v3, libVLC native Win32 embedding, Svelte 5 Runes. |
 | **CLI Tool** | [tools/agent-ctl/README.md](../tools/agent-ctl/README.md) | Binary `agent-ctl.exe`, lifecycle status, automated verify, evidence reports. |
 
