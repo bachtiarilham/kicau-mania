@@ -1,0 +1,62 @@
+discovery.docker "containers" {
+  host             = "unix:///var/run/docker.sock"
+  refresh_interval = "5s"
+}
+
+discovery.relabel "app" {
+  targets = discovery.docker.containers.targets
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/?(.*)"
+    target_label  = "container"
+  }
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = ".*(kicau|cloud-app).*"
+    action        = "keep"
+  }
+}
+
+loki.source.docker "app_logs" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.relabel.app.output
+  forward_to = [loki.process.zap.receiver]
+}
+
+loki.process "zap" {
+  stage.json {
+    expressions = {
+      service   = "service",
+      level     = "level",
+      requestId = "requestId",
+      method    = "method",
+      route     = "route",
+      status    = "status",
+      latency   = "latency",
+    }
+  }
+
+  stage.labels {
+    values = {
+      service = "",
+      level   = "",
+    }
+  }
+
+  stage.structured_metadata {
+    values = {
+      requestId = "requestId",
+      method    = "method",
+      route     = "route",
+      status    = "status",
+    }
+  }
+
+  forward_to = [loki.write.loki.receiver]
+}
+
+loki.write "loki" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}

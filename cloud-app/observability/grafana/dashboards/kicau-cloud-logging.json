@@ -1,0 +1,58 @@
+{
+  "title": "Kicau Mania Cloud - Observability",
+  "uid": "kicau-cloud-obs",
+  "schemaVersion": 39,
+  "version": 1,
+  "templating": {
+    "list": [
+      {
+        "name": "requestId",
+        "type": "textbox",
+        "label": "Request ID",
+        "current": { "value": "" }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Total ERROR Logs (24h)",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "datasource": { "type": "loki", "uid": "Loki" },
+      "targets": [
+        { "expr": "sum(count_over_time({service=\"cloud-app\", level=\"error\"}[24h]))" }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Total WARN Logs (24h)",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "datasource": { "type": "loki", "uid": "Loki" },
+      "targets": [
+        { "expr": "sum(count_over_time({service=\"cloud-app\", level=\"warn\"}[24h]))" }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Log Volume by Level",
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "loki", "uid": "Loki" },
+      "targets": [
+        { "expr": "sum by (level) (count_over_time({service=\"cloud-app\"}[1m]))" }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "logs",
+      "title": "Interactive Logs (Filter by $requestId)",
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 6 },
+      "datasource": { "type": "loki", "uid": "Loki" },
+      "targets": [
+        { "expr": "{service=\"cloud-app\"} |= \"$requestId\"" }
+      ]
+    }
+  ]
+}

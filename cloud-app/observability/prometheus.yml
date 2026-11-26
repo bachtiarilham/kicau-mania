@@ -1,0 +1,8 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: kicau-cloud-app
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['kicau_mania_app:8091', 'host.docker.internal:8080']

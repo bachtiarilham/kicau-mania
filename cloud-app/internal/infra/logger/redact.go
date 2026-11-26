@@ -22,6 +22,8 @@ var sensitiveKeys = []string{
 	"api_key",
 	"cookie",
 	"credential",
+	"cvv",
+	"card_number",
 	"stream_key",
 	"source_url",
 	"database_url",

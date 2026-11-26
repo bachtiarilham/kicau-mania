@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
+	_ "time/tzdata"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -18,6 +20,9 @@ type ctxLoggerKey struct{}
 
 // Init runs after dotenv is loaded. Logging failures never prevent cloud startup.
 func Init() {
+	if loc, err := time.LoadLocation("Asia/Jakarta"); err == nil {
+		time.Local = loc
+	}
 	jsonConfig := zap.NewProductionEncoderConfig()
 	jsonConfig.TimeKey, jsonConfig.LevelKey = "time", "level"
 	jsonConfig.MessageKey, jsonConfig.CallerKey = "msg", "caller"

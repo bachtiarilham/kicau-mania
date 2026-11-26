@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net"
 	"net/http"
+	"os"
 	"time"
 
 	"go.uber.org/zap"
@@ -14,6 +15,7 @@ import (
 	"kicau.cloud/control/internal/app"
 	delivery "kicau.cloud/control/internal/delivery"
 	"kicau.cloud/control/internal/infra/logger"
+	"kicau.cloud/control/internal/infra/telemetry"
 )
 
 func Run(ctx context.Context, cfg config.Config) error {
@@ -27,6 +29,20 @@ func Run(ctx context.Context, cfg config.Config) error {
 		return err
 	}
 	defer container.Close()
+	serviceName := os.Getenv("SERVICE_NAME")
+	if serviceName == "" {
+		serviceName = "cloud-app"
+	}
+	shutdownTracer, tracerErr := telemetry.InitAlloyTracer(ctx, serviceName)
+	if tracerErr != nil {
+		logger.Warn("OpenTelemetry tracer init failed; continuing without tracing", zap.Error(tracerErr))
+	} else if shutdownTracer != nil {
+		defer func() {
+			tCtx, tCancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer tCancel()
+			_ = shutdownTracer(tCtx)
+		}()
+	}
 	if container.Database == nil {
 		logger.Warn("PostgreSQL is not configured; readiness will return 503")
 	}

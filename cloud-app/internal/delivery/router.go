@@ -2,11 +2,13 @@
 package delivery
 
 import (
+	"os"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 
 	"kicau.cloud/control/internal/apperror"
 	assetDelivery "kicau.cloud/control/internal/asset/delivery"
@@ -40,7 +42,12 @@ func Router(opts Options, h Handlers) *gin.Engine {
 	r.RedirectFixedPath = false
 	r.HandleMethodNotAllowed = true
 	_ = r.SetTrustedProxies(opts.TrustedProxies)
-	r.Use(middleware.SecurityHeaders(), middleware.AccessLog(), middleware.Recover(), middleware.CanonicalParams(), middleware.Limits(opts.RequestTimeout), middleware.CORS(opts.AllowedOrigins))
+	serviceName := os.Getenv("SERVICE_NAME")
+	if serviceName == "" {
+		serviceName = "cloud-app"
+	}
+	r.Use(otelgin.Middleware(serviceName), middleware.SecurityHeaders(), middleware.AccessLog(), middleware.PrometheusMiddleware(), middleware.Recover(), middleware.CanonicalParams(), middleware.Limits(opts.RequestTimeout), middleware.CORS(opts.AllowedOrigins))
+	r.GET("/metrics", middleware.PrometheusHandler())
 	r.GET("/healthz", h.Health.Live)
 	r.HEAD("/healthz", h.Health.Live)
 	r.GET("/readyz", h.Health.Ready)
