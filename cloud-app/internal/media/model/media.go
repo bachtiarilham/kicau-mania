@@ -2,6 +2,9 @@ package model
 
 import (
 	"context"
+	"path"
+	"regexp"
+	"strings"
 	"time"
 )
 
@@ -19,14 +22,15 @@ type Ingestion struct {
 	Mappings  []Mapping `json:"mappings"`
 }
 type Upload struct {
-	Container   string    `json:"container"`
-	SessionID   string    `json:"session_id"`
-	ChannelID   string    `json:"channel_id"`
-	RecordingID string    `json:"recording_id"`
-	Size        int64     `json:"size_bytes"`
-	SHA256      string    `json:"sha256"`
-	Started     time.Time `json:"started_at"`
-	Ended       time.Time `json:"ended_at"`
+	DisplayFilename string    `json:"display_filename"`
+	Container       string    `json:"container"`
+	SessionID       string    `json:"session_id"`
+	ChannelID       string    `json:"channel_id"`
+	RecordingID     string    `json:"recording_id"`
+	Size            int64     `json:"size_bytes"`
+	SHA256          string    `json:"sha256"`
+	Started         time.Time `json:"started_at"`
+	Ended           time.Time `json:"ended_at"`
 }
 type Part struct {
 	Number int32  `json:"number"`
@@ -60,11 +64,31 @@ type WhatsAppDeliveryResult struct {
 }
 
 type PublicVideoWatch struct {
-	RecordingID   string `json:"recording_id"`
-	BirdName      string `json:"bird_name"`
-	OwnerName     string `json:"owner_name"`
-	GantanganCode string `json:"gantangan_code"`
-	StreamingURL  string `json:"streaming_url"`
-	DownloadURL   string `json:"download_url"`
-	Duration      string `json:"duration"`
+	RecordingID     string `json:"recording_id"`
+	BirdName        string `json:"bird_name"`
+	OwnerName       string `json:"owner_name"`
+	GantanganCode   string `json:"gantangan_code"`
+	StreamingURL    string `json:"streaming_url"`
+	DownloadURL     string `json:"download_url"`
+	Duration        string `json:"duration"`
+	DisplayFilename string `json:"display_filename,omitempty"`
+	VideoNote       string `json:"video_note,omitempty"`
+}
+
+const LimitedRecordingNote = "Rekaman ini mungkin tidak lengkap atau tidak dapat diputar dengan lancar."
+
+var recordingNames = regexp.MustCompile(`^Gantangan (0[1-9]|1[0-9]|2[0-4])( - Rekaman Terbatas)?\.mkv$`)
+
+func ValidRecordingName(name string) bool { return recordingNames.MatchString(name) }
+
+func RecordingName(key string) string {
+	name := path.Base(key)
+	if !ValidRecordingName(name) {
+		return ""
+	}
+	return name
+}
+
+func LimitedRecording(key string) bool {
+	return strings.HasSuffix(RecordingName(key), " - Rekaman Terbatas.mkv")
 }

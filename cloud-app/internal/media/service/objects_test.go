@@ -12,6 +12,7 @@ import (
 	"kicau.cloud/control/internal/media/model"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -61,12 +62,19 @@ func exerciseObject(t *testing.T, o *Objects, key string) {
 	if e != nil || !ok {
 		t.Fatal("head", e)
 	}
-	if _, e = o.Download(ctx, key); e != nil {
+	download, e := o.Download(ctx, key)
+	if e != nil {
 		t.Fatal("download", e)
+	}
+	if name := model.RecordingName(key); name != "" {
+		signed, err := url.Parse(download)
+		if err != nil || !strings.Contains(signed.Query().Get("response-content-disposition"), name) {
+			t.Fatal("missing readable download name")
+		}
 	}
 }
 func TestS3SDKMultipartContract(t *testing.T) {
-	for _, key := range []string{"fixture.mp4", "fixture.mkv"} {
+	for _, key := range []string{"fixture.mp4", "fixture.mkv", "Gantangan 03 - Rekaman Terbatas.mkv"} {
 		t.Run(key, func(t *testing.T) {
 			data := "fixture-mp4-payload"
 			sum := sha256.Sum256([]byte(data))

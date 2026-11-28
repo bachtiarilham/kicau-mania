@@ -12,6 +12,7 @@ import (
 	"github.com/aws/smithy-go"
 	"kicau.cloud/control/internal/apperror"
 	"kicau.cloud/control/internal/media/model"
+	"mime"
 	"path"
 	"strings"
 	"time"
@@ -109,7 +110,12 @@ func (o *Objects) Exists(c context.Context, key string, size int64, hash string)
 	return true, nil
 }
 func (o *Objects) Download(c context.Context, key string) (string, error) {
-	r, e := s3.NewPresignClient(o.Client).PresignGetObject(c, &s3.GetObjectInput{Bucket: aws.String(o.Bucket), Key: aws.String(key), ResponseContentDisposition: aws.String("attachment; filename=recording" + path.Ext(key))}, s3.WithPresignExpires(time.Minute))
+	name := model.RecordingName(key)
+	if name == "" {
+		name = "recording" + path.Ext(key)
+	}
+	disposition := mime.FormatMediaType("attachment", map[string]string{"filename": name})
+	r, e := s3.NewPresignClient(o.Client).PresignGetObject(c, &s3.GetObjectInput{Bucket: aws.String(o.Bucket), Key: aws.String(key), ResponseContentDisposition: aws.String(disposition)}, s3.WithPresignExpires(time.Minute))
 	if e != nil {
 		return "", failure(e)
 	}

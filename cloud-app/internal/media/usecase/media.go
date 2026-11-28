@@ -200,6 +200,9 @@ func (u *UseCase) Create(c context.Context, engine core.Record, in model.Upload)
 	if !identifier.MatchString(in.SessionID) || !identifier.MatchString(in.ChannelID) || !identifier.MatchString(in.RecordingID) || !digest.MatchString(in.SHA256) || in.Size <= 0 || in.Size > model.PartSize*10000 || in.Started.IsZero() || in.Ended.Before(in.Started) {
 		return nil, apperror.ErrInvalid
 	}
+	if in.DisplayFilename != "" && (in.Container != "mkv" || !model.ValidRecordingName(in.DisplayFilename)) {
+		return nil, apperror.ErrInvalid
+	}
 	if u.Objects == nil {
 		return nil, apperror.ErrUnavailable
 	}
@@ -226,6 +229,9 @@ func (u *UseCase) Create(c context.Context, engine core.Record, in model.Upload)
 		}
 		id := text(allocated, "id")
 		key := fmt.Sprintf("arenas/%s/engines/%s/%s.%s", text(engine, "arena_id"), eid, id, in.Container)
+		if in.DisplayFilename != "" {
+			key = fmt.Sprintf("arenas/%s/engines/%s/%s/%s", text(engine, "arena_id"), eid, id, in.DisplayFilename)
+		}
 		r, e := u.DB.One(c, "DesktopAssetCreate", id, eid, text(s, "id"), in.ChannelID, in.RecordingID, key, in.Size, in.SHA256, in.Started, in.Ended)
 		if e != nil {
 			return e
@@ -375,7 +381,15 @@ func (u *UseCase) List(c context.Context, actor, arena, round, session, channel,
 		}
 		own = actor
 	}
-	return u.DB.Many(c, "DesktopAssetList", arena, null(round), null(session), null(channel), null(cursor), limit, own)
+	assets, err := u.DB.Many(c, "DesktopAssetList", arena, null(round), null(session), null(channel), null(cursor), limit, own)
+	for _, asset := range assets {
+		key := text(asset, "object_key")
+		if name := model.RecordingName(key); name != "" {
+			asset["display_filename"] = name
+			asset["video_issue"] = model.LimitedRecording(key)
+		}
+	}
+	return assets, err
 }
 func (u *UseCase) Download(c context.Context, actor, id string) (string, error) {
 	r, e := u.Read(c, actor, id)
@@ -436,6 +450,10 @@ func (u *UseCase) DeliverWhatsApp(c context.Context, actor, assetID, baseURL str
 		return res, nil
 	}
 
+	title, videoNote := "Tonton Rekaman CCTV Full HD (10 Menit)", "Dapat diputar langsung di HP tanpa install aplikasi & tersedia tombol download"
+	if model.LimitedRecording(text(r, "object_key")) {
+		title, videoNote = "Rekaman Terbatas", model.LimitedRecordingNote
+	}
 	messageText := fmt.Sprintf(
 		"🏆 *REKAMAN RESMI LOMBA - KICAU MANIA* 🏆\n\n"+
 			"Halo Bpk/Ibu *%s*,\n"+
@@ -443,14 +461,16 @@ func (u *UseCase) DeliverWhatsApp(c context.Context, actor, assetID, baseURL str
 			"📋 *Detail Sesi Lomba:*\n"+
 			"• Burung: *%s*\n"+
 			"• Saluran / Gantangan: *%s*\n\n"+
-			"🎥 *Tonton Rekaman CCTV Full HD (10 Menit):*\n"+
+			"🎥 *%s:*\n"+
 			"👉 %s\n\n"+
-			"_(Dapat diputar langsung di HP tanpa install aplikasi & tersedia tombol download)_\n"+
+			"_(%s)_\n"+
 			"Salam Kicau Mania Juara! 🕊️",
 		ownerName,
 		birdName,
 		strings.ToUpper(text(r, "channel_id")),
+		title,
 		streamURL,
+		videoNote,
 	)
 
 	if u.WhatsApp != nil {
@@ -526,13 +546,18 @@ func (u *UseCase) PublicWatch(c context.Context, assetID string) (*model.PublicV
 		}
 	}
 
-	return &model.PublicVideoWatch{
-		RecordingID:   text(r, "id"),
-		BirdName:      birdName,
-		OwnerName:     ownerName,
-		GantanganCode: strings.ToUpper(text(r, "channel_id")),
-		StreamingURL:  downloadURL,
-		DownloadURL:   downloadURL,
-		Duration:      "10:00 Menit",
-	}, nil
+	watch := &model.PublicVideoWatch{
+		RecordingID:     text(r, "id"),
+		BirdName:        birdName,
+		OwnerName:       ownerName,
+		GantanganCode:   strings.ToUpper(text(r, "channel_id")),
+		StreamingURL:    downloadURL,
+		DownloadURL:     downloadURL,
+		Duration:        "10:00 Menit",
+		DisplayFilename: model.RecordingName(text(r, "object_key")),
+	}
+	if model.LimitedRecording(text(r, "object_key")) {
+		watch.Duration, watch.VideoNote = "", model.LimitedRecordingNote
+	}
+	return watch, nil
 }

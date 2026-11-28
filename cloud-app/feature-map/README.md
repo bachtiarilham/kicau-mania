@@ -24,4 +24,4 @@ Peta ini merinci fungsionalitas REST API, cara akses, selector/parameter HTTP, i
 | [03-tournaments-and-rounds.md](./03-tournaments-and-rounds.md) | Event Lomba & Penjadwalan Ronde | `/api/v1/arenas/:arena/events`, `/rounds` |
 | [04-ticketing-and-registrations.md](./04-ticketing-and-registrations.md) | Pendaftaran Peserta & Tiket | `/api/v1/arenas/:arena/registrations`, `/proof` |
 | [05-judging-and-scoring.md](./05-judging-and-scoring.md) | Penugasan Juri & Rekap Penilaian | `/api/v1/arenas/:arena/rounds/:id/scores`, `/recap` |
-| [06-media-and-whatsapp.md](./06-media-and-whatsapp.md) | Media S3 & Pengiriman WhatsApp | `/api/v1/arenas/:arena/rounds/:id/deliveries/whatsapp`, `/v/:id` |
+| [06-media-and-whatsapp.md](./06-media-and-whatsapp.md) | Rekaman Cloud & WhatsApp | Alur unduhan, pengiriman tautan peserta, dan masa simpan lima hari. |

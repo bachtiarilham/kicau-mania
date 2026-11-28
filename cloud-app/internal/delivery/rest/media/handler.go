@@ -116,14 +116,16 @@ func (h *Handler) Routes(users, engine *gin.RouterGroup) {
 		c.Set("media_engine", r)
 		c.Next()
 	})
-	engine.POST("/uploads", func(c *gin.Context) {
+	createUpload := func(c *gin.Context) {
 		var b model.Upload
 		if !request.Bind(c, &b) {
 			return
 		}
 		r, e := h.UC.Create(c.Request.Context(), identity(c), b)
 		send(c, r, e)
-	})
+	}
+	engine.POST("/uploads", createUpload)
+	engine.POST("/uploads/named", createUpload)
 	engine.GET("/uploads/:id", func(c *gin.Context) {
 		r, e := h.UC.Status(c.Request.Context(), identity(c), c.Param("id"))
 		send(c, r, e)
@@ -179,6 +181,10 @@ func renderVideoPlayerHTML(w *model.PublicVideoWatch) string {
 	code := html.EscapeString(w.GantanganCode)
 	streamURL := html.EscapeString(w.StreamingURL)
 	downloadURL := html.EscapeString(w.DownloadURL)
+	quality := "Full HD 10 Menit"
+	if w.VideoNote != "" {
+		quality = "Rekaman Terbatas"
+	}
 
 	return fmt.Sprintf(`<!DOCTYPE html>
 <html lang="id">
@@ -337,7 +343,7 @@ func renderVideoPlayerHTML(w *model.PublicVideoWatch) string {
   <div class="container">
     <header>
       <div class="badge">🎥 CCTV Resmi Kicau Mania</div>
-      <span style="font-size: 11px; color: #fbbf24; font-weight: 700;">Full HD 10 Menit</span>
+      <span style="font-size: 11px; color: #fbbf24; font-weight: 700;">%s</span>
     </header>
 
     <div class="player-card">
@@ -350,6 +356,7 @@ func renderVideoPlayerHTML(w *model.PublicVideoWatch) string {
       <div class="details">
         <div class="title">%s</div>
         <div class="subtitle">Pemilik: %s · Saluran: %s</div>
+        <p class="subtitle">%s</p>
 
         <div class="info-grid">
           <div class="info-box">
@@ -388,7 +395,7 @@ func renderVideoPlayerHTML(w *model.PublicVideoWatch) string {
     }
   </script>
 </body>
-</html>`, code, birdName, streamURL, streamURL, birdName, ownerName, code, code, downloadURL)
+</html>`, code, birdName, quality, streamURL, streamURL, birdName, ownerName, code, html.EscapeString(w.VideoNote), code, downloadURL)
 }
 
 func identity(c *gin.Context) core.Record { v, _ := c.Get("media_engine"); return v.(core.Record) }
