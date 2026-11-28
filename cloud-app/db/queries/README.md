@@ -59,7 +59,7 @@ Soft delete akun mematikan akun, menaikkan versi dan mencabut sesi PostgreSQL da
 ## Login dan sesi
 
 1. Lookup `LoginAccountByEmail`; verifikasi hash Argon2id pada UseCase. Jangan kirim plaintext password untuk dibandingkan SQL atau mengembalikan hash ke frontend. Periksa akun aktif, tidak terhapus dan kebijakan verifikasi email.
-2. Dalam transaksi, `LoginUserLock` menserialisasi login akun tersebut. Jalankan `LoginExpireSessions`, lalu `LoginOtherDeviceCount`; tolak bila sudah tiga perangkat lain aktif.
+2. Dalam transaksi, `LoginUserLock` menserialisasi login akun tersebut. Jalankan `LoginExpireSessions` untuk menandai sesi kedaluwarsa.
 3. `LoginSessionSave` membuat/memperbarui sesi perangkat dengan expiry yang ditentukan layanan. Issue access/refresh credential hanya setelah penyimpanan berhasil; format/penyimpanan token belum ditetapkan oleh query ini.
 4. `LoginSessionValidate` menerima session ID dan user ID **hasil verifikasi credential**, bukan menerima UUID sesi mentah sebagai Bearer token. Query tersebut tidak memverifikasi signature/hash token.
 5. Untuk Google, verifikasi Google ID token asli di service sebelum `LoginGoogleAccount`/`LoginGoogleLink`. Jangan otomatis menautkan provider hanya karena email dari body cocok.

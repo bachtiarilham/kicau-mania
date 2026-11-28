@@ -17,7 +17,7 @@
 | Lokasi | Tanggung jawab |
 |---|---|
 | internal/app | Wiring schema 010, PostgreSQL/Redis dan readiness; tidak memigrasi database. |
-| internal/login/usecase | Login, maksimal 3 perangkat, sesi PostgreSQL, refresh dan logout. |
+| internal/login/usecase | Login, sesi PostgreSQL, refresh dan logout. |
 | internal/login/service | SHA-256 token Redis, TTL, rotasi Lua atomik dan fail closed. |
 | internal/workflow/usecase | Scope arena/role, expected_version, transaksi dan aturan lomba. |
 | internal/workflow/repository | Adapter port data ke named SQL; tidak menyimpan SQL inline. |

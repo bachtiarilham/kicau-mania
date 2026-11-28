@@ -939,7 +939,7 @@ Contoh urutan:
 | `iam` | `roles` | Master daftar role sistem. |
 | `iam` | `user_roles` | Role pengguna pada tingkat global sistem. |
 | `iam` | `arena_user_roles` | Penugasan role operasional per arena (misal: juri/operator di Arena X). |
-| `iam` | `user_sessions` | Sesi aktif perangkat login beserta user agent (dibatasi maks 3 perangkat aktif per akun). |
+| `iam` | `user_sessions` | Sesi aktif perangkat login beserta user agent. |
 | `asset` | `arenas` | Data arena/gantangan fisik (fasilitas, lokasi, zona waktu). |
 | `asset` | `gantangan` | Nomor tiang gantangan fisik beserta posisi baris dan kolom di arena. |
 | `asset` | `bird_species` | Master jenis burung yang direferensikan oleh burung dan ronde. |

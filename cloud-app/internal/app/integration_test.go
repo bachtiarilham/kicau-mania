@@ -417,12 +417,9 @@ func TestSchema010BusinessFlows(t *testing.T) {
 		t.Fatal("history was writable")
 	}
 	_, _ = db.Exec(ctx, "RESET ROLE")
-	for _, device := range []string{"test-device-02", "test-device-03"} {
+	for _, device := range []string{"test-device-02", "test-device-03", "test-device-04"} {
 		loginScoped("admin@example.test", "test-password-admin-010", device, 200)
 	}
-	pre4 := call("POST", "/auth/login", map[string]any{"email": "admin@example.test", "password": "test-password-admin-010", "device_id": "test-device-04"}, 200)
-	scope4 := pre4["accessible_scopes"].([]any)[0].(map[string]any)["scope_id"].(string)
-	call("POST", "/auth/select-scope", map[string]any{"pre_auth_token": pre4["pre_auth_token"], "scope_id": scope4, "device_id": "test-device-04"}, 409)
 	login = loginScoped("admin@example.test", "test-password-admin-010", "test-device-01", 200)
 	token = login["access_token"].(string)
 	call("POST", "/auth/logout", map[string]any{}, 200)

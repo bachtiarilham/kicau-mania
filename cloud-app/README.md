@@ -41,7 +41,7 @@ Lihat [API aktif](docs/API.md), [koleksi dan panduan Insomnia](docs/insomnia/REA
 go run ./cmd/openapi docs/generated/swagger.json
 ```
 
-Access token opaque berlaku 15 menit; refresh berotasi atomik di Redis dan dibatasi umur sesi PostgreSQL maksimal 30 hari. SHA-256 token, TTL dan referensi sesi disimpan di Redis. Setiap autentikasi memeriksa pencabutan sesi dan status akun pada PostgreSQL. Maksimal tiga perangkat aktif, dan login ulang pada perangkat yang sama mengganti pasangan token. Password awal petugas hanya dapat ditetapkan ADMIN setelah role arena ditugaskan. Akun peserta baru tidak memiliki password/login otomatis. Ganti password mencabut semua sesi.
+Access token opaque berlaku 15 menit; refresh berotasi atomik di Redis dan dibatasi umur sesi PostgreSQL maksimal 30 hari. SHA-256 token, TTL dan referensi sesi disimpan di Redis. Setiap autentikasi memeriksa pencabutan sesi dan status akun pada PostgreSQL. Login ulang pada perangkat yang sama mengganti pasangan token. Password awal petugas hanya dapat ditetapkan ADMIN setelah role arena ditugaskan. Akun peserta baru tidak memiliki password/login otomatis. Ganti password mencabut semua sesi.
 
 ## Pemeriksaan
 

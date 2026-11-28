@@ -225,14 +225,6 @@ func (u *AuthUsecase) SelectScope(ctx context.Context, in model.SelectScopeReque
 			return err
 		}
 
-		count, err := u.sessions.OtherDeviceCount(txCtx, preAuthSession.UserID, in.DeviceID)
-		if err != nil {
-			return err
-		}
-		if count >= 3 {
-			return apperror.Public(apperror.ErrConflict, "Maksimal tiga perangkat aktif; cabut sesi terlebih dahulu")
-		}
-
 		sessionID, expiresAt, err := u.sessions.SaveSession(txCtx, preAuthSession.UserID, in.DeviceID, in.UserAgent, time.Now().Add(30*24*time.Hour))
 		if err != nil {
 			return err

@@ -4,7 +4,7 @@ Pengujian memakai PostgreSQL 17.6 port 55439 dan Redis 5.0.14 port 56379 khusus 
 
 `internal/app/integration_test.go` memuat dan PREPARE seluruh named SQL sebagai role `kicau_cloud_app`, menjalankan skenario SQL rollback, lalu menjalankan middleware/handler HTTP Gin dalam proses tes memakai grant role kicau_cloud_app. PostgreSQL dan Redis tetap layanan nyata. Suite ini lolos dua kali berturut-turut. Smoke test opsional tests/live-contract.mjs juga pernah lolos terhadap listener Go nyata; pengulangannya mengalami timeout/socket error localhost Windows yang intermiten, sehingga koneksi lintas proses tersebut belum dinyatakan stabil pada host ini. Skenario mencakup:
 
-- Bootstrap, login gagal/berhasil, profil, hash token dan TTL Redis, refresh/reuse/concurrent refresh, logout, batas tiga perangkat, penggantian token pada perangkat sama, dan Redis gagal → 503.
+- Bootstrap, login gagal/berhasil, profil, hash token dan TTL Redis, refresh/reuse/concurrent refresh, logout, login pada empat perangkat, penggantian token pada perangkat sama, dan Redis gagal → 503.
 - Penolakan akses lintas arena dan OPERATOR memberi role/password atau mengubah akun berprivilege; perlindungan ADMIN terakhir.
 - Master no-op, expected_version stale, transfer owner no-op, soft delete dan larangan menulis history melalui role aplikasi.
 - Akun, event, ronde, burung, gantangan, tiket duplikat, spesies salah, edit sebelum/sesudah verifikasi, pembayaran tunai/transfer, bukti palsu/lebih besar/PNG valid, verifikasi/penolakan, pembatalan.

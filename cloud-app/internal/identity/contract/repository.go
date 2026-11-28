@@ -35,5 +35,4 @@ type SessionRepository interface {
 	SaveSession(ctx context.Context, userID, deviceID, userAgent string, expiresAt time.Time) (string, time.Time, error)
 	RevokeAllSessions(ctx context.Context, userID string) error
 	ExpireOldSessions(ctx context.Context, userID string) error
-	OtherDeviceCount(ctx context.Context, userID, currentDeviceID string) (int, error)
 }

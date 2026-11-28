@@ -63,16 +63,3 @@ func (r *sessionRepositoryImpl) ExpireOldSessions(ctx context.Context, userID st
 	query := `UPDATE iam.user_sessions SET revoked_at = CURRENT_TIMESTAMP WHERE user_id = $1::text::bigint AND revoked_at IS NULL AND expires_at <= CURRENT_TIMESTAMP`
 	return r.store.ExecSQL(ctx, query, userID)
 }
-
-func (r *sessionRepositoryImpl) OtherDeviceCount(ctx context.Context, userID, currentDeviceID string) (int, error) {
-	query := `SELECT count(*) FROM iam.user_sessions WHERE user_id = $1::text::bigint AND device_id <> $2 AND revoked_at IS NULL AND expires_at > CURRENT_TIMESTAMP`
-	row, err := r.store.QueryRow(ctx, query, userID, currentDeviceID)
-	if err != nil {
-		return 0, err
-	}
-	var count int
-	if err := row.Scan(&count); err != nil {
-		return 0, err
-	}
-	return count, nil
-}
