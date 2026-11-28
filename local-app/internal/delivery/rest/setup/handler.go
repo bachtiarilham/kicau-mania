@@ -5,6 +5,7 @@ import (
 	"net/url"
 
 	"github.com/gin-gonic/gin"
+	"kicau.local/edge/config"
 	"kicau.local/edge/internal/delivery/rest/response"
 	"kicau.local/edge/internal/infra/network"
 )
@@ -55,12 +56,12 @@ type JobRequest struct {
 }
 
 type Job struct {
-	ID        string `json:"id"`
-	State     string `json:"state"`
-	Progress  string `json:"progress"`
-	Result    any    `json:"result,omitempty"`
-	Code      string `json:"code,omitempty"`
-	Message   string `json:"message,omitempty"`
+	ID       string `json:"id"`
+	State    string `json:"state"`
+	Progress string `json:"progress"`
+	Result   any    `json:"result,omitempty"`
+	Code     string `json:"code,omitempty"`
+	Message  string `json:"message,omitempty"`
 }
 
 type SystemInfo interface {
@@ -72,6 +73,10 @@ type SystemInfo interface {
 	Start(JobRequest) (Job, error)
 	Job(string) (Job, error)
 	Cancel(string) error
+	Arena(context.Context) (config.ArenaSettings, error)
+	SaveArena(config.ArenaSettings) error
+	TestArenaCamera(context.Context, config.ArenaChannel) (any, error)
+	TestArenaNVR(context.Context, string) error
 }
 
 type Handler struct {
@@ -88,9 +93,65 @@ func (h *Handler) Routes(g *gin.RouterGroup) {
 	g.GET("/bootstrap", h.bootstrap)
 	g.GET("/checks", h.checks)
 	g.GET("/configuration", h.configuration)
+	g.GET("/arena", h.arena)
+	g.POST("/arena", h.saveArena)
+	g.POST("/arena/test-camera", h.testArenaCamera)
+	g.POST("/arena/test-nvr", h.testArenaNVR)
 	g.POST("/jobs", h.startJob)
 	g.GET("/jobs/:id", h.job)
 	g.DELETE("/jobs/:id", h.cancelJob)
+}
+
+func (h *Handler) arena(c *gin.Context) {
+	c.Header("Cache-Control", "no-store")
+	settings, err := h.sys.Arena(c.Request.Context())
+	if err != nil {
+		response.WriteError(c, err)
+		return
+	}
+	response.Success(c, "Pengaturan arena", settings)
+}
+
+func (h *Handler) saveArena(c *gin.Context) {
+	var settings config.ArenaSettings
+	if c.ShouldBindJSON(&settings) != nil {
+		response.BadRequest(c, "Pengaturan arena tidak valid", nil)
+		return
+	}
+	if err := h.sys.SaveArena(settings); err != nil {
+		response.WriteError(c, err)
+		return
+	}
+	response.NoContent(c)
+}
+
+func (h *Handler) testArenaCamera(c *gin.Context) {
+	var camera config.ArenaChannel
+	if c.ShouldBindJSON(&camera) != nil {
+		response.BadRequest(c, "Sumber RTSP tidak valid", nil)
+		return
+	}
+	stream, err := h.sys.TestArenaCamera(c.Request.Context(), camera)
+	if err != nil {
+		response.WriteError(c, err)
+		return
+	}
+	response.Success(c, "Video tersedia", stream)
+}
+
+func (h *Handler) testArenaNVR(c *gin.Context) {
+	var target struct {
+		IP string `json:"ip" binding:"required,ipv4"`
+	}
+	if c.ShouldBindJSON(&target) != nil {
+		response.BadRequest(c, "Masukkan IPv4 NVR yang valid", nil)
+		return
+	}
+	if err := h.sys.TestArenaNVR(c.Request.Context(), target.IP); err != nil {
+		response.WriteError(c, err)
+		return
+	}
+	response.NoContent(c)
 }
 
 func (h *Handler) bootstrap(c *gin.Context) {

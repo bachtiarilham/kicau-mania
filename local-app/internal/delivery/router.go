@@ -5,21 +5,23 @@ import (
 	"io"
 	desktopDelivery "kicau.local/edge/internal/delivery/rest/desktop"
 	"net/http"
+	"slices"
 
 	"github.com/gin-gonic/gin"
 
 	"kicau.local/edge/config"
 	"kicau.local/edge/internal/apperror"
+	cameraDelivery "kicau.local/edge/internal/camera/delivery"
+	competitionDelivery "kicau.local/edge/internal/competition/delivery"
 	"kicau.local/edge/internal/delivery/middleware"
 	"kicau.local/edge/internal/delivery/rest"
 	"kicau.local/edge/internal/delivery/rest/apidocs"
-	cameraDelivery "kicau.local/edge/internal/camera/delivery"
-	recordingDelivery "kicau.local/edge/internal/recording/delivery"
-	streamingDelivery "kicau.local/edge/internal/streaming/delivery"
 	engineDelivery "kicau.local/edge/internal/delivery/rest/engine"
 	"kicau.local/edge/internal/delivery/rest/response"
 	setupDelivery "kicau.local/edge/internal/delivery/rest/setup"
 	"kicau.local/edge/internal/infra/logger"
+	recordingDelivery "kicau.local/edge/internal/recording/delivery"
+	streamingDelivery "kicau.local/edge/internal/streaming/delivery"
 )
 
 type Handlers struct {
@@ -29,6 +31,7 @@ type Handlers struct {
 	Camera    *cameraDelivery.Handler
 	Recording *recordingDelivery.Handler
 	Streaming *streamingDelivery.Handler
+	Rounds    *competitionDelivery.Handler
 }
 
 // Router godoc
@@ -54,6 +57,7 @@ func Router(c config.Config, handlers Handlers) *gin.Engine {
 		}
 	}))
 	r.Use(middleware.RequestLimits(), middleware.CORS(c.Origins))
+	lanReadCIDRs := append(slices.Clone(c.ReadCIDRs), c.JudgeReadCIDRs...)
 	apidocs.Routes(r)
 	r.GET("/healthz", rest.Health)
 	r.GET("/", func(ctx *gin.Context) {
@@ -66,8 +70,8 @@ func Router(c config.Config, handlers Handlers) *gin.Engine {
 	if c.AccessMode == "lan" {
 		if handlers.Setup != nil {
 			handlers.Setup.Routes(r.Group("/api/v1/setup", middleware.LocalControl(c.LocalControlToken, c.Origins)))
-			r.GET("/api/v1/local/status", middleware.LANViewer(c.ReadCIDRs), handlers.Setup.Status)
-			r.GET("/api/v1/local/guidance/:code", middleware.LANViewer(c.ReadCIDRs), handlers.Setup.Guidance)
+			r.GET("/api/v1/local/status", middleware.LANViewer(lanReadCIDRs), handlers.Setup.Status)
+			r.GET("/api/v1/local/guidance/:code", middleware.LANViewer(lanReadCIDRs), handlers.Setup.Guidance)
 		}
 	}
 	if handlers.Engine != nil {
@@ -85,7 +89,12 @@ func Router(c config.Config, handlers Handlers) *gin.Engine {
 	}
 	read := g
 	if c.AccessMode == "lan" {
-		read = r.Group("/api/v1", middleware.LANViewer(c.ReadCIDRs))
+		read = r.Group("/api/v1", middleware.LANViewer(lanReadCIDRs))
+		if handlers.Rounds != nil {
+			control := r.Group("/api/v1", middleware.LocalControl(c.LocalControlToken, c.Origins))
+			judges := r.Group("/api/v1", middleware.LANViewer(c.JudgeReadCIDRs))
+			handlers.Rounds.Routes(judges, control)
+		}
 	}
 	if handlers.Camera != nil {
 		handlers.Camera.Routes(read, g)

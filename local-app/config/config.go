@@ -6,9 +6,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"net/netip"
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -19,6 +21,7 @@ import (
 )
 
 type Config struct {
+	EnvPath           string
 	AccessMode        string
 	LocalControlToken string
 	// Aplikasi
@@ -49,11 +52,12 @@ type Config struct {
 	RTSPListen  string
 	RTSPBase    string
 
-	ReadCIDRs    []string
-	Channels     []Channel
-	Destinations map[string]string
-	NVRIP        string
-	NVRMAC       string
+	ReadCIDRs      []string
+	JudgeReadCIDRs []string
+	Channels       []Channel
+	Destinations   map[string]string
+	NVRIP          string
+	NVRMAC         string
 
 	// Audio
 	SampleRate                int
@@ -163,6 +167,7 @@ func Load(path string) (Config, error) {
 		return Config{}, err
 	}
 	cfg := Config{
+		EnvPath:    path,
 		AccessMode: getEnv("ENGINE_ACCESS_MODE", "cloud"),
 		// Aplikasi
 		Listen:               getEnv("HTTP_ADDR", "127.0.0.1:8090"),
@@ -185,17 +190,18 @@ func Load(path string) (Config, error) {
 		DNSUpstreams:         strings.Split(getEnv("DNS_UPSTREAMS", "1.1.1.1:53,8.8.8.8:53"), ","),
 
 		// Media / NVR
-		FFmpeg:       getEnv("FFMPEG_BIN", "ffmpeg"),
-		FFprobe:      getEnv("FFPROBE_BIN", "ffprobe"),
-		MediaMTX:     getEnv("MEDIAMTX_BIN", "mediamtx"),
-		MediaConfig:  filepath.Join(runtimeDir, "mediamtx.yml"),
-		RTSPListen:   getEnv("RTSP_ADDR", "127.0.0.1:8554"),
-		RTSPBase:     getEnv("RTSP_BASE_URL", "rtsp://127.0.0.1:8554"),
-		ReadCIDRs:    strings.Split(getEnv("MEDIA_READ_CIDRS", "127.0.0.1/32,::1/128"), ","),
-		Channels:     channels,
-		Destinations: destinations,
-		NVRIP:        getEnv("NVR_IP", "192.168.1.123"),
-		NVRMAC:       getEnv("NVR_MAC", "B8:86:87:C0:C3:AF"),
+		FFmpeg:         getEnv("FFMPEG_BIN", "ffmpeg"),
+		FFprobe:        getEnv("FFPROBE_BIN", "ffprobe"),
+		MediaMTX:       getEnv("MEDIAMTX_BIN", "mediamtx"),
+		MediaConfig:    filepath.Join(runtimeDir, "mediamtx.yml"),
+		RTSPListen:     getEnv("RTSP_ADDR", "127.0.0.1:8554"),
+		RTSPBase:       getEnv("RTSP_BASE_URL", "rtsp://127.0.0.1:8554"),
+		ReadCIDRs:      strings.Split(getEnv("MEDIA_READ_CIDRS", "127.0.0.1/32,::1/128"), ","),
+		JudgeReadCIDRs: strings.FieldsFunc(getEnv("JUDGE_READ_CIDRS", ""), func(r rune) bool { return r == ',' || r == ' ' }),
+		Channels:       channels,
+		Destinations:   destinations,
+		NVRIP:          getEnv("NVR_IP", "192.168.1.123"),
+		NVRMAC:         getEnv("NVR_MAC", "B8:86:87:C0:C3:AF"),
 
 		// Audio
 		SampleRate:                16000,
@@ -249,10 +255,24 @@ func validate(c Config) error {
 	if c.HeartbeatInterval < time.Second || c.HeartbeatTimeout <= c.HeartbeatInterval || c.HeartbeatTimeout > 5*time.Minute {
 		return fmt.Errorf("heartbeat timeout must exceed interval and be at most 5m")
 	}
-	for _, address := range []string{c.RTSPListen} {
-		host, _, err := net.SplitHostPort(address)
-		if err != nil || net.ParseIP(host) == nil || !net.ParseIP(host).IsLoopback() {
-			return fmt.Errorf("RTSP_ADDR must bind loopback")
+	host, _, err := net.SplitHostPort(c.RTSPListen)
+	rtspIP := net.ParseIP(host)
+	if err != nil || rtspIP == nil || !rtspIP.IsLoopback() && (host != "0.0.0.0" || c.AccessMode != "lan" || len(c.JudgeReadCIDRs) == 0) {
+		return fmt.Errorf("RTSP_ADDR must bind loopback, or 0.0.0.0 in LAN mode with JUDGE_READ_CIDRS")
+	}
+	privateNetworks := []netip.Prefix{
+		netip.MustParsePrefix("10.0.0.0/8"),
+		netip.MustParsePrefix("172.16.0.0/12"),
+		netip.MustParsePrefix("192.168.0.0/16"),
+	}
+	for _, cidr := range c.JudgeReadCIDRs {
+		prefix, err := netip.ParsePrefix(cidr)
+		private := false
+		for _, network := range privateNetworks {
+			private = private || (err == nil && network.Bits() <= prefix.Bits() && network.Contains(prefix.Addr()))
+		}
+		if !private {
+			return fmt.Errorf("JUDGE_READ_CIDRS must contain private IPv4 networks")
 		}
 	}
 
@@ -325,8 +345,12 @@ func validate(c Config) error {
 	if len(c.Token) < 32 || strings.HasPrefix(c.Token, "REPLACE_") {
 		return fmt.Errorf("API_TOKEN requires at least 32 characters")
 	}
-	if (len(c.Channels) < 1 && c.AccessMode != "lan") || len(c.Channels) > 24 {
-		return fmt.Errorf("configure 1..24 channels")
+	limit := 24
+	if slices.ContainsFunc(c.Channels, func(ch Channel) bool { return ch.ID == ArenaCameraID }) {
+		limit++
+	}
+	if (len(c.Channels) < 1 && c.AccessMode != "lan") || len(c.Channels) > limit {
+		return fmt.Errorf("configure up to 24 gantangan and one arena camera")
 	}
 	seen := map[string]bool{}
 	for _, ch := range c.Channels {

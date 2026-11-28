@@ -26,6 +26,8 @@ import (
 	cloudWorker "kicau.local/edge/internal/cloud/worker"
 	delivery "kicau.local/edge/internal/delivery"
 	engineDelivery "kicau.local/edge/internal/delivery/rest/engine"
+	"kicau.local/edge/internal/infra/ffmpeg"
+	"kicau.local/edge/internal/infra/mediamtx"
 	"kicau.local/edge/internal/infra/storage/filesystem"
 	"kicau.local/edge/internal/infra/storage/s3"
 	recordingDelivery "kicau.local/edge/internal/recording/delivery"
@@ -36,8 +38,6 @@ import (
 	streamingService "kicau.local/edge/internal/streaming/service"
 	streamingUC "kicau.local/edge/internal/streaming/usecase"
 	streamingWorker "kicau.local/edge/internal/streaming/worker"
-	"kicau.local/edge/internal/infra/ffmpeg"
-	"kicau.local/edge/internal/infra/mediamtx"
 )
 
 type Container struct {
@@ -69,7 +69,7 @@ func NewMedia(c config.Config) (*cameraRepo.Catalog, *mediamtx.Server, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	mediaServer := mediamtx.New(mediamtx.Options{Binary: c.MediaMTX, ConfigFile: c.MediaConfig, RTSPListen: c.RTSPListen, ReadCIDRs: c.ReadCIDRs, Sources: mediaSources})
+	mediaServer := mediamtx.New(mediamtx.Options{Binary: c.MediaMTX, ConfigFile: c.MediaConfig, RTSPListen: c.RTSPListen, JudgeReadCIDRs: c.JudgeReadCIDRs, OperatorCamera: config.ArenaCameraID, Sources: mediaSources})
 	return catalog, mediaServer, nil
 }
 func NewContainer(ctx context.Context, c config.Config) (*Container, error) {

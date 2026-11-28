@@ -15,8 +15,8 @@ import (
 	"go.uber.org/zap"
 
 	"kicau.local/edge/internal/infra/logger"
-	"kicau.local/edge/internal/infra/runtime/subprocess"
 	"kicau.local/edge/internal/infra/media"
+	"kicau.local/edge/internal/infra/runtime/subprocess"
 )
 
 var credsRegex = regexp.MustCompile(`://([^:]+):([^@]+)@`)
@@ -48,7 +48,8 @@ type Source struct {
 type Options struct {
 	Sources                        []Source
 	Binary, ConfigFile, RTSPListen string
-	ReadCIDRs                      []string
+	JudgeReadCIDRs                 []string
+	OperatorCamera                 string
 }
 type Server struct {
 	opts   Options
@@ -116,6 +117,19 @@ func (s *Server) Render() error {
 			"user":        "any",
 			"ips":         []string{"127.0.0.1/32", "::1/128"},
 			"permissions": permissions},
+	}
+	if len(s.opts.JudgeReadCIDRs) > 0 {
+		judgePermissions := make([]any, 0, len(s.opts.Sources))
+		for _, source := range s.opts.Sources {
+			if source.ID != s.opts.OperatorCamera {
+				judgePermissions = append(judgePermissions, map[string]any{"action": "read", "path": source.ID})
+			}
+		}
+		authUsers = append(authUsers, map[string]any{
+			"user":        "any",
+			"ips":         s.opts.JudgeReadCIDRs,
+			"permissions": judgePermissions,
+		})
 	}
 	cfg := map[string]any{
 		"logLevel":          "info",

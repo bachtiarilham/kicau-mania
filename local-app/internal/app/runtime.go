@@ -18,6 +18,8 @@ import (
 	"kicau.local/edge/internal/apperror"
 	cameraModel "kicau.local/edge/internal/camera/model"
 	cloudMedia "kicau.local/edge/internal/cloud/service"
+	competitionDelivery "kicau.local/edge/internal/competition/delivery"
+	competitionUsecase "kicau.local/edge/internal/competition/usecase"
 	"kicau.local/edge/internal/delivery"
 	desktopDelivery "kicau.local/edge/internal/delivery/rest/desktop"
 	setupDelivery "kicau.local/edge/internal/delivery/rest/setup"
@@ -36,6 +38,8 @@ type Coordinator struct {
 	errorCode string
 	closed    bool
 	setup     *setupDelivery.Handler
+	arenaMu   sync.Mutex
+	rounds    *competitionDelivery.Handler
 }
 
 func NewCoordinator(ctx context.Context, c config.Config) (*Coordinator, error) {
@@ -49,11 +53,12 @@ func NewCoordinator(ctx context.Context, c config.Config) (*Coordinator, error) 
 	c.LocalControlToken = hex.EncodeToString(secret[:])
 	m := &Coordinator{ctx: ctx, base: c}
 	m.setup = setupDelivery.New(m, c.LocalControlToken)
+	m.rounds = competitionDelivery.New(competitionUsecase.NewRounds(time.Now))
 	bridge, e := cloudMedia.New(filepath.Join(c.DataDir, "cloud-media"))
 	if e != nil {
 		return nil, e
 	}
-	m.shell = delivery.Router(c, delivery.Handlers{Setup: m.setup, Desktop: &desktopDelivery.Handler{Cloud: bridge}})
+	m.shell = delivery.Router(c, delivery.Handlers{Setup: m.setup, Desktop: &desktopDelivery.Handler{Cloud: bridge}, Rounds: m.rounds})
 	return m, nil
 }
 
@@ -98,6 +103,7 @@ func (m *Coordinator) launch() (*engineRuntime, error) {
 		return nil, e
 	}
 	r.container.Handlers.Setup = m.setup
+	r.container.Handlers.Rounds = m.rounds
 	r.handler = delivery.Router(c, r.container.Handlers)
 	return r, nil
 }

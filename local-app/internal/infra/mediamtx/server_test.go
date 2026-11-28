@@ -12,16 +12,16 @@ import (
 	"testing"
 	"time"
 
-	"kicau.local/edge/internal/infra/media"
-	"kicau.local/edge/internal/infra/ffmpeg"
 	cameraModel "kicau.local/edge/internal/camera/model"
 	cameraService "kicau.local/edge/internal/camera/service"
+	"kicau.local/edge/internal/infra/ffmpeg"
+	"kicau.local/edge/internal/infra/media"
 )
 
 func TestGeneratedConfigPreservesUpstreamMapping(t *testing.T) {
 	sources := []Source{{ID: "one", URL: "rtsp://user:secret@192.0.2.1/one"}, {ID: "two", URL: "rtsp://192.0.2.1/two"}}
 	var e error
-	opts := Options{ConfigFile: filepath.Join(t.TempDir(), "data", "mediamtx.yml"), RTSPListen: "127.0.0.1:8554", ReadCIDRs: []string{"192.0.2.0/24"}}
+	opts := Options{ConfigFile: filepath.Join(t.TempDir(), "data", "mediamtx.yml"), RTSPListen: "127.0.0.1:8554"}
 	mediaServer := newTestServer(opts, sources)
 	if e = mediaServer.Render(); e != nil {
 		t.Fatal(e)
@@ -121,7 +121,7 @@ func TestRenderEmptyReadCIDRsKeepsOnlyLoopback(t *testing.T) {
 	for _, cidrs := range [][]string{nil, {}} {
 		sources := []Source{{ID: "one", URL: "rtsp://192.0.2.1/a"}}
 		path := filepath.Join(t.TempDir(), "mediamtx.yml")
-		mediaServer := newTestServer(Options{ConfigFile: path, ReadCIDRs: cidrs}, sources)
+		mediaServer := newTestServer(Options{ConfigFile: path, JudgeReadCIDRs: cidrs}, sources)
 		if err := mediaServer.Render(); err != nil {
 			t.Fatal(err)
 		}
@@ -141,6 +141,40 @@ func TestRenderEmptyReadCIDRsKeepsOnlyLoopback(t *testing.T) {
 		if len(cfg.Users) != 1 || len(cfg.Users[0].IPs) != 2 || cfg.Users[0].IPs[0] != "127.0.0.1/32" || cfg.Users[0].IPs[1] != "::1/128" {
 			t.Fatal("empty CIDRs must not create unrestricted read access")
 		}
+	}
+}
+
+func TestJudgeAddressesCanOnlyRead(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "mediamtx.yml")
+	server := newTestServer(Options{ConfigFile: path, RTSPListen: "0.0.0.0:8554", JudgeReadCIDRs: []string{"192.168.1.58/32"}, OperatorCamera: "arena-overview"}, []Source{
+		{ID: "one", OnDemand: []string{"ffmpeg"}},
+		{ID: "arena-overview", URL: "rtsp://192.168.1.30/stream"},
+	})
+	if err := server.Render(); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var config struct {
+		Users []struct {
+			IPs         []string `json:"ips"`
+			Permissions []struct {
+				Action string `json:"action"`
+				Path   string `json:"path"`
+			} `json:"permissions"`
+		} `json:"authInternalUsers"`
+	}
+	if err := json.Unmarshal(raw, &config); err != nil {
+		t.Fatal(err)
+	}
+	if len(config.Users) != 2 || len(config.Users[0].Permissions) != 2 {
+		t.Fatalf("invalid local permissions: %+v", config.Users)
+	}
+	judge := config.Users[1]
+	if len(judge.IPs) != 1 || judge.IPs[0] != "192.168.1.58/32" || len(judge.Permissions) != 1 || judge.Permissions[0].Action != "read" || judge.Permissions[0].Path != "one" {
+		t.Fatalf("invalid judge permissions: %+v", judge)
 	}
 }
 

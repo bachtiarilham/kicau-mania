@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"kicau.local/edge/internal/apperror"
-	"kicau.local/edge/internal/core/identifier"
 	"kicau.local/edge/internal/camera/model"
+	"kicau.local/edge/internal/core/identifier"
 )
 
 type Input struct {
@@ -39,8 +39,8 @@ func New(inputs []Input, rtspBase string) (*Catalog, error) {
 	if base.Scheme != "rtsp" || base.Host == "" {
 		return nil, fmt.Errorf("invalid local RTSP hub address")
 	}
-	if len(inputs) < 1 || len(inputs) > 24 {
-		return nil, fmt.Errorf("NVR requires 1..24 channels")
+	if len(inputs) < 1 || len(inputs) > 25 {
+		return nil, fmt.Errorf("NVR requires 1..25 channels")
 	}
 	c := &Catalog{inputs: append([]Input(nil), inputs...), byID: map[string]Input{}, base: strings.TrimRight(rtspBase, "/")}
 	for _, in := range inputs {
