@@ -258,7 +258,7 @@ func (r *registrationRepoImpl) Create(ctx context.Context, arenaID string, req *
 	query := `
 		INSERT INTO competition.registrations(user_id, arena_id, round_id, bird_id, gantangan_id, entry_fee, payment_method,
 		                                      registration_number, registration_date, participant_name, participant_phone, owner_name, owner_phone)
-		SELECT u.id, $2::text::bigint, r.id, b.id, $5::text::bigint, $6::numeric, $7,
+		SELECT u.id, $2::text::bigint, r.id, b.id, NULLIF($5::text, '')::bigint, $6::numeric, NULLIF($7, ''),
 		       $8, coalesce($9::date, CURRENT_DATE), $10, $11, $12, $13
 		FROM iam.users u
 		CROSS JOIN asset.birds b
@@ -281,21 +281,31 @@ func (r *registrationRepoImpl) Create(ctx context.Context, arenaID string, req *
 
 func (r *registrationRepoImpl) Update(ctx context.Context, arenaID, id string, req *model.CreateRegistrationRequest) (*model.RegistrationView, error) {
 	query := `
+		WITH updated AS (
+			UPDATE competition.registrations SET
+				user_id = $3::text::bigint,
+				round_id = $4::text::bigint,
+				bird_id = $5::text::bigint,
+				gantangan_id = CASE WHEN $6::text IS NULL THEN gantangan_id ELSE NULLIF($6, '')::bigint END,
+				entry_fee = $7::numeric,
+				payment_method = COALESCE(NULLIF($8, ''), payment_method),
+				registration_number = COALESCE(NULLIF($9, ''), registration_number),
+				registration_date = COALESCE($10::date, registration_date, CURRENT_DATE),
+				participant_name = $11,
+				participant_phone = $12,
+				owner_name = $13,
+				owner_phone = $14,
+				updated_at = CURRENT_TIMESTAMP
+			WHERE arena_id = $1::text::bigint AND id = $2::text::bigint AND status = 'PENDING_PAYMENT' AND payment_status <> 'VERIFIED'
+			RETURNING id
+		)
 		UPDATE competition.registrations SET
-			user_id = $3::text::bigint,
-			round_id = $4::text::bigint,
-			bird_id = $5::text::bigint,
-			gantangan_id = $6::text::bigint,
-			entry_fee = $7::numeric,
-			payment_method = $8,
-			registration_number = $9,
-			registration_date = coalesce($10::date, CURRENT_DATE),
-			participant_name = $11,
-			participant_phone = $12,
-			owner_name = $13,
-			owner_phone = $14,
+			gantangan_id = NULLIF($6, '')::bigint,
 			updated_at = CURRENT_TIMESTAMP
-		WHERE arena_id = $1::text::bigint AND id = $2::text::bigint AND status = 'PENDING_PAYMENT' AND payment_status <> 'VERIFIED'
+		WHERE arena_id = $1::text::bigint AND id = $2::text::bigint
+		  AND status = 'CONFIRMED' AND gantangan_id IS NULL
+		  AND NULLIF($6, '') IS NOT NULL
+		  AND NOT EXISTS (SELECT 1 FROM updated)
 	`
 	err := r.store.ExecSQL(ctx, query, arenaID, id, req.UserID, req.RoundID, req.BirdID, req.GantanganID, req.EntryFee, req.PaymentMethod, req.RegistrationNumber, req.RegistrationDate, req.ParticipantName, req.ParticipantPhone, req.OwnerName, req.OwnerPhone)
 	if err != nil {

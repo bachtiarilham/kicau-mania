@@ -131,7 +131,7 @@ func (u *CompetitionUsecase) ListRegistrations(ctx context.Context, arenaID stri
 }
 
 func (u *CompetitionUsecase) CreateRegistration(ctx context.Context, arenaID string, req *model.CreateRegistrationRequest) (*model.RegistrationView, error) {
-	if req.UserID == "" || req.RoundID == "" || req.BirdID == "" || req.GantanganID == "" {
+	if req.UserID == "" || req.RoundID == "" || req.BirdID == "" {
 		return nil, apperror.Invalid("Data pendaftaran tidak lengkap")
 	}
 	return u.regs.Create(ctx, arenaID, req)

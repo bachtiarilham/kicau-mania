@@ -73,12 +73,12 @@ type RegistrationView struct {
 	BirdName               string     `db:"bird_name" json:"bird_name"`
 	OwnerID                string     `db:"owner_id" json:"owner_id"`
 	BirdSpeciesID          string     `db:"bird_species_id" json:"bird_species_id"`
-	GantanganID            string     `db:"gantangan_id" json:"gantangan_id"`
-	GantanganNumber        int        `db:"gantangan_number" json:"gantangan_number"`
-	Baris                  int        `db:"baris" json:"baris"`
-	Kolom                  int        `db:"kolom" json:"kolom"`
+	GantanganID            *string    `db:"gantangan_id" json:"gantangan_id"`
+	GantanganNumber        *int       `db:"gantangan_number" json:"gantangan_number"`
+	Baris                  *int       `db:"baris" json:"baris"`
+	Kolom                  *int       `db:"kolom" json:"kolom"`
 	EntryFee               string     `db:"entry_fee" json:"entry_fee"`
-	PaymentMethod          string     `db:"payment_method" json:"payment_method"`
+	PaymentMethod          *string    `db:"payment_method" json:"payment_method"`
 	PaymentStatus          string     `db:"payment_status" json:"payment_status"`
 	HasPaymentProof        bool       `db:"has_payment_proof" json:"has_payment_proof"`
 	PaymentProofMime       *string    `db:"payment_proof_mime" json:"payment_proof_mime,omitempty"`
@@ -177,7 +177,7 @@ type CreateRegistrationRequest struct {
 	UserID             string  `json:"user_id"`
 	RoundID            string  `json:"round_id"`
 	BirdID             string  `json:"bird_id"`
-	GantanganID        string  `json:"gantangan_id"`
+	GantanganID        *string `json:"gantangan_id"`
 	EntryFee           string  `json:"entry_fee"`
 	PaymentMethod      string  `json:"payment_method"`
 	RegistrationNumber *string `json:"registration_number"`
