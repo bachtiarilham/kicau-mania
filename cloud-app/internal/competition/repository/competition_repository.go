@@ -189,12 +189,7 @@ func (r *roundRepoImpl) Delete(ctx context.Context, arenaID, id string) error {
 
 func (r *roundRepoImpl) Lock(ctx context.Context, arenaID, id string) (*model.RoundView, error) {
 	query := `
-		SELECT id, arena_id, event_id, event_title, owner_id, category_id, category_code, category_name,
-		       bird_species_id, bird_species_name, round_number, title, status, created_at, updated_at,
-		       registration_count, active_participant_count, disqualified_count,
-		       start_time, end_time, coordinator_name, head_judge_name,
-		       field_judge_1, field_judge_2, field_judge_3, field_judge_4,
-		       monitor_judge_1, monitor_judge_2, monitor_judge_3, monitor_judge_4
+		SELECT status
 		FROM competition.rounds
 		WHERE arena_id = $1::text::bigint AND id = $2::text::bigint FOR UPDATE
 	`
