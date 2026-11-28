@@ -35,8 +35,12 @@ func TestArenaSettingsPreserveCredentialsAndUnrelatedConfiguration(t *testing.T)
 	if err != nil || len(settings.Channels) != 1 {
 		t.Fatalf("read arena: %v", err)
 	}
-	if strings.Contains(settings.Channels[0].Source, "@") || !settings.Channels[0].HasCredentials {
-		t.Fatal("GET exposed credentials or failed to detect them")
+	current, err := url.Parse(settings.Channels[0].Source)
+	if err != nil || current.User == nil || !settings.Channels[0].HasCredentials {
+		t.Fatal("expected credentials in local arena settings")
+	}
+	if password, _ := current.User.Password(); password != "demo$secret" {
+		t.Fatal("arena settings did not return the stored password")
 	}
 	settings.ServerIP = "192.168.1.6"
 	settings.JudgeIPs = []string{"192.168.1.58"}

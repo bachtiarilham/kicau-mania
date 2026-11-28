@@ -236,6 +236,9 @@ func (b *Bridge) call(c context.Context, p Pairing, method, path string, body an
 	if res.StatusCode == 401 || res.StatusCode == 403 {
 		return apperror.ErrForbidden
 	}
+	if res.StatusCode == http.StatusNotFound && path == "/uploads/named" {
+		return apperror.ErrNotFound
+	}
 	if res.StatusCode < 200 || res.StatusCode >= 300 {
 		return apperror.ErrUnavailable
 	}
@@ -343,16 +346,24 @@ func (b *Bridge) PutRecording(c context.Context, r model.Recording) (err error) 
 	}
 	var upload remote
 	payload := map[string]any{
-		"container":    container,
-		"session_id":   r.RoundID,
-		"channel_id":   r.ChannelID,
-		"recording_id": r.ID,
-		"size_bytes":   stat.Size(),
-		"sha256":       hash,
-		"started_at":   r.StartedAt,
-		"ended_at":     r.EndedAt,
+		"container":        container,
+		"session_id":       r.RoundID,
+		"channel_id":       r.ChannelID,
+		"recording_id":     r.ID,
+		"size_bytes":       stat.Size(),
+		"sha256":           hash,
+		"started_at":       r.StartedAt,
+		"ended_at":         r.EndedAt,
+		"display_filename": r.DisplayFilename,
 	}
-	if e = b.call(c, p, "POST", "/uploads", payload, &upload); e != nil {
+	uploadPath := "/uploads"
+	if r.DisplayFilename != "" {
+		uploadPath = "/uploads/named"
+	}
+	if e = b.call(c, p, "POST", uploadPath, payload, &upload); e != nil {
+		if uploadPath == "/uploads/named" && errors.Is(e, apperror.ErrNotFound) {
+			failureMessage = "Cloud belum mendukung nama rekaman. File lokal menunggu pembaruan Cloud."
+		}
 		return e
 	}
 	if !strings.HasSuffix(upload.ObjectKey, ext) {

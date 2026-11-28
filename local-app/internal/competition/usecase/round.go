@@ -21,6 +21,9 @@ type Round struct {
 	RoundID      string        `json:"roundId" binding:"required,max=120"`
 	EventName    string        `json:"eventName" binding:"max=200"`
 	SessionName  string        `json:"sessionName" binding:"max=200"`
+	ArenaName    string        `json:"arenaName" binding:"max=200"`
+	EventDate    string        `json:"eventDate" binding:"max=32"`
+	RoundNumber  int           `json:"roundNumber"`
 	StartTime    string        `json:"startTime" binding:"max=64"`
 	EndTime      string        `json:"endTime" binding:"max=64"`
 	Jurors       []string      `json:"jurors" binding:"max=4,dive,max=200"`
@@ -40,10 +43,11 @@ type Rounds struct {
 	now       func() time.Time
 	snapshot  Snapshot
 	startedAt time.Time
+	completed map[[2]string]bool
 }
 
 func NewRounds(now func() time.Time) *Rounds {
-	return &Rounds{now: now}
+	return &Rounds{now: now, completed: make(map[[2]string]bool)}
 }
 
 func (r *Rounds) Current() *Snapshot {
@@ -56,9 +60,18 @@ func (r *Rounds) Current() *Snapshot {
 	return &snapshot
 }
 
+func (r *Rounds) Completed(arenaID, roundID string) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.completed[[2]string{arenaID, roundID}]
+}
+
 func (r *Rounds) Start(round Round) (Snapshot, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	if r.completed[[2]string{round.ArenaID, round.RoundID}] {
+		return Snapshot{}, apperror.ErrConflict
+	}
 	if r.snapshot.State == "RUNNING" {
 		if r.snapshot.ArenaID == round.ArenaID && r.snapshot.RoundID == round.RoundID {
 			return r.current(), nil
@@ -76,8 +89,15 @@ func (r *Rounds) Stop(arenaID, roundID string) (Snapshot, error) {
 	if r.snapshot.ArenaID != arenaID || r.snapshot.RoundID != roundID {
 		return Snapshot{}, apperror.ErrNotFound
 	}
+	if r.snapshot.State != "RUNNING" {
+		return r.snapshot, nil
+	}
 	r.snapshot = r.current()
-	r.snapshot.State = "FINISHED"
+	r.snapshot.State = "INCOMPLETE"
+	if r.snapshot.ElapsedMS >= Duration.Milliseconds() {
+		r.snapshot.State = "FINISHED"
+		r.completed[[2]string{arenaID, roundID}] = true
+	}
 	return r.snapshot, nil
 }
 

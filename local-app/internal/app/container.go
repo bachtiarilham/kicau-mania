@@ -162,7 +162,7 @@ func NewContainer(ctx context.Context, c config.Config) (*Container, error) {
 	if err != nil {
 		return nil, err
 	}
-	sessions := recordingUC.NewSessionUseCase(recordingUC.SessionOptions{DataDir: c.DataDir, MaxDuration: c.MaxRound, MinFreeBytes: c.MinFreeBytes, Targets: c.Destinations}, sessionJournal, repo, sources, pipeline, ffmpeg.Finalizer{Binary: c.FFmpeg, Probe: c.FFprobe}, audio, streaming, filesystem.Disk{}, recordingWorker.NewSessionWorker(), mediaServer)
+	sessions := recordingUC.NewSessionUseCase(recordingUC.SessionOptions{DataDir: c.DataDir, RecordingsDir: c.RecordingsDir, MaxDuration: c.MaxRound, MinFreeBytes: c.MinFreeBytes, Targets: c.Destinations}, sessionJournal, repo, sources, pipeline, ffmpeg.Finalizer{Binary: c.FFmpeg, Probe: c.FFprobe}, audio, streaming, filesystem.Disk{}, recordingWorker.NewSessionWorker(), mediaServer)
 	engine := cloudUC.NewEngine(cloudUC.EngineOptions{
 		ArenaID: c.ArenaID, EngineID: c.EngineID,
 		HeartbeatTimeout: c.HeartbeatTimeout, CommandsConfigured: c.CloudCommandsURL != "",

@@ -8,9 +8,21 @@ type Restream struct {
 }
 
 type StartRequest struct {
-	ID        string     `json:"id" binding:"required"`
-	Channels  []string   `json:"channels" binding:"required,min=1,max=24"`
-	Restreams []Restream `json:"restreams"`
+	ID          string       `json:"id" binding:"required"`
+	Channels    []string     `json:"channels" binding:"required,min=1,max=24"`
+	Restreams   []Restream   `json:"restreams"`
+	Competition *Competition `json:"competition,omitempty"`
+}
+
+type Competition struct {
+	ArenaID     string         `json:"arena_id"`
+	ArenaName   string         `json:"arena_name"`
+	EventID     string         `json:"event_id"`
+	EventName   string         `json:"event_name"`
+	EventDate   string         `json:"event_date"`
+	RoundID     string         `json:"round_id"`
+	RoundNumber int            `json:"round_number"`
+	Gantangan   map[string]int `json:"gantangan"`
 }
 
 type Channel struct {
@@ -26,13 +38,16 @@ type Channel struct {
 }
 
 type Session struct {
-	StopReason    string    `json:"stop_reason,omitempty"`
+	StopReason string `json:"stop_reason,omitempty"`
 	StartRequest
-	State         string    `json:"state"`
-	StartedAt     time.Time `json:"started_at"`
-	StoppedAt     time.Time `json:"stopped_at,omitempty"`
-	ChannelsState []Channel `json:"channel_states"`
-	Error         string    `json:"error,omitempty"`
+	State           string    `json:"state"`
+	StartedAt       time.Time `json:"started_at"`
+	StoppedAt       time.Time `json:"stopped_at,omitempty"`
+	ChannelsState   []Channel `json:"channel_states"`
+	Error           string    `json:"error,omitempty"`
+	RecordingRoot   string    `json:"recording_root,omitempty"`
+	RecordingFolder string    `json:"recording_folder,omitempty"`
+	RoundComplete   bool      `json:"round_complete,omitempty"`
 }
 
 func Terminal(state string) bool {

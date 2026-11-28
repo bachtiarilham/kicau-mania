@@ -28,12 +28,14 @@ var (
 )
 
 type ArenaSettings struct {
-	ServerIP string         `json:"server_ip"`
-	JudgeIPs []string       `json:"judge_ips"`
-	NVRIP    string         `json:"nvr_ip"`
-	Gateway  string         `json:"gateway"`
-	Channels []ArenaChannel `json:"channels"`
-	Revision string         `json:"revision"`
+	ServerIP               string         `json:"server_ip"`
+	JudgeIPs               []string       `json:"judge_ips"`
+	NVRIP                  string         `json:"nvr_ip"`
+	Gateway                string         `json:"gateway"`
+	Channels               []ArenaChannel `json:"channels"`
+	Revision               string         `json:"revision"`
+	RecordingsDir          *string        `json:"recordings_dir,omitempty"`
+	EffectiveRecordingsDir string         `json:"effective_recordings_dir,omitempty"`
 }
 
 type ArenaChannel struct {
@@ -52,7 +54,6 @@ func ReadArena(base Config) (ArenaSettings, error) {
 	for _, channel := range channels {
 		source, _ := url.Parse(channel.Source)
 		hasCredentials := source.User != nil
-		source.User = nil
 		ip := channel.IP
 		if ip == "" {
 			ip = source.Hostname()
@@ -82,6 +83,17 @@ func SaveArena(base Config, settings ArenaSettings) error {
 	if settings.Revision != current.Revision {
 		return ErrArenaConflict
 	}
+	directory := *current.RecordingsDir
+	if settings.RecordingsDir != nil {
+		directory = strings.TrimSpace(*settings.RecordingsDir)
+		if directory != "" && !localRecordingDirectory(directory) {
+			return ErrArenaInvalid
+		}
+		if directory != "" {
+			directory = filepath.Clean(directory)
+		}
+	}
+	base.RecordingsDir = directory
 	if !arenaIPv4(settings.ServerIP) || settings.NVRIP != "" && !arenaIPv4(settings.NVRIP) {
 		return ErrArenaInvalid
 	}
@@ -152,6 +164,7 @@ func SaveArena(base Config, settings ArenaSettings) error {
 		"LAN_SERVER_IP": base.LANServerIP, "NVR_IP": base.NVRIP,
 		"JUDGE_READ_CIDRS": strings.Join(judges, ","), "CHANNELS_JSON": string(encoded),
 		"HTTP_ADDR": base.Listen, "RTSP_ADDR": base.RTSPListen,
+		"RECORDINGS_DIR": base.RecordingsDir,
 	})
 	if err != nil {
 		return err
@@ -169,6 +182,12 @@ func SaveArena(base Config, settings ArenaSettings) error {
 		return err
 	}
 	return os.Rename(tmp.Name(), base.EnvPath)
+}
+
+func localRecordingDirectory(dir string) bool {
+	volume := filepath.VolumeName(dir)
+	return filepath.IsAbs(dir) && !strings.HasPrefix(volume, `\\`) &&
+		!strings.ContainsAny(dir, "\x00\r\n")
 }
 
 func arenaIPv4(raw string) bool {
@@ -205,7 +224,15 @@ func readArena(base Config) (ArenaSettings, []Channel, string, error) {
 	if err != nil {
 		return ArenaSettings{}, nil, "", ErrArenaInvalid
 	}
-	settings := ArenaSettings{ServerIP: base.LANServerIP, NVRIP: base.NVRIP, JudgeIPs: []string{}}
+	configuredDir := base.RecordingsDir
+	if value, found := values["RECORDINGS_DIR"]; found {
+		configuredDir = value
+	}
+	effectiveDir := base.RecordingsDir
+	if effectiveDir == "" {
+		effectiveDir = filepath.Join(base.DataDir, "recordings")
+	}
+	settings := ArenaSettings{ServerIP: base.LANServerIP, NVRIP: base.NVRIP, JudgeIPs: []string{}, RecordingsDir: &configuredDir, EffectiveRecordingsDir: effectiveDir}
 	if value, found := values["LAN_SERVER_IP"]; found {
 		settings.ServerIP = value
 	}

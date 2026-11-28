@@ -16,7 +16,7 @@ func (u *SavingUseCase) RecordingFile(c context.Context, id string) (string, err
 	}
 	for _, r := range rows {
 		if r.ID == id {
-			if r.State != "READY" && r.State != "UPLOADED" {
+			if r.Superseded || (r.State != "READY" && r.State != "UPLOADED" && r.State != "HELD") {
 				return "", apperror.ErrConflict
 			}
 			return r.File, nil

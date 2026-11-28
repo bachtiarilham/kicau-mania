@@ -12,7 +12,7 @@ import (
 
 type SessionUseCase interface {
 	StartSession(context.Context, model.StartRequest) (model.Session, error)
-	StopSession(context.Context, string) (model.Session, error)
+	StopSessionWithResult(context.Context, string, bool) (model.Session, error)
 	Get(context.Context, string) (model.Session, error)
 	Current(context.Context) (*model.Session, error)
 	Reset(context.Context) error
@@ -66,7 +66,14 @@ func (h *Handler) StartSession(c *gin.Context) {
 }
 
 func (h *Handler) StopSession(c *gin.Context) {
-	s, err := h.sessions.StopSession(c.Request.Context(), c.Param("id"))
+	var request struct {
+		Complete bool `json:"complete"`
+	}
+	if c.Request.ContentLength != 0 && c.ShouldBindJSON(&request) != nil {
+		response.BadRequest(c, "invalid request syntax", nil)
+		return
+	}
+	s, err := h.sessions.StopSessionWithResult(c.Request.Context(), c.Param("id"), request.Complete)
 	if err != nil {
 		response.WriteError(c, err)
 		return

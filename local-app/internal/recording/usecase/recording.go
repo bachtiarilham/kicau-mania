@@ -162,8 +162,12 @@ func (u *SessionUseCase) capture(r *run, ctx context.Context, id string) {
 	}
 }
 
-func (u *SessionUseCase) safePath(path string) bool {
-	root, err := filepath.Abs(filepath.Join(u.opts.DataDir, "recordings"))
+func (u *SessionUseCase) safeRecordingPath(rec model.Recording, path string) bool {
+	dir := rec.StorageRoot
+	if dir == "" {
+		dir = filepath.Join(u.opts.DataDir, "recordings")
+	}
+	root, err := filepath.Abs(dir)
 	if err != nil {
 		return false
 	}
@@ -175,19 +179,25 @@ func (u *SessionUseCase) safePath(path string) bool {
 	return err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) && !filepath.IsAbs(rel)
 }
 
-func (u *SessionUseCase) finalize(ctx context.Context, rec model.Recording, at time.Time) error {
+func (u *SessionUseCase) finalize(ctx context.Context, rec model.Recording, at time.Time, complete bool) error {
 	if rec.State == "READY" || rec.State == "UPLOADED" {
 		return nil
 	}
 	rec.EndedAt = at
-	if !u.safePath(rec.File) {
+	if rec.FinalBase != "" && (rec.State == "HELD" || rec.State == "UNAVAILABLE") {
+		return nil
+	}
+	if !u.safeRecordingPath(rec, rec.File) {
 		rec.State = "FAILED"
 		rec.Error = "recording path outside data directory"
 		return u.recordings.Save(ctx, rec)
 	}
+	if rec.PendingFile != "" {
+		return u.publishCompetitionRecording(ctx, rec, nil, complete, nil)
+	}
 	parts := []string{}
 	for _, segment := range rec.Segments {
-		if !u.safePath(segment.File) {
+		if !u.safeRecordingPath(rec, segment.File) {
 			rec.State = "FAILED"
 			rec.Error = "recording segment path outside data directory"
 			return u.recordings.Save(ctx, rec)
@@ -211,6 +221,9 @@ func (u *SessionUseCase) finalize(ctx context.Context, rec model.Recording, at t
 	finalCtx, cancel := context.WithTimeout(ctx, 30*time.Minute)
 	defer cancel()
 	err := u.finalizer.Finalize(finalCtx, parts, rec.File)
+	if rec.FinalBase != "" {
+		return u.publishCompetitionRecording(ctx, rec, parts, complete, err)
+	}
 	rec.EndedAt = at
 	rec.State = "READY"
 	rec.Error = ""
@@ -289,11 +302,11 @@ func (u *SessionUseCase) finish(r *run) {
 			continue
 		}
 		for _, saved := range current {
-			if saved.ID == rec.ID && (saved.State == "READY" || saved.State == "UPLOADED") {
+			if saved.ID == rec.ID && (saved.State == "READY" || saved.State == "UPLOADED" || saved.State == "HELD" || saved.State == "UNAVAILABLE" || saved.PendingFile != "") {
 				rec = saved
 			}
 		}
-		if err := u.finalize(context.Background(), rec, r.session.StoppedAt); err != nil {
+		if err := u.finalize(context.Background(), rec, r.session.StoppedAt, r.session.RoundComplete); err != nil {
 			failed = true
 			logger.Error("recording final state persistence failed", zap.Error(err))
 			continue
@@ -316,7 +329,7 @@ func (u *SessionUseCase) finish(r *run) {
 							r.session.ChannelsState[i].Gaps = append(r.session.ChannelsState[i].Gaps, model.Gap{StartedAt: gap.StartedAt, EndedAt: gap.EndedAt, Reason: gap.Reason})
 						}
 					}
-					if current.ID == rec.ID && current.State == "FAILED" {
+					if current.ID == rec.ID && (current.State == "FAILED" || current.State == "UNAVAILABLE") {
 						r.session.ChannelsState[i].State = "FAILED"
 						r.session.ChannelsState[i].Error = current.Error
 						r.session.ChannelsState[i].ErrorCode = "RECORDING_FINALIZATION_FAILED"
@@ -343,6 +356,9 @@ func (u *SessionUseCase) finish(r *run) {
 	if !failed && u.active == r {
 		u.active = nil
 	}
+	if !failed {
+		u.cleanCompetitionCapture(r.session)
+	}
 }
 
 func (u *SessionUseCase) recover(ctx context.Context) error {
@@ -351,7 +367,9 @@ func (u *SessionUseCase) recover(ctx context.Context) error {
 		return err
 	}
 	now := time.Now().UTC()
+	completed := make(map[string]bool, len(sessions))
 	for _, s := range sessions {
+		completed[s.ID] = s.RoundComplete
 		if model.Terminal(s.State) {
 			continue
 		}
@@ -381,7 +399,7 @@ func (u *SessionUseCase) recover(ctx context.Context) error {
 				rec.Gaps = append(rec.Gaps, model.Gap{Reason: "restart_uncertain", StartedAt: segment.StartedAt, EndedAt: now})
 			}
 		}
-		if err := u.finalize(ctx, rec, now); err != nil {
+		if err := u.finalize(ctx, rec, now, completed[rec.RoundID]); err != nil {
 			return err
 		}
 	}
@@ -390,6 +408,7 @@ func (u *SessionUseCase) recover(ctx context.Context) error {
 		return err
 	}
 	for _, previous := range sessions {
+		u.cleanCompetitionCapture(previous)
 		if model.Terminal(previous.State) {
 			continue
 		}

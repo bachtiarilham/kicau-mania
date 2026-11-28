@@ -2,6 +2,13 @@
 
 Dokumen ini mendefinisikan peta fitur untuk memulai perekaman multi-kamera NVR, manajemen file journal lokal, dan penghentian perekaman sesi.
 
+## Alur bisnis target upload rekaman
+
+1. Saat ronde selesai, Local App memasukkan video yang siap ke antrean upload dan mengunggahnya otomatis.
+2. Saat operator menekan **START** untuk ronde berikutnya, Local App menjeda transfer yang sedang berlangsung dan menahan transfer baru. Antrean lanjut otomatis saat ronde berhenti. Upload hanya aktif saat tidak ada ronde yang berjalan.
+3. Setelah upload berhasil, Local App memperbarui status dan mempertahankan file asli di penyimpanan lokal.
+4. Cloud App memicu pengiriman tautan WhatsApp dan melayani unduhan peserta. Video disimpan di Cloud selama lima hari sejak upload berhasil. Penghapusan di Cloud tidak memengaruhi file lokal.
+
 ---
 
 ## Fitur 3.1: Memulai Perekaman Multi-Channel Sesi Lomba

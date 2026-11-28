@@ -24,7 +24,7 @@ func (u *SavingUseCase) RecordingsFiltered(ctx context.Context, cursor string, l
 	out := []model.Recording{}
 	next := ""
 	for _, r := range all {
-		if session != "" && r.RoundID != session || channel != "" && r.ChannelID != channel || state != "" && r.State != state {
+		if r.Superseded || session != "" && r.RoundID != session || channel != "" && r.ChannelID != channel || state != "" && r.State != state {
 			continue
 		}
 		if r.ID <= cursor {

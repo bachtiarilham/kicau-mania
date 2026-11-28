@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -77,10 +78,11 @@ type MediaReset interface {
 }
 
 type SessionOptions struct {
-	DataDir      string
-	MaxDuration  time.Duration
-	MinFreeBytes uint64
-	Targets      map[string]string
+	DataDir       string
+	RecordingsDir string
+	MaxDuration   time.Duration
+	MinFreeBytes  uint64
+	Targets       map[string]string
 }
 
 type run struct {
@@ -92,23 +94,24 @@ type run struct {
 }
 
 type SessionUseCase struct {
-	opts             SessionOptions
-	journal          Journal
-	recordings       Recordings
-	catalog          Catalog
-	pipeline         Pipeline
-	finalizer        Finalizer
-	audio            Audio
-	restreams        Restreams
-	disk             Disk
-	worker           Worker
-	media            MediaReset
-	ops              sync.Mutex
-	mu               sync.Mutex
-	admissions       sync.WaitGroup
-	active           *run
-	started, closing bool
-	live, sockets    Connections
+	opts                 SessionOptions
+	competitionCompleted func(string, string) bool
+	journal              Journal
+	recordings           Recordings
+	catalog              Catalog
+	pipeline             Pipeline
+	finalizer            Finalizer
+	audio                Audio
+	restreams            Restreams
+	disk                 Disk
+	worker               Worker
+	media                MediaReset
+	ops                  sync.Mutex
+	mu                   sync.Mutex
+	admissions           sync.WaitGroup
+	active               *run
+	started, closing     bool
+	live, sockets        Connections
 }
 
 func NewSessionUseCase(
@@ -154,7 +157,7 @@ func (u *SessionUseCase) Start() error {
 	if u.closing || u.started {
 		return apperror.ErrConflict
 	}
-	if err := os.MkdirAll(filepath.Join(u.opts.DataDir, "recordings"), 0700); err != nil {
+	if err := os.MkdirAll(u.recordingRoot(), 0700); err != nil {
 		return err
 	}
 	if err := u.recover(u.worker.Context()); err != nil {
@@ -190,7 +193,11 @@ func (u *SessionUseCase) validate(req model.StartRequest) error {
 		}
 		targets[r.Target] = true
 	}
-	free, err := u.disk.Free(u.opts.DataDir)
+	return nil
+}
+
+func (u *SessionUseCase) checkRecordingDisk(root string) error {
+	free, err := u.disk.Free(root)
 	if err != nil {
 		return apperror.Diagnostic(apperror.ErrUnavailable, "DISK_UNAVAILABLE", "Kapasitas disk tidak dapat diperiksa")
 	}
@@ -238,6 +245,9 @@ func (u *SessionUseCase) StartSession(ctx context.Context, req model.StartReques
 	req.Channels = append([]string(nil), req.Channels...)
 	req.Restreams = append([]model.Restream(nil), req.Restreams...)
 	s := model.Session{StartRequest: req, State: "STARTING", StartedAt: time.Now().UTC(), ChannelsState: []model.Channel{}}
+	if err := u.prepareRecordingLocation(ctx, &s); err != nil {
+		return model.Session{}, err
+	}
 	for _, id := range req.Channels {
 		hash := sha256.Sum256([]byte(req.ID + "\x00" + id))
 		s.ChannelsState = append(s.ChannelsState, model.Channel{ID: id, RecordingID: hex.EncodeToString(hash[:16]), State: "CONNECTING"})
@@ -248,7 +258,11 @@ func (u *SessionUseCase) StartSession(ctx context.Context, req model.StartReques
 	jobCtx, cancel := context.WithCancel(u.worker.Context())
 	r := &run{session: s, ctx: jobCtx, cancel: cancel, pipelinesDone: make(chan struct{}), done: make(chan struct{}), records: map[string]model.Recording{}}
 	for _, ch := range s.ChannelsState {
-		rec := model.Recording{ID: ch.RecordingID, RoundID: req.ID, ChannelID: ch.ID, State: "RECORDING", File: filepath.Join(u.opts.DataDir, "recordings", ch.RecordingID+".mkv"), Key: "rounds/" + req.ID + "/" + ch.ID + "/" + ch.RecordingID + ".mkv", StartedAt: s.StartedAt}
+		rec := model.Recording{ID: ch.RecordingID, RoundID: req.ID, ChannelID: ch.ID, State: "RECORDING", File: filepath.Join(s.RecordingRoot, ch.RecordingID+".mkv"), Key: "rounds/" + req.ID + "/" + ch.ID + "/" + ch.RecordingID + ".mkv", StartedAt: s.StartedAt, StorageRoot: s.RecordingRoot}
+		if req.Competition != nil {
+			rec.File = filepath.Join(s.RecordingFolder, ".capture-"+s.ID, ch.RecordingID+".mkv")
+			rec.FinalBase = filepath.Join(s.RecordingFolder, fmt.Sprintf("Gantangan %02d", req.Competition.Gantangan[ch.ID]))
+		}
 		if err := u.recordings.Save(ctx, rec); err != nil {
 			u.abortLocked(r)
 			return model.Session{}, err
@@ -394,6 +408,16 @@ func (u *SessionUseCase) AcquirePlayback(channel string) (func(), error) {
 }
 
 func (u *SessionUseCase) StopSession(ctx context.Context, id string) (model.Session, error) {
+	return u.StopSessionWithResult(ctx, id, false)
+}
+
+func (u *SessionUseCase) SetCompetitionCompletion(completed func(string, string) bool) {
+	u.ops.Lock()
+	defer u.ops.Unlock()
+	u.competitionCompleted = completed
+}
+
+func (u *SessionUseCase) StopSessionWithResult(ctx context.Context, id string, complete bool) (model.Session, error) {
 	u.ops.Lock()
 	defer u.ops.Unlock()
 	u.mu.Lock()
@@ -424,18 +448,28 @@ func (u *SessionUseCase) StopSession(ctx context.Context, id string) (model.Sess
 	if model.Terminal(r.session.State) {
 		return clone(r.session), nil
 	}
-	r.session.State = "STOPPING"
-	if r.session.StopReason == "" {
-		r.session.StopReason = "OPERATOR"
+	if round := r.session.Competition; complete && round != nil && u.competitionCompleted != nil &&
+		!u.competitionCompleted(round.ArenaID, round.RoundID) {
+		return clone(r.session), apperror.ErrConflict
 	}
-	r.session.StoppedAt = time.Now().UTC()
+	next := clone(r.session)
+	next.State = "STOPPING"
+	next.RoundComplete = complete && next.Competition != nil
+	if next.StopReason == "" {
+		next.StopReason = "OPERATOR"
+	}
+	next.StoppedAt = time.Now().UTC()
+	if err := u.journal.Save(context.Background(), next); err != nil {
+		return clone(r.session), err
+	}
+	r.session.State, r.session.StopReason = next.State, next.StopReason
+	r.session.StoppedAt, r.session.RoundComplete = next.StoppedAt, next.RoundComplete
 	r.cancel()
 	u.audio.Deactivate()
-	persistErr := u.journal.Save(context.Background(), r.session)
 	if err := u.worker.Run(func(context.Context) { u.finish(r) }); err != nil {
 		return clone(r.session), err
 	}
-	return clone(r.session), persistErr
+	return clone(r.session), nil
 }
 
 func (u *SessionUseCase) Close() {
@@ -458,7 +492,11 @@ func (u *SessionUseCase) Close() {
 
 func (u *SessionUseCase) guard(r *run) {
 	for r.ctx.Err() == nil {
-		free, err := u.disk.Free(u.opts.DataDir)
+		root := r.session.RecordingRoot
+		if root == "" {
+			root = u.recordingRoot()
+		}
+		free, err := u.disk.Free(root)
 		if err != nil || free < u.opts.MinFreeBytes || time.Since(r.session.StartedAt) >= u.opts.MaxDuration {
 			u.mu.Lock()
 			if r.ctx.Err() == nil {

@@ -33,7 +33,7 @@ func (u *SavingUseCase) uploadPending(ctx context.Context) {
 		if ctx.Err() != nil {
 			return
 		}
-		if r.State != "READY" || time.Now().Before(r.NextAttempt) {
+		if r.Superseded || r.State != "READY" || time.Now().Before(r.NextAttempt) {
 			continue
 		}
 		err = u.executor.UploadWithTimeout(ctx, func(uploadCtx context.Context) error {

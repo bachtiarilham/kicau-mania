@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"kicau.local/edge/config"
+	"kicau.local/edge/internal/delivery/middleware"
 	"kicau.local/edge/internal/delivery/rest/response"
 	"kicau.local/edge/internal/infra/network"
 )
@@ -93,7 +94,7 @@ func (h *Handler) Routes(g *gin.RouterGroup) {
 	g.GET("/bootstrap", h.bootstrap)
 	g.GET("/checks", h.checks)
 	g.GET("/configuration", h.configuration)
-	g.GET("/arena", h.arena)
+	g.GET("/arena", middleware.RequireLocalControlNonce(h.nonce), h.arena)
 	g.POST("/arena", h.saveArena)
 	g.POST("/arena/test-camera", h.testArenaCamera)
 	g.POST("/arena/test-nvr", h.testArenaNVR)

@@ -28,6 +28,7 @@ type Config struct {
 	Listen               string
 	Token                string
 	DataDir              string
+	RecordingsDir        string
 	RuntimeDir           string
 	Origins              []string
 	ArenaID              string
@@ -173,6 +174,7 @@ func Load(path string) (Config, error) {
 		Listen:               getEnv("HTTP_ADDR", "127.0.0.1:8090"),
 		Token:                getEnv("API_TOKEN", ""),
 		DataDir:              dataDir,
+		RecordingsDir:        getEnv("RECORDINGS_DIR", ""),
 		RuntimeDir:           runtimeDir,
 		Origins:              strings.Split(getEnv("ALLOWED_ORIGINS", "http://localhost:3000"), ","),
 		ArenaID:              getEnv("ARENA_ID", "arena01"),
@@ -249,6 +251,9 @@ func Load(path string) (Config, error) {
 }
 
 func validate(c Config) error {
+	if c.RecordingsDir != "" && !localRecordingDirectory(c.RecordingsDir) {
+		return fmt.Errorf("RECORDINGS_DIR requires an absolute local directory")
+	}
 	if c.AccessMode != "" && c.AccessMode != "lan" && c.AccessMode != "cloud" {
 		return fmt.Errorf("ENGINE_ACCESS_MODE must be lan or cloud")
 	}

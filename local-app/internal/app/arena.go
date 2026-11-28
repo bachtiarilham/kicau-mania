@@ -4,7 +4,10 @@ import (
 	"context"
 	"errors"
 	"net"
+	"net/url"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -13,7 +16,10 @@ import (
 	"kicau.local/edge/config"
 	"kicau.local/edge/internal/apperror"
 	cameraModel "kicau.local/edge/internal/camera/model"
+	cameraRepo "kicau.local/edge/internal/camera/repository"
 	"kicau.local/edge/internal/infra/ffmpeg"
+	"kicau.local/edge/internal/infra/storage/filesystem"
+	recordingModel "kicau.local/edge/internal/recording/model"
 )
 
 func (m *Coordinator) Arena(ctx context.Context) (config.ArenaSettings, error) {
@@ -33,8 +39,49 @@ func (m *Coordinator) Arena(ctx context.Context) (config.ArenaSettings, error) {
 func (m *Coordinator) SaveArena(settings config.ArenaSettings) error {
 	for _, network := range m.Networks() {
 		if network.IP == settings.ServerIP {
+			m.ops.Lock()
+			defer m.ops.Unlock()
 			m.arenaMu.Lock()
 			defer m.arenaMu.Unlock()
+			if settings.RecordingsDir != nil {
+				target := strings.TrimSpace(*settings.RecordingsDir)
+				if target != "" {
+					target = filepath.Clean(target)
+				}
+				if target != m.base.RecordingsDir {
+					m.mu.RLock()
+					active := m.current
+					m.mu.RUnlock()
+					if active != nil {
+						session, err := active.container.Sessions.Current(context.Background())
+						if err != nil {
+							return err
+						}
+						if session != nil && !recordingModel.Terminal(session.State) {
+							return apperror.Public(apperror.ErrConflict, "Tunggu rekaman dan finalisasi selesai.")
+						}
+					}
+					if target == "" {
+						target = filepath.Join(m.base.DataDir, "recordings")
+						if err := os.MkdirAll(target, 0700); err != nil {
+							return apperror.Public(apperror.ErrInvalid, "Folder rekaman bawaan tidak dapat dibuat.")
+						}
+					}
+					if !filepath.IsAbs(target) || strings.HasPrefix(filepath.VolumeName(target), `\\`) {
+						return apperror.Public(apperror.ErrInvalid, "Pilih folder pada drive lokal PC operator.")
+					}
+					probe, err := os.CreateTemp(target, ".recording-test-*")
+					if err != nil {
+						return apperror.Public(apperror.ErrInvalid, "Folder tidak tersedia atau Local App tidak dapat menulis ke folder itu.")
+					}
+					probe.Close()
+					os.Remove(probe.Name())
+					free, err := (filesystem.Disk{}).Free(target)
+					if err != nil || free < m.base.MinFreeBytes {
+						return apperror.Public(apperror.ErrInvalid, "Ruang kosong di drive rekaman tidak mencukupi.")
+					}
+				}
+			}
 			return arenaConfigError(config.SaveArena(m.base, settings))
 		}
 	}
@@ -46,15 +93,44 @@ func (m *Coordinator) TestArenaCamera(ctx context.Context, camera config.ArenaCh
 	if err != nil {
 		return nil, arenaConfigError(err)
 	}
-	probe, err := (ffmpeg.Inspector{ProbeBinary: m.base.FFprobe}).Probe(ctx, source)
+	m.mu.RLock()
+	var catalog *cameraRepo.Catalog
+	if m.current != nil {
+		catalog = m.current.container.ChannelCatalog
+	}
+	m.mu.RUnlock()
+	target, via := arenaProbeTarget(catalog, camera.ID, source)
+	probe, err := (ffmpeg.Inspector{ProbeBinary: m.base.FFprobe}).Probe(ctx, target)
 	if err != nil {
+		label := "Sumber RTSP"
+		if via == "mediamtx" {
+			label = "Livestream MediaMTX"
+		}
 		var failure *cameraModel.Failure
 		if errors.As(err, &failure) {
-			return nil, &apperror.Message{Kind: apperror.ErrUnavailable, Code: failure.Code, Text: failure.Message}
+			return nil, &apperror.Message{Kind: apperror.ErrUnavailable, Code: failure.Code, Text: label + " · " + failure.Message}
 		}
-		return nil, &apperror.Message{Kind: apperror.ErrUnavailable, Text: "Tes video tidak selesai."}
+		return nil, &apperror.Message{Kind: apperror.ErrUnavailable, Text: label + " · Tes video tidak selesai."}
 	}
-	return probe, nil
+	return struct {
+		cameraModel.Probe
+		Via string `json:"via"`
+	}{Probe: probe, Via: via}, nil
+}
+
+func arenaProbeTarget(catalog *cameraRepo.Catalog, id, source string) (string, string) {
+	if catalog != nil {
+		running, err := catalog.Source(id)
+		if err == nil {
+			active, parseErr := url.Parse(running)
+			if parseErr == nil && active.String() == source {
+				if relay, err := catalog.HubRTSP(id); err == nil {
+					return relay, "mediamtx"
+				}
+			}
+		}
+	}
+	return source, "direct"
 }
 
 func arenaConfigError(err error) error {

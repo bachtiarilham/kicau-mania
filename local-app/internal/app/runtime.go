@@ -29,17 +29,18 @@ import (
 )
 
 type Coordinator struct {
-	mu        sync.RWMutex
-	ops       sync.Mutex
-	ctx       context.Context
-	base      config.Config
-	shell     http.Handler
-	current   *engineRuntime
-	errorCode string
-	closed    bool
-	setup     *setupDelivery.Handler
-	arenaMu   sync.Mutex
-	rounds    *competitionDelivery.Handler
+	mu         sync.RWMutex
+	ops        sync.Mutex
+	ctx        context.Context
+	base       config.Config
+	shell      http.Handler
+	current    *engineRuntime
+	errorCode  string
+	closed     bool
+	setup      *setupDelivery.Handler
+	arenaMu    sync.Mutex
+	rounds     *competitionDelivery.Handler
+	roundClock *competitionUsecase.Rounds
 }
 
 func NewCoordinator(ctx context.Context, c config.Config) (*Coordinator, error) {
@@ -53,7 +54,8 @@ func NewCoordinator(ctx context.Context, c config.Config) (*Coordinator, error) 
 	c.LocalControlToken = hex.EncodeToString(secret[:])
 	m := &Coordinator{ctx: ctx, base: c}
 	m.setup = setupDelivery.New(m, c.LocalControlToken)
-	m.rounds = competitionDelivery.New(competitionUsecase.NewRounds(time.Now))
+	m.roundClock = competitionUsecase.NewRounds(time.Now)
+	m.rounds = competitionDelivery.New(m.roundClock)
 	bridge, e := cloudMedia.New(filepath.Join(c.DataDir, "cloud-media"))
 	if e != nil {
 		return nil, e
@@ -104,6 +106,7 @@ func (m *Coordinator) launch() (*engineRuntime, error) {
 	}
 	r.container.Handlers.Setup = m.setup
 	r.container.Handlers.Rounds = m.rounds
+	r.container.Sessions.SetCompetitionCompletion(m.roundClock.Completed)
 	r.handler = delivery.Router(c, r.container.Handlers)
 	return r, nil
 }

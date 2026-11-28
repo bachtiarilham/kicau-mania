@@ -46,6 +46,7 @@ func IsLocalControl(c *gin.Context, origins ...[]string) bool {
 	return c.GetHeader("Sec-Fetch-Site") != "cross-site" || explicit
 }
 func LocalControl(nonce string, origins ...[]string) gin.HandlerFunc {
+	checkNonce := RequireLocalControlNonce(nonce)
 	return func(c *gin.Context) {
 		if len(nonce) < 32 || !IsLocalControl(c, origins...) {
 			c.Abort()
@@ -53,11 +54,19 @@ func LocalControl(nonce string, origins ...[]string) gin.HandlerFunc {
 			return
 		}
 		if c.Request.Method != "GET" && c.Request.Method != "HEAD" {
-			if subtle.ConstantTimeCompare([]byte(c.GetHeader("X-Local-Control")), []byte(nonce)) != 1 {
-				c.Abort()
-				response.WriteError(c, apperror.ErrForbidden)
-				return
-			}
+			checkNonce(c)
+			return
+		}
+		c.Next()
+	}
+}
+
+func RequireLocalControlNonce(nonce string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if len(nonce) < 32 || subtle.ConstantTimeCompare([]byte(c.GetHeader("X-Local-Control")), []byte(nonce)) != 1 {
+			c.Abort()
+			response.WriteError(c, apperror.ErrForbidden)
+			return
 		}
 		c.Next()
 	}

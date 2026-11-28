@@ -31,7 +31,7 @@ func TestRoundClockAndTransitions(t *testing.T) {
 	if _, err := rounds.Stop("other", round.RoundID); !errors.Is(err, apperror.ErrNotFound) {
 		t.Fatalf("stop of wrong arena: %v", err)
 	}
-	if state, err := rounds.Stop(round.ArenaID, round.RoundID); err != nil || state.State != "FINISHED" || state.ElapsedMS != 120300 {
+	if state, err := rounds.Stop(round.ArenaID, round.RoundID); err != nil || state.State != "INCOMPLETE" || state.ElapsedMS != 120300 {
 		t.Fatalf("stop: %+v, %v", state, err)
 	}
 	now = now.Add(time.Minute)
@@ -44,5 +44,11 @@ func TestRoundClockAndTransitions(t *testing.T) {
 	now = now.Add(11 * time.Minute)
 	if state := rounds.Current(); state.State != "RUNNING" || state.ElapsedMS != 600000 {
 		t.Fatalf("time up must wait for stop: %+v", state)
+	}
+	if state, err := rounds.Stop(round.ArenaID, round.RoundID); err != nil || state.State != "FINISHED" {
+		t.Fatalf("finished stop: %+v, %v", state, err)
+	}
+	if _, err := rounds.Start(round); !errors.Is(err, apperror.ErrConflict) {
+		t.Fatalf("finished round reopened: %v", err)
 	}
 }
