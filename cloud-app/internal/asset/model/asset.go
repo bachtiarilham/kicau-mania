@@ -27,10 +27,20 @@ type GantanganView struct {
 
 // BirdSpeciesView represents a row projected from cloud_read.v_bird_species.
 type BirdSpeciesView struct {
-	ID        string    `db:"id" json:"id"`
-	Name      string    `db:"name" json:"name"`
-	CreatedAt time.Time `db:"created_at" json:"created_at"`
-	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
+	ID         string    `db:"id" json:"id"`
+	Name       string    `db:"name" json:"name"`
+	CreatedAt  time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt  time.Time `db:"updated_at" json:"updated_at"`
+	AlterName1 *string   `db:"alter_name_1" json:"alter_name_1"`
+	AlterName2 *string   `db:"alter_name_2" json:"alter_name_2"`
+	AlterName3 *string   `db:"alter_name_3" json:"alter_name_3"`
+}
+
+type BirdSpeciesRequest struct {
+	Name       string  `json:"name"`
+	AlterName1 *string `json:"alter_name_1"`
+	AlterName2 *string `json:"alter_name_2"`
+	AlterName3 *string `json:"alter_name_3"`
 }
 
 // BirdView represents a row projected from cloud_read.v_birds.

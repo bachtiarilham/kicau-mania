@@ -32,8 +32,8 @@ type GantanganRepository interface {
 type BirdSpeciesRepository interface {
 	GetByID(ctx context.Context, id string) (*model.BirdSpeciesView, error)
 	List(ctx context.Context, cursor *string, limit int) ([]model.BirdSpeciesView, error)
-	Create(ctx context.Context, name string) (*model.BirdSpeciesView, error)
-	Update(ctx context.Context, id string, name string) (*model.BirdSpeciesView, error)
+	Create(ctx context.Context, req *model.BirdSpeciesRequest) (*model.BirdSpeciesView, error)
+	Update(ctx context.Context, id string, req *model.BirdSpeciesRequest) (*model.BirdSpeciesView, error)
 	Delete(ctx context.Context, id string) error
 }
 

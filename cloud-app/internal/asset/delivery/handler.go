@@ -26,8 +26,8 @@ type AssetBusiness interface {
 
 	GetSpecies(ctx context.Context, id string) (*model.BirdSpeciesView, error)
 	ListSpecies(ctx context.Context, cursor *string, limit int) ([]model.BirdSpeciesView, error)
-	CreateSpecies(ctx context.Context, name string) (*model.BirdSpeciesView, error)
-	UpdateSpecies(ctx context.Context, id, name string) (*model.BirdSpeciesView, error)
+	CreateSpecies(ctx context.Context, req *model.BirdSpeciesRequest) (*model.BirdSpeciesView, error)
+	UpdateSpecies(ctx context.Context, id string, req *model.BirdSpeciesRequest) (*model.BirdSpeciesView, error)
 	DeleteSpecies(ctx context.Context, id string) error
 
 	GetBird(ctx context.Context, id string) (*model.BirdView, error)
@@ -200,25 +200,21 @@ func (h *Handler) Routes(g *gin.RouterGroup) {
 	})
 
 	g.POST("/bird-species", func(c *gin.Context) {
-		var req struct {
-			Name string `json:"name"`
-		}
+		var req model.BirdSpeciesRequest
 		if !request.Bind(c, &req) {
 			return
 		}
-		v, err := h.Asset.CreateSpecies(c.Request.Context(), req.Name)
+		v, err := h.Asset.CreateSpecies(c.Request.Context(), &req)
 		result(c, v, err)
 	})
 
 	for _, method := range []string{"PATCH", "PUT"} {
 		g.Handle(method, "/bird-species/:id", func(c *gin.Context) {
-			var req struct {
-				Name string `json:"name"`
-			}
+			var req model.BirdSpeciesRequest
 			if !request.Bind(c, &req) {
 				return
 			}
-			v, err := h.Asset.UpdateSpecies(c.Request.Context(), c.Param("id"), req.Name)
+			v, err := h.Asset.UpdateSpecies(c.Request.Context(), c.Param("id"), &req)
 			result(c, v, err)
 		})
 	}

@@ -63,6 +63,9 @@ INSERT INTO asset.bird_species(name) VALUES($1::text) RETURNING jsonb_build_obje
 -- name: BirdSpeciesUpdate
 -- params: id bigint, patch jsonb
 UPDATE asset.bird_species SET name=CASE WHEN $2::jsonb ? 'name' THEN ($2::jsonb->>'name')::text ELSE name END,
+ alter_name_1=CASE WHEN $2::jsonb ? 'alter_name_1' THEN NULLIF(btrim($2->>'alter_name_1'), '') ELSE alter_name_1 END,
+ alter_name_2=CASE WHEN $2::jsonb ? 'alter_name_2' THEN NULLIF(btrim($2->>'alter_name_2'), '') ELSE alter_name_2 END,
+ alter_name_3=CASE WHEN $2::jsonb ? 'alter_name_3' THEN NULLIF(btrim($2->>'alter_name_3'), '') ELSE alter_name_3 END,
  updated_at=CURRENT_TIMESTAMP WHERE id=$1::text::bigint RETURNING jsonb_build_object('id',id);
 
 -- name: BirdSpeciesDelete

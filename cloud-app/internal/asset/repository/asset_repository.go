@@ -143,7 +143,7 @@ func NewBirdSpeciesRepository(s *postgres.Store) contract.BirdSpeciesRepository 
 }
 
 func (r *birdSpeciesRepoImpl) GetByID(ctx context.Context, id string) (*model.BirdSpeciesView, error) {
-	query := `SELECT id, name, created_at, updated_at FROM cloud_read.v_bird_species WHERE id = $1::text::bigint`
+	query := `SELECT id, name, created_at, updated_at, alter_name_1, alter_name_2, alter_name_3 FROM cloud_read.v_bird_species WHERE id = $1::text::bigint`
 	return postgres.QueryOne[model.BirdSpeciesView](ctx, r.store, query, id)
 }
 
@@ -151,13 +151,15 @@ func (r *birdSpeciesRepoImpl) List(ctx context.Context, cursor *string, limit in
 	if limit < 1 || limit > 100 {
 		limit = 25
 	}
-	query := `SELECT id, name, created_at, updated_at FROM cloud_read.v_bird_species WHERE ($1::text::bigint IS NULL OR id > $1::text::bigint) ORDER BY name, id LIMIT $2`
+	query := `SELECT id, name, created_at, updated_at, alter_name_1, alter_name_2, alter_name_3 FROM cloud_read.v_bird_species WHERE ($1::text::bigint IS NULL OR id > $1::text::bigint) ORDER BY name, id LIMIT $2`
 	return postgres.QueryMany[model.BirdSpeciesView](ctx, r.store, query, cursor, limit)
 }
 
-func (r *birdSpeciesRepoImpl) Create(ctx context.Context, name string) (*model.BirdSpeciesView, error) {
-	query := `INSERT INTO asset.bird_species(name) VALUES($1) RETURNING id`
-	row, err := r.store.QueryRow(ctx, query, name)
+func (r *birdSpeciesRepoImpl) Create(ctx context.Context, req *model.BirdSpeciesRequest) (*model.BirdSpeciesView, error) {
+	query := `INSERT INTO asset.bird_species(name, alter_name_1, alter_name_2, alter_name_3)
+		VALUES ($1, NULLIF(btrim($2), ''), NULLIF(btrim($3), ''), NULLIF(btrim($4), ''))
+		RETURNING id`
+	row, err := r.store.QueryRow(ctx, query, req.Name, req.AlterName1, req.AlterName2, req.AlterName3)
 	if err != nil {
 		return nil, err
 	}
@@ -168,9 +170,15 @@ func (r *birdSpeciesRepoImpl) Create(ctx context.Context, name string) (*model.B
 	return r.GetByID(ctx, id)
 }
 
-func (r *birdSpeciesRepoImpl) Update(ctx context.Context, id, name string) (*model.BirdSpeciesView, error) {
-	query := `UPDATE asset.bird_species SET name = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1::text::bigint`
-	err := r.store.ExecSQL(ctx, query, id, name)
+func (r *birdSpeciesRepoImpl) Update(ctx context.Context, id string, req *model.BirdSpeciesRequest) (*model.BirdSpeciesView, error) {
+	query := `UPDATE asset.bird_species SET
+			name = $2,
+			alter_name_1 = CASE WHEN $3::text IS NULL THEN alter_name_1 ELSE NULLIF(btrim($3), '') END,
+			alter_name_2 = CASE WHEN $4::text IS NULL THEN alter_name_2 ELSE NULLIF(btrim($4), '') END,
+			alter_name_3 = CASE WHEN $5::text IS NULL THEN alter_name_3 ELSE NULLIF(btrim($5), '') END,
+			updated_at = CURRENT_TIMESTAMP
+		WHERE id = $1::text::bigint`
+	err := r.store.ExecSQL(ctx, query, id, req.Name, req.AlterName1, req.AlterName2, req.AlterName3)
 	if err != nil {
 		return nil, err
 	}

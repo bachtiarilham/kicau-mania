@@ -129,18 +129,18 @@ func (u *AssetUsecase) ListSpecies(ctx context.Context, cursor *string, limit in
 	return u.species.List(ctx, cursor, limit)
 }
 
-func (u *AssetUsecase) CreateSpecies(ctx context.Context, name string) (*model.BirdSpeciesView, error) {
-	if strings.TrimSpace(name) == "" {
+func (u *AssetUsecase) CreateSpecies(ctx context.Context, req *model.BirdSpeciesRequest) (*model.BirdSpeciesView, error) {
+	if strings.TrimSpace(req.Name) == "" {
 		return nil, apperror.Invalid("Nama jenis burung wajib diisi")
 	}
-	return u.species.Create(ctx, name)
+	return u.species.Create(ctx, req)
 }
 
-func (u *AssetUsecase) UpdateSpecies(ctx context.Context, id, name string) (*model.BirdSpeciesView, error) {
-	if strings.TrimSpace(name) == "" {
+func (u *AssetUsecase) UpdateSpecies(ctx context.Context, id string, req *model.BirdSpeciesRequest) (*model.BirdSpeciesView, error) {
+	if strings.TrimSpace(req.Name) == "" {
 		return nil, apperror.Invalid("Nama jenis burung tidak boleh kosong")
 	}
-	return u.species.Update(ctx, id, name)
+	return u.species.Update(ctx, id, req)
 }
 
 func (u *AssetUsecase) DeleteSpecies(ctx context.Context, id string) error {
